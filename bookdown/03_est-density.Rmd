@@ -1,0 +1,29 @@
+# Estimating Density
+
+You can follow along with the code embedded in this chapter and functions from the R package `tifc`, which also contains example data.
+
+This method is also documented in the Becker et al (2022) paper linked HERE. 
+
+## Overview
+
+### Simple Explanation
+
+### Assumptions
+
+Link to Chapter on testing assumptions. 
+
+## Camera deployment duration lengths
+
+Here we can include all those figures. Yay. 
+
+
+
+
+
+
+
+
+
+
+
+
