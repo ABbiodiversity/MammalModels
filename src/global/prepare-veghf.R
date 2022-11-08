@@ -102,7 +102,13 @@ pt_2013_to_2018_rev <- bind_rows(
 
 # Image reports
 
+paths <- dir_ls(path = paste0(g_drive, "data/base/raw/from_WildTrax/ABMI/image_reports"), glob = "*.csv")
 
+df <- map_df(.x = paths,
+             .f = ~ read_csv(., col_select = c(project, location, date_detected,
+                                               trigger, field_of_view, `image_url(admin only)`)))
+
+# Now, figure out how to take the appropriate sample.
 
 
 
