@@ -1,7 +1,7 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Title:            Clean Raw Data
-# Description:      Clean raw ABMI data from WildTrax in preparation for downstream density estimation,
+# Title:            Process Raw Data
+# Description:      Process raw ABMI camera tag data from WildTrax in preparation for downstream density estimation,
 #                   as well as extract NONE gap class information.
 # Author:           Marcus Becker
 # Date:             August 2022
