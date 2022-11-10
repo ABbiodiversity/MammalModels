@@ -3,7 +3,7 @@
 # Title:            Prepare VegHF
 # Description:      Process the site point and buffer summaries from the Geospatial Centre
 # Author:           Marcus Becker
-# Date:             August 2022
+# Date:             November 2022
 
 # Previous scripts: None
 
@@ -14,6 +14,7 @@
 library(readr)
 library(dplyr)
 library(stringr)
+library(tidyr)
 library(fs)
 library(purrr)
 library(lubridate)
@@ -23,34 +24,44 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Note: in the future, the veg-hf-soil summaries repository will be made into an R package.
+# Latest summaries performed by Eric D in November 2022
+# Note: in the future, the veg-hf-soil summaries repository will be made into an R package with functions that can be
+# called here.
 
-# Read in pre-processed data (for now):
+# Read in pre-processed data from csv (for now):
 
-# 2019-2022 - Summarised by Eric D in November 2022
+# 2019-2022
 pt_2019_to_2022 <- read_csv(paste0(g_drive, "data/lookup/veghf/processed/all-sites_point_2019-2022.csv")) |>
   # Remove ARU-only points
   filter(deployment == "CAM" | deployment == "BOTH") |>
   # Adjustments to the WildtraxProject field need to be made for sites that were revisited.
   mutate(project = case_when(
     str_detect(WildtraxProject, "2014|2015|2016|2017") ~ paste0("ABMI Ecosystem Health ", survey_year),
-    TRUE ~ WildtraxProject
-  )) |>
+    TRUE ~ WildtraxProject)) |>
+  # Adjust 2022 locations
+  mutate(project = case_when(
+    project == "ABMI Ecosystem Health 2021" & str_detect(WildtraxName, "^7") ~ "ABMI Ecosystem Health 2022",
+    TRUE ~ project)) |>
   # Some locations don't have a WildtraxName (something went wrong with data collection?) - Keep for now.
   mutate(location = case_when(
     is.na(WildtraxName) ~ Site_ID,
     TRUE ~ WildtraxName
   )) |>
+  # Keeping HFclass for later automated classification of VegForDetectionDistance
   select(location, project, HFclass, VEGHFAGEclass, SOILHFclass) |>
-  # Duplicate locations in Southern Focal Areas
+  # Duplicate locations in Southern Focal Areas to reflect the two projects (2019 and 2021)
   mutate(count = if_else(str_detect(project, "Southern Focal"), 2, 1)) |>
   uncount(weights = count, .remove = TRUE, .id = "id") |>
   mutate(project = if_else(id == "2", "ABMI Southern Focal Areas 2019", project)) |>
   select(-id)
-  # We're missing VegForDetectionDistance.
+  # VegForDetectionDistance still needs to be defined.
 
-# Find VegForDetectionDistance from data processed in previous years.
+# Find VegForDetectionDistance from data processed in previous years (2019 and 2020)
 prev_pt_2019_2020 <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_all-years_veghf-soilhf-detdistveg_2021-10-06.csv")) |>
+  # Later years - notably, we are missing 2021 and 2022 information here. I thought I summarised 2021 last year.
+  filter(str_detect(project, "2019|2020"),
+         # Remove HF2 and CUDDE deployments - they are in new projects now, and not relevant to habitat modeling.
+         !str_detect(location, "HF2|HP2X|CUDDE|BOTH")) |>
   # Remove "-CAM" suffix from a few locations
   mutate(location = str_remove(location, "-CAM$")) |>
   # Update a couple locations with a 'B' where needed
@@ -58,10 +69,6 @@ prev_pt_2019_2020 <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_all-ye
     str_detect(location, "822|853") ~ gsub("^(.{3})(.*)$", "\\1B\\2", location),
     TRUE ~ location
   )) |>
-  # Later years - notably, we are missing 2021 and 2022 information here. I thought I summarised 2021 last year.
-  filter(str_detect(project, "2019|2020"),
-         # Remove HF2 and CUDDE deployments - they are in new projects now, and not relevant to habitat modeling.
-         !str_detect(location, "HF2|HP2X|CUDDE|BOTH")) |>
   select(location, project, VegForDetectionDistance)
 
 # Join VegForDetectionDistance information to current VegHF summaries (for 2019 and 2020)
@@ -80,7 +87,7 @@ pt_2019_2020_all <- pt_2019_to_2022 |>
 
 # Now we need pre-2019.
 
-# Hmm, okay, so the problem now is that the projects are messed up for OGs. Can I just take the location name?
+# Issue: changes in WildTrax project naming has impacted OG cameras
 
 pt_2013_to_2018 <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_all-years_veghf-soilhf-detdistveg_2021-10-06.csv")) |>
   # Only want earlier years.
@@ -90,7 +97,7 @@ pt_2013_to_2018 <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_all-year
 cmu_2017_2018 <- pt_2013_to_2018 |>
   filter(str_detect(project, "CMU"))
 
-# Sort out Off-Grid (OG) deployments
+# Sort out Off-Grid (OG) deployments into the appropriate project name
 og_2013_to_2018 <- pt_2013_to_2018 |>
   filter(str_detect(location, "OG")) |>
   mutate(year = str_extract(project, "\\d+"),
@@ -102,6 +109,7 @@ og_2013_to_2018 <- pt_2013_to_2018 |>
            str_detect(location, "CITSCI") ~ "Citizen Science Monitoring",
            TRUE ~ "Off-Grid Monitoring"
          )) |>
+  # Create new project variable
   mutate(project = paste0("ABMI ", type, " ", year)) |>
   select(1:5)
 
@@ -124,8 +132,16 @@ pt_2013_to_2018_all <- bind_rows(
 
 pt_2021_2022_all <- pt_2019_to_2022 |>
   filter(!str_detect(project, "2019|2020")) |>
+  # Fix NWSAR 2020 project name
+  mutate(project = ifelse(project == "Northwest Species at Risk Program",
+                           "Northwest Species at Risk Program 2020",
+                           project)) |>
+  # Fix OSL grid in NWSAR 2020
+  mutate(location = if_else(str_detect(location, "OSL") & !str_detect(location, "0$") & str_detect(project, "2020$"),
+                            str_remove(location, "0"),
+                            location)) |>
   arrange(project) |>
-  # Delineate VegForDetectionDistance automatically - to be checked manually!
+  # Delineate VegForDetectionDistance automatically (this should be made into a function) - to be checked manually!
   mutate(VegForDetectionDistance = case_when(
     !is.na(HFclass) ~ "HF",
     str_detect(VEGHFAGEclass, "Pine|Spruce|Mixedwood") ~ "Conif",
@@ -161,34 +177,72 @@ df <- map_df(.x = paths,
 
 # Pull representative images - determined to be a within range Time Lapse photo nearest to June 15.
 rep_images <- df |>
-  filter(trigger == "Time Lapse", # Something to investigate.
-         field_of_view == "WITHIN") |>
+  filter(field_of_view == "WITHIN") |>
+         #trigger == "Time Lapse") |> We generally want a timelapse, but they will be selected nearly all of the time
+         # anyway. Include motion detection here in case a camera wasn't programmed to take TL for whatever reason.
   # Create target date
   mutate(year = year(date_detected),
-         target_date = ymd_hms(paste0(year, "-06-15 13:00:00"))) |>
-  group_by(project, location) |>
+         # Slightly earlier than 1pm in the afternoon - some deployments had TL programmed on even hours, so we don't
+         # want two images to be selected.
+         target_date = ymd_hms(paste0(year, "-06-15 12:59:59"))) |>
+  group_by(project, location, trigger) |>
   # Select the image closest to the target date
   filter(abs(difftime(date_detected, target_date)) == min(abs(difftime(date_detected, target_date)))) |>
-  select(project, location, date_detected, url = `image_url(admin only)`)
+  # If a deployment spans >1 year, just choose the first record
+  filter(row_number() == 1) |>
+  # Drop trigger as group
+  group_by(project, location) |>
+  add_count() |>
+  # Keep only Time Lapse image when it is available; keep Motion Detection if needed.
+  filter(case_when(
+    n > 1 ~ trigger == "Time Lapse",
+    T ~ T
+  )) |>
+  select(project, location, date_detected, trigger, url = `image_url(admin only)`)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Join image urls to GIS data
+# Join image URLs to GIS data
 
-check <- pt_2019_to_2022_all |>
-  left_join(rep_images, by = c("project", "location")) |>
-  arrange(project, location)
+full <- pt_2019_to_2022_all |>
+  full_join(rep_images, by = c("project", "location")) |>
+  # Remove CMU and NWSAR deployments with no url - erroneously included in GIS summaries it seems
+  filter(!(is.na(url) & str_detect(project, "CMU|Northwest"))) |>
+  select(2, 1, 3:8) |>
+  arrange(project, location) |>
+  mutate(comments = "")
+
+# What is missing?
+
+missing <- full |>
+  filter(is.na(VEGHFAGEclass) | is.na(url))
+
+# Projects
+missing_breakdown <- missing |>
+  mutate(missing_url = ifelse(is.na(url), 1, 0),
+         missing_veg = ifelse(is.na(VEGHFAGEclass), 1, 0),
+         missing_both = ifelse(missing_url == 1 & missing_veg == 1, 1, 0)) |>
+  group_by(project) |>
+  summarise(missing_url = sum(missing_url),
+            missing_veg = sum(missing_veg),
+            missing_both = sum(missing_both))
+
+proj <- unique(full$project)
+
+for (i in proj) {
+
+  d <- full |> filter(project == i)
+  write_csv(d, paste0(g_drive, "data/lookup/veghf/manual_checking/", "VegHF Checks for ", i, ".csv"))
+
+}
+
+library(googledrive)
+library(googlesheets4)
+
+check <- write_sheet(d)
+
+drive_find(n_max = 10)
 
 
-
-
-
-
-
-
-
-
-
-
-
+#-----------------------------------------------------------------------------------------------------------------------
 
