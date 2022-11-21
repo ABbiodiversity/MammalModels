@@ -18,6 +18,7 @@ library(tidyr)
 library(fs)
 library(purrr)
 library(lubridate)
+library(veghfsoil)
 
 # Set path to Shared Google Drive (G Drive)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
@@ -25,13 +26,30 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Latest summaries performed by Eric D in November 2022
-# Note: in the future, the veg-hf-soil summaries repository will be made into an R package with functions that can be
-# called here.
 
-# Read in pre-processed data from csv (for now):
+# Set path to VegHF summaries in Science Centre Drive (S Drive)
+s_drive <- "S:/GC_eric/FromEric/Sites_summaries/"
+
+# Raw summary tables
+d <- read_summary(
+  summary_path = paste0(s_drive, "Round2022/Modelling2022/CAM&ARU/Marcus_Selection_survey_year_2019_to_2022/summaries_20221101_rev00.sqlite"),
+  table = "landscape_summary_camaru_pts_2019_2022"
+)
+
+# Processing into long format
+d_long <- make_veghf_long(
+  d = d,
+  col.label = "Site_ID",
+  col.veg = "Combined_ChgByCWCS",
+  col.baseyear = 2019,
+  col.hfyear = "YEAR",
+  col.soil = "Soil_Type_1",
+  unround = FALSE,
+  hf_fine = TRUE
+)
 
 # 2019-2022
-pt_2019_to_2022 <- read_csv(paste0(g_drive, "data/lookup/veghf/processed/all-sites_point_2019-2022.csv")) |>
+pt_2019_to_2022 <- d_long |>
   # Remove ARU-only points
   filter(deployment == "CAM" | deployment == "BOTH") |>
   # Adjustments to the WildtraxProject field need to be made for sites that were revisited.
@@ -164,7 +182,6 @@ pt_2019_to_2022_all <- bind_rows(
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-
 # Image reports
 
 # Paths to the image reports (already downloaded from WildTrax)
@@ -236,13 +253,7 @@ for (i in proj) {
 
 }
 
-library(googledrive)
-library(googlesheets4)
-
-check <- write_sheet(d)
-
-drive_find(n_max = 10)
-
+# Currently w/ Dave H for checking.
 
 #-----------------------------------------------------------------------------------------------------------------------
 
