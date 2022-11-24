@@ -1,10 +1,11 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Title:            Process Raw Data
+# Project:          ABMI
+
+# Title:            Process Raw Camera Data
 # Description:      Process raw ABMI camera tag data from WildTrax in preparation for downstream density estimation,
 #                   as well as extract NONE gap class information.
 # Author:           Marcus Becker
-# Date:             August 2022
 
 # Previous scripts: None
 

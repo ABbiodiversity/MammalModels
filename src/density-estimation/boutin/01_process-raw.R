@@ -1,5 +1,7 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
+# Project:          BOUTIN
+
 # Title:            Process Raw Data
 # Description:      Process raw BOUTIN camera tag data from WildTrax in preparation for downstream density estimation,
 #                   as well as extract NONE gap class information.
@@ -30,7 +32,7 @@ load(paste0(g_drive, "data/lookup/wt_native_sp.RData"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Download ABMI data
+# Download BOUTIN data
 
 # Set environment variables (username/password)
 Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
@@ -60,21 +62,23 @@ images <- map_df(.x = boutin_proj_ids,
                    sensor_id = "CAM",
                    report = "image",
                    weather_cols = FALSE
-                 )) |>
-  select(project, location, date_detected, trigger, field_of_view) |>
-  # Something funky going on ... multiple records of 'different' images? Blank in WildTrax.
+                 ))
+
+images_simple <- images |>
+  select(project, location, date_detected, trigger, field_of_view, serial_number) |>
+  # Duplicated image records - not sure why.
   distinct()
 
-# Remove images that are not in the field of view
-tags <- tags |>
-  left_join(images, by = c("location", "project", "date_detected")) |>
+# Remove images that are not in the field of view - this is an annoying change.
+tags_within <- tags |>
+  left_join(images_simple, by = c("location", "project", "date_detected")) |>
   filter(field_of_view == "WITHIN")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Clean data
 
-df_native_clean <- tags |>
+df_native_clean <- tags_within |>
   # Only keep native species tags, takes way too long otherwise; remove VNAs from number_individuals (mostly non-mammals)
   filter(common_name %in% native_sp,
          !number_individuals == "VNA") |>
@@ -90,7 +94,7 @@ df_native_clean <- tags |>
 # Note:  ^ This code chunk will soon have a dedicated wildRtrax function.
 
 # Join the remainder non-native mammal images back in
-df_all_clean <- tags |>
+df_all_clean <- tags_within |>
   filter(!common_name %in% native_sp) |>
   mutate(number_individuals = as.numeric(ifelse(number_individuals == "VNA", 1, number_individuals))) |>
   bind_rows(df_native_clean) |>
