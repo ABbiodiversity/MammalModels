@@ -60,7 +60,8 @@ image_reports <- map_df(.x = nwsar_proj_ids,
                           report = "image",
                           weather_cols = FALSE))
 
-image_fov <- image_reports |>
+# Strip it down to include on relevant information (trigger, field of view)
+image_fov_trigger <- image_reports |>
   select(project, location, date_detected, trigger, field_of_view)
 
 # Clean up tags
@@ -77,10 +78,9 @@ df_gap_nones <- add_gap_class_n(tags_clean)
 # Save cleaned and binded data to Shared Google Drive
 # (so we don't have to re-download from WildTrax each time)
 
-# Timelapse images
-image_reports |>
-  filter(trigger == "Time Lapse") |>
-  write_csv(paste0(g_drive, "data/lookup/timelapse/nwsar_all-years_timelapse.csv"))
+# Simple image reports
+image_fov_trigger |>
+  write_csv(paste0(g_drive, "data/lookup/images/nwsar_all-years_image-report_simple.csv"))
 
 # Only tags of species
 tags_clean |>
