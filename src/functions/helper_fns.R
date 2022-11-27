@@ -123,19 +123,8 @@ days_in_year <- function(year) {
 
 summarise_time_by_day <- function(x) {
 
-  x <- image_fov_trigger
-
   x <- x |>
     unite("project_location", project, location, sep = "_", remove = TRUE)
-
-  range <- x |>
-    # Remove Out of Range images
-    filter(field_of_view == "WITHIN") |>
-    group_by(project_location) |>
-    summarise(start_date_time = min(date_detected),
-              end_date_time = max(date_detected)) |>
-    ungroup() |>
-    filter(!is.na(end_date_time))
 
   # Locations which started operation again after an intermediate pause
   inter <- x |>
@@ -164,78 +153,62 @@ summarise_time_by_day <- function(x) {
     filter(time_diff > 12) |>
     select(1:3, 5, 6)
 
-  ends <- inter_pairs |>
-    select(1, date_detected = `date_detected...2`, field_of_view = `field_of_view...3`)
+  to_remove <- inter_pairs |>
+    mutate(end_date = as.Date(`date_detected...2`),
+           start_date = as.Date(`date_detected...5`)) |>
+    select(project_location = 1, end_date, start_date) |>
+    rowwise() |>
+    mutate(date = list(seq(from = end_date, to = start_date, by = "day"))) |>
+    unnest(date) |>
+    select(project_location, date)
 
-  inter_pairs <- inter_pairs |>
-    select(1, date_detected = `date_detected...5`, field_of_view = `field_of_view...6`) |>
-    bind_rows(ends) |>
-    arrange(project_location, date_detected) |>
-    select(project_location, date_detected, field_of_view)
+  range <- x |>
+    # Remove Out of Range images
+    filter(field_of_view == "WITHIN") |>
+    group_by(project_location) |>
+    summarise(start_date = as.Date(min(date_detected)),
+              end_date = as.Date(max(date_detected))) |>
+    filter(!is.na(end_date)) |>
+    group_by(project_location) |>
+    mutate(date = list(seq(from = start_date, to = end_date, by = "day"))) |>
+    unnest(date) |>
+    ungroup() |>
+    select(project_location, date) |>
+    mutate(operating = 1) |>
+    mutate(julian = yday(date),
+           season = ifelse(julian < 106 | julian > 288, "total_winter_days", "total_summer_days")) |>
+    anti_join(to_remove, by = c("project_location", "date")) |>
+    group_by(project_location, season) |>
+    summarise(operating_days = sum(operating)) |>
+    ungroup() |>
+    group_by(project_location) |>
+    mutate(total_days = sum(operating_days)) |>
+    pivot_wider(id_cols = c(project_location, total_days), names_from = season, values_from = operating_days)
 
-  start <- as.Date("2019-01-01")
-  end <- max(range$end_date_time)
-  interval <- start %--% end
-  days <- ceiling(as.duration(interval) / ddays(1))
-
-  dep <- range |>
-    pull(project_location)
-
-  time.by.day <- array(0, c(length(dep), 366))
-  time.since.start <- array(0, c(length(dep), days))
-
-  for (i in 1:length(dep)) {
-    df <- range[range$project_location == dep[i],]
-    for (k in 1:nrow(df)) {
-      # For days since 2009. floor() is used so that first & last day of operation is included.
-      j1 <- floor(julian(df$start_date_time[k], origin = start))
-      j2 <- floor(julian(df$end_date_time[k], origin = start))
-      if (!is.na(j1) & !is.na(j2)) {
-        time.since.start[i, (j1:j2)] <- 1
-      }
-    }
-    # To take off time(s) when camera wasn't working.
-    if (dep[i] %in% inter_pairs$project_location) {
-      df1<- inter_pairs[as.character(inter_pairs$project_location) == as.character(dep[i]),]
-      for (j in seq(1, (nrow(df1) - 1), 2)) { # Assumes all extra times are formatted as END/START pairs
-        # Use ceiling() so that day of failure is excluded from operating days
-        j1 <- ceiling(julian(df1$date_detected[j], origin = start))
-        j2 <- floor(julian(df1$date_detected[j + 1], origin = start))
-        if (j2 > j1) time.since.start[i, j1:(j2-1)] <- 0
-      }
-    }
-  }
-
-  years <- seq(as.numeric(year(start)), as.numeric(year(end)))
-  days.per.year1 <- map_dbl(years, .f = days_in_year)
-  #days.per.year2 <- c(365, 365, 365, 365)
-  Jan1 <- cumsum(c(1, days.per.year1))
-
-  yrnum <- julday <- NULL
-
-  for (i in 1:ncol(time.since.start)) {
-    yrnum[i] <- sum(i >= Jan1)
-    julday[i] <- i - Jan1[yrnum[i]] + 1
-  }
-  for (i in 1:ncol(time.by.day)) {
-    time.by.day[,i] <- rowSums(time.since.start[,which(julday == i)])
-  }
-
-  rownames(time.by.day) <- rownames(time.since.start) <- dep
-  columns <- as.character(1:366)
-
-  # Summarise time-by-day for each camera deployment
-  tbd_summary <- time.by.day %>%
-    as_tibble(rownames = "project_location", .name_repair = ~ columns) %>%
-    mutate(total_days = rowSums(select(., -project_location)),
-           total_summer_days = rowSums(select(., -c(project_location:106, 289:366))),
-           total_winter_days = rowSums(select(., -c(project_location, 107:288)))) %>%
-    select(project_location, total_days, total_summer_days, total_winter_days) %>%
-    separate(project_location, into = c("project", "location"), sep = "_")
-
-  return(tbd_summary)
+  return(range)
 
 }
+
+# This ^ is great for my narrow ABMI purposes.
+# What would a more generic user function look like?
+
+# wt_get_operating_days -> generate long data frame of all days of operation.
+# wt_summarise_operating_days -> feed in custom monitoring periods (can loop), which will be summarised.
+#                                There could be an 'ABMI' pre-format option. Maybe?
+# Have to think about project vs location, etc.
+
+#----------------------
+
+
+
+
+
+
+
+
+
+
+
 
 
 

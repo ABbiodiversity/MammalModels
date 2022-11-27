@@ -13,6 +13,7 @@
 library(readr)
 library(dplyr)
 library(lubridate)
+library(tidyverse)
 
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
@@ -30,7 +31,7 @@ df_all <- read_csv(paste0(g_drive, "data/base/clean/nwsar_all-years_all-data_cle
 
 check <- summarise_time_by_day(x = image_fov_trigger)
 
-# Summarise time-by-day for each camera deployment
+
 
 
 
