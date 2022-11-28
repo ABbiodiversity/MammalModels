@@ -66,9 +66,11 @@ image_fov_trigger <- image_reports |>
 
 # Clean up tags
 tags_clean <- tag_reports |>
+  # Consolidate tags of same species in same image into one row
   wt_consolidate_tags() |>
   left_join(image_fov, by = c("project", "location", "date_detected")) |>
-  filter(field_of_view == "WITHIN")
+  filter(field_of_view == "WITHIN") |>
+  select(project, location, date_detected, common_name, age_class, sex, number_individuals)
 
 # Add 'N' gap class to images following a 'NONE' image
 df_gap_nones <- add_gap_class_n(tags_clean)

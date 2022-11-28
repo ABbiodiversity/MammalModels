@@ -118,17 +118,20 @@ days_in_year <- function(year) {
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-#' @param x image report
+#' @param x Image report from WildTrax; must include the columns `location`, `field_of_view`, and ``
 #' @param include_project logical; Summarise across project, or just by location?
+#' @param summarise logical; Summarise the total number of days?
+#' @param .abmi_seasons logical; Include ABMI seasonal periods? Defaults to FALSE
 #'
 
-summarise_time_by_day <- function(x, include_project = TRUE) {
+get_operating_days <- function(x, include_project = TRUE, summarise = FALSE, .abmi_seasons = FALSE) {
 
   if(include_project) {
     x <- x |>
       unite("project_location", project, location, sep = "_", remove = TRUE)
   } else {
     x <- x |>
+      rename(project_location = location)
 
   }
 
@@ -155,7 +158,7 @@ summarise_time_by_day <- function(x, include_project = TRUE) {
     select(-c(starts_again, restart)) |>
     ungroup() |>
     group_split(field_of_view) |>
-    bind_cols() |>
+    bind_cols(.name_repair = "unique") |>
     mutate(time_diff = difftime(`date_detected...5`, `date_detected...2`, units = "hours")) |>
     filter(time_diff > 12) |>
     select(1:3, 5, 6)
@@ -181,30 +184,104 @@ summarise_time_by_day <- function(x, include_project = TRUE) {
     unnest(date) |>
     ungroup() |>
     select(project_location, date) |>
-    mutate(operating = 1) |>
-    mutate(julian = yday(date),
-           season = ifelse(julian < 106 | julian > 288, "total_winter_days", "total_summer_days")) |>
     anti_join(to_remove, by = c("project_location", "date")) |>
-    group_by(project_location, season) |>
-    summarise(operating_days = sum(operating)) |>
-    ungroup() |>
-    group_by(project_location) |>
-    mutate(total_days = sum(operating_days)) |>
-    pivot_wider(id_cols = c(project_location, total_days), names_from = season, values_from = operating_days)
+    mutate(operating = 1)
 
-  return(range)
+  if(summarise) {
+    if(.abmi_seasons) {
+      range <- range |>
+        mutate(julian = yday(date),
+               season = ifelse(julian < 106 | julian > 288, "total_winter_days", "total_summer_days")) |>
+        group_by(project_location, season) |>
+        summarise(operating_days = sum(operating)) |>
+        ungroup() |>
+        group_by(project_location) |>
+        mutate(total_days = sum(operating_days)) |>
+        pivot_wider(id_cols = c(project_location, total_days), names_from = season, values_from = operating_days)
+    } else {
+      range <- range |>
+        group_by(project_location) |>
+        summarise(total_days = sum(operating))
+    }
+  } else {
+    range <- range |> select(-operating)
+  }
+
+  if(include_project) {
+    range <- range |>
+      separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE)
+    return(range)
+  } else {
+    range <- range |>
+      rename(location = project_location)
+    return(range)
+  }
 
 }
 
-# This ^ is great for my narrow ABMI purposes.
-# What would a more generic user function look like?
+#-----------------------------------------------------------------------------------------------------------------------
 
-# wt_get_operating_days -> generate long data frame of all days of operation.
-# wt_summarise_operating_days -> feed in custom monitoring periods (can loop), which will be summarised.
-#                                There could be an 'ABMI' pre-format option. Maybe?
-# Have to think about project vs location, etc.
+# Now we want a function to calculate time in front of camera, by species and location. Right?
 
-#----------------------
+# First function: group_into_series
+
+#'
+#' @param x
+#'
+
+group_tags_into_series <- function(x, threshold) {
+
+  threshold <- 120
+
+  series <- x %>%
+    # Remove records with VNA as number_individuals -> these are misc human & birds
+    filter(!number_individuals == "VNA") |>
+    # Turn into numeric
+    mutate(number_individuals = as.numeric(number_individuals)) |>
+    # Order the dataframe
+    arrange(project, location, date_detected, common_name) |>
+    group_by(project, location, common_name) |>
+    # Calculate the time difference between subsequent images
+    mutate(interval = int_length(date_detected %--% lag(date_detected))) |>
+    # Is this considered a new detection?
+    mutate(new_detection = ifelse(is.na(interval) | abs(interval) >= threshold, TRUE, FALSE)) |>
+    ungroup() |>
+    # Number the series
+    mutate(series = c(1, cumsum(new_detection[-1]) + 1)) |>
+    # Flag gaps that will need
+
+    select(project, location, date_detected, common_name, age_class, sex, number_individuals, series)
+
+  # Summarise detections
+  series_summary <- series %>%
+    group_by(series, project, location, common_name) %>%
+    summarise(start_time = min(date_detected),
+              end_time = max(date_detected),
+              total_duration_seconds = int_length(start_time %--% end_time),
+              n_images = n(),
+              avg_animals = mean(number_individuals))
+
+
+}
+
+x <- df_all |>
+  select(project, location, date_detected, common_name, age_class, sex, number_individuals)
+
+# Next function:
+
+# Calculate total time for each series.
+
+#' @param x
+#' @param .abmi_gap Logical; Whether to use ABMI gap leaving probability adjustments or not.
+
+total_time_by_series <- function(x, .abmi_gap) {
+
+
+
+
+}
+
+
 
 
 

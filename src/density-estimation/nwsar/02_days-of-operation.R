@@ -34,3 +34,13 @@ df_tbd_summary <- get_operating_days(
   .abmi_seasons = TRUE
 )
 
+# Now, the question is - does this need to be done in a separate script?
+# Or maybe in the processing data script?
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Save results
+write_csv(df_tbd_summary, paste0(g_drive, "data/processed/time-by-day/nwsar_all-years_tbd-summary_", Sys.Date(), ".csv"))
+
+
+
