@@ -119,18 +119,25 @@ days_in_year <- function(year) {
 #-----------------------------------------------------------------------------------------------------------------------
 
 #' @param x image report
+#' @param include_project logical; Summarise across project, or just by location?
 #'
 
-summarise_time_by_day <- function(x) {
+summarise_time_by_day <- function(x, include_project = TRUE) {
 
-  x <- x |>
-    unite("project_location", project, location, sep = "_", remove = TRUE)
+  if(include_project) {
+    x <- x |>
+      unite("project_location", project, location, sep = "_", remove = TRUE)
+  } else {
+    x <- x |>
+
+  }
 
   # Locations which started operation again after an intermediate pause
   inter <- x |>
     filter(field_of_view == "START - First Good Image in FOV" | field_of_view == "END - Last Good Image in FOV") |>
     group_by(project_location) |>
     tally() |>
+    # Locations that have n = 1 will only have an 'END' (they did not re-start operation)
     filter(n > 1) |>
     select(project_location)
 
@@ -141,7 +148,7 @@ summarise_time_by_day <- function(x) {
     arrange(project_location, date_detected) |>
     select(project_location, date_detected, field_of_view) |>
     group_by(project_location) |>
-    # This code is gross. Issue is that cameras <2019 are formatted slightly differently wrt START / END tagging
+    # This code is gross. Do we still need to do this for camera data pre-2019?
     mutate(starts_again = ifelse(lead(field_of_view) == "START - First Good Image in FOV" & field_of_view == "END - Last Good Image in FOV", 1, NA),
            restart = ifelse(lag(starts_again) == "1" & lag(field_of_view) == "END - Last Good Image in FOV", 1, NA)) |>
     filter(starts_again == "1" | restart == "1") |>

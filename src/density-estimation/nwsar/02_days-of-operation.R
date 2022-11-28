@@ -20,21 +20,17 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 # Read image report data
 image_fov_trigger <- read_csv(paste0(g_drive, "data/lookup/images/nwsar_all-years_image-report_simple.csv"))
 
-# Read in latest tag data
-df_all <- read_csv(paste0(g_drive, "data/base/clean/nwsar_all-years_all-data_clean_2022-11-24.csv"))
-
 #-----------------------------------------------------------------------------------------------------------------------
 
-# We may only need the image report data now. That's cool.
+# Summarise time-by-day for each camera deployment in the two NWSAR projects.
 
-# Use the new function to summarise time-by-day for each camera deployments.
-
-check <- summarise_time_by_day(x = image_fov_trigger)
-
-
-
-
-
-
-
+df_tbd_summary <- get_operating_days(
+  x = image_fov_trigger,
+  # Keep project
+  include_project = TRUE,
+  # Summarise
+  summarise = TRUE,
+  # Include ABMI seasons
+  .abmi_seasons = TRUE
+)
 
