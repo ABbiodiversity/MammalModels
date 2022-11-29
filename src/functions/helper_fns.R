@@ -132,7 +132,6 @@ get_operating_days <- function(x, include_project = TRUE, summarise = FALSE, .ab
   } else {
     x <- x |>
       rename(project_location = location)
-
   }
 
   # Locations which started operation again after an intermediate pause
@@ -192,9 +191,11 @@ get_operating_days <- function(x, include_project = TRUE, summarise = FALSE, .ab
       range <- range |>
         mutate(julian = yday(date),
                season = ifelse(julian < 106 | julian > 288, "total_winter_days", "total_summer_days")) |>
-        group_by(project_location, season) |>
+        mutate_at(c("project_location", "season"), factor) |>
+        group_by(project_location, season, .drop = FALSE) |>
         summarise(operating_days = sum(operating)) |>
         ungroup() |>
+        mutate_if(is.factor, as.character) |>
         group_by(project_location) |>
         mutate(total_days = sum(operating_days)) |>
         pivot_wider(id_cols = c(project_location, total_days), names_from = season, values_from = operating_days)
@@ -208,8 +209,8 @@ get_operating_days <- function(x, include_project = TRUE, summarise = FALSE, .ab
   }
 
   if(include_project) {
-    range <- range |>
-      separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE)
+    #range <- range |>
+    #  separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE)
     return(range)
   } else {
     range <- range |>
@@ -221,15 +222,13 @@ get_operating_days <- function(x, include_project = TRUE, summarise = FALSE, .ab
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Now we want a function to calculate time in front of camera, by species and location. Right?
-
-# First function: group_into_series
+# This first one is not suited for our internal purposes - but might be useful code for wildRtrax at some point?
 
 #'
 #' @param x
 #'
 
-group_tags_into_series <- function(x, threshold) {
+group_tags_into_series <- function(x, threshold, summarise = FALSE) {
 
   threshold <- 120
 
@@ -242,58 +241,235 @@ group_tags_into_series <- function(x, threshold) {
     arrange(project, location, date_detected, common_name) |>
     group_by(project, location, common_name) |>
     # Calculate the time difference between subsequent images
-    mutate(interval = int_length(date_detected %--% lag(date_detected))) |>
+    mutate(interval = abs(int_length(date_detected %--% lag(date_detected)))) |>
     # Is this considered a new detection?
-    mutate(new_detection = ifelse(is.na(interval) | abs(interval) >= threshold, TRUE, FALSE)) |>
+    mutate(new_detection = ifelse(is.na(interval) | interval >= threshold, TRUE, FALSE)) |>
     ungroup() |>
     # Number the series
-    mutate(series = c(1, cumsum(new_detection[-1]) + 1)) |>
+    mutate(series = c(1, cumsum(new_detection[-1]) + 1))
     # Flag gaps that will need
 
-    select(project, location, date_detected, common_name, age_class, sex, number_individuals, series)
-
-  # Summarise detections
-  series_summary <- series %>%
-    group_by(series, project, location, common_name) %>%
-    summarise(start_time = min(date_detected),
-              end_time = max(date_detected),
-              total_duration_seconds = int_length(start_time %--% end_time),
-              n_images = n(),
-              avg_animals = mean(number_individuals))
-
-
-}
-
-x <- df_all |>
-  select(project, location, date_detected, common_name, age_class, sex, number_individuals)
-
-# Next function:
-
-# Calculate total time for each series.
-
-#' @param x
-#' @param .abmi_gap Logical; Whether to use ABMI gap leaving probability adjustments or not.
-
-total_time_by_series <- function(x, .abmi_gap) {
-
-
-
+  # "Naive" summary. Maybe not useful.
+  if(summarise) {
+    series_summary <- series |>
+      select(project, location, date_detected, common_name, age_class, sex, number_individuals, series) |>
+      group_by(series, project, location, common_name) %>%
+      summarise(start_time = min(date_detected),
+                end_time = max(date_detected),
+                total_duration_seconds = int_length(start_time %--% end_time),
+                n_images = n(),
+                avg_animals = mean(number_individuals))
+    return(series_summary)
+  } else {
+    return(series)
+  }
 
 }
 
+#-----------------------------------------------------------------------------------------------------------------------
 
+# Calculate total time for each series. This is for internal purposes only - unless that lookup information could be
+# included as data in the package?
 
+#' @param x Tag data (clean, all)
 
+calculate_time_by_series <- function(x) {
 
+  # Path to Google Drive
+  g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
+  # Load lookup information:
 
+  # Native sp strings in WildTrax
+  load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
+  # Gap groups
+  gap_groups <- read_csv(paste0(g_drive, "data/lookup/species-gap-groups.csv"))
+  # Leaving probability predictions
+  leave_prob_pred <- read_csv(paste0(g_drive, "data/processed/probabilistic-gaps/gap-leave-prob_predictions_2021-10-05.csv"))
+  # Time between images
+  tbi <- read_csv(paste0(g_drive, "data/processed/time-btwn-images/abmi-cmu_all-years_tbp_2021-06-25.csv"))
 
+  # Retrieve gap class NONES
+  nones <- add_gap_class_n(x)
 
+  series <- x |>
+    # Remove records with VNA as number_individuals -> these are misc human & birds
+    filter(!number_individuals == "VNA",
+           common_name %in% native_sp) |>
+    # Convert number_individuals to numeric
+    mutate(number_individuals = as.numeric(number_individuals)) |>
+    # Join gap class
+    # NOTE: Need to fix the N/tagged gap class issue. TO DO. <- What is this?!
+    left_join(nones, by = c("location", "project", "date_detected", "common_name")) |>
+    # Order observations
+    arrange(project, location, date_detected, common_name) |>
+    # Identify series and gaps requiring probabilistic time assignment
+    mutate(series_num = 0,
+           # Lagged time stamp
+           date_detected_previous = lag(date_detected),
+           # Lead time stamp
+           date_detected_next = lead(date_detected),
+           # Calculate difference in time between ordered images
+           diff_time_previous = as.numeric(date_detected - date_detected_previous),
+           diff_time_next = as.numeric(abs(date_detected - date_detected_next)),
+           # Lagged species
+           common_name_previous = lag(common_name),
+           # Was is a different species?
+           diff_sp = ifelse(common_name != common_name_previous, TRUE, FALSE),
+           # Lagged deployment
+           location_previous = lag(location),
+           # Was is a different deployment?
+           diff_location = ifelse(location != location_previous, TRUE, FALSE),
+           # Flag gaps that will need checking
+           gap_check = ifelse(diff_location == FALSE & diff_sp == FALSE & (diff_time_previous <= 120 & diff_time_previous >= 20), 1, 0),
+           # Lagged gap class
+           gap_class_previous = replace_na(lag(gap_class), ""),
+           # Identify new series, based on being different deployment, species, greater than 120 seconds, and approp gaps
+           diff_series = ifelse(diff_location == TRUE | diff_sp == TRUE | diff_time_previous > 120 | (gap_class_previous == "L" | gap_class_previous == "N"), 1, 0),
+           # Number series
+           series_num = c(1, cumsum(diff_series[-1]) + 1),
+           # Flag gaps that require probabilistic time assignment
+           gap_prob = replace_na(ifelse(gap_check == 1 & (gap_class_previous == "" | gap_class_previous == "U"), 1, 0), 0)) |>
+    group_by(series_num) |>
+    mutate(diff_time_previous = ifelse(row_number() == 1, 0, diff_time_previous),
+           diff_time_next = ifelse(row_number() == n(), 0, diff_time_next)) |>
+    ungroup() |>
+    # Join gap group lookup table
+    left_join(gap_groups, by = "common_name") |>
+    # Join gap leaving predictions
+    left_join(leave_prob_pred, by = c("gap_group", "diff_time_previous" = "diff_time")) |>
+    # Adjust time difference between ordered images that require probabilistic time assignment
+    mutate(pred = replace_na(pred, 1),
+           diff_time_previous_adj = ifelse(gap_prob == 1, diff_time_previous * (1 - pred), diff_time_previous),
+           diff_time_next_adj = ifelse(lead(gap_prob == 1), diff_time_next * (1 - lead(pred)), diff_time_next),
+           diff_time_next_adj = ifelse(is.na(diff_time_next_adj), 0, diff_time_next_adj))
 
+  # Calculate total time in front of the camera, by series
+  tts <- series %>%
+    left_join(tbi, by = "common_name") |>
+    group_by(series_num) |>
+    mutate(# Check whether the image was first or last in a series
+      bookend = ifelse(row_number() == 1 | row_number() == n(), 1, 0),
+      # Calculate time for each individual image
+      image_time = ifelse(bookend == 1,
+                          ((diff_time_previous_adj + diff_time_next_adj) / 2) + (tbp / 2),
+                          (diff_time_previous_adj + diff_time_next_adj) / 2),
+      # Multiply image time by the number of animals present
+      image_time_ni = image_time * number_individuals) |>
+    # Group by common name as well to add it as a variable to output
+    group_by(project, location, common_name, .add = TRUE) |>
+    # Calculate total time and number of images for each series
+    summarise(n_images = n(),
+              series_total_time = sum(image_time_ni),
+              series_start = min(date_detected),
+              series_end = max(date_detected)) |>
+    ungroup() |>
+    select(project, location, series_num, common_name, series_start, series_end, series_total_time, n_images)
 
+  return(tts)
 
+}
 
+#-----------------------------------------------------------------------------------------------------------------------
 
+# Calculate total time in front of the camera, by deployment, project, and species.
 
+#' @param x Time by series dataframe
+#' @param y Time by day summary; assume 'project_location' field.
+#' @param summer.start.j Julian date of summer period start; defaults to 106 (April 16)
+#' @param summer.end.j Julian date of summer period end; defaults to 288 (October 15)
+#'
+
+sum_total_time <- function(x, y, summer.start.j = 106, summer.end.j = 288) {
+
+  # Summarise total time
+  tt <- x |>
+    unite("project_location", project, location, sep = "_", remove = TRUE) |>
+    mutate(julian = as.numeric(format(series_start, "%j")),
+           season = ifelse(julian >= summer.start.j & julian <= summer.end.j, "summer", "winter")) |>
+    mutate_at(c("project_location", "common_name", "season"), factor) |>
+    group_by(project_location, common_name, season, .drop = FALSE) |>
+    summarise(total_duration = sum(series_total_time)) |>
+    ungroup() |>
+    mutate_if(is.factor, as.character) |>
+    left_join(y, by = c("project_location"))
+
+  # Unique species seen
+  sp <- as.character(sort(unique(tt$common_name)))
+
+  tt_nn <- y |>
+    # Retrieve only those that had no images of animals
+    anti_join(tt, by = "project_location") |>
+    expand(project_location, season = c("summer", "winter"), common_name = sp) |>
+    # Re-join time-by-day information
+    left_join(y, by = c("project_location")) |>
+    # Add total_duration column, which is zero in these cases
+    mutate(total_duration = 0)
+
+  tt_full <- tt |>
+    bind_rows(tt_nn) |>
+    arrange(project_location, common_name, season) |>
+    mutate(total_season_days = ifelse(season == "summer", total_summer_days, total_winter_days)) |>
+    separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE) |>
+    select(project, location, common_name, season, total_season_days, total_duration)
+
+  return(tt_full)
+
+}
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Calculate density at each location
+
+#' @param x Total time in front of the camera by location, season, and species.
+#' @param y Lookup table of the VegForDetectionDistance category of each camera location.
+#' @param cam_fov_angle Numeric; defaults to 40.
+
+calc_density_by_loc <- function(x, y, cam_fov_angle = 40, format = "long") {
+
+  # Path to Google Drive
+  g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
+  # Effective detection distance (EDD) predictions lookup
+  edd <- read_csv(paste0(g_drive, "data/processed/detection-distance/predictions/edd_veghf_season.csv"))
+  # EDD species groups
+  dist_groups <- read_csv(paste0(g_drive, "data/lookup/species-distance-groups.csv"))
+
+  d <- x |>
+    unite("project_location", project, location, sep = "_", remove = TRUE) |>
+    # Join species EDD groups
+    left_join(dist_groups, by = "common_name") |>
+    # Join detection distance vegetation values
+    left_join(y, by = "project_location") |>
+    # Join EDD predictions
+    left_join(edd, by = c("dist_group", "season", "VegForDetectionDistance")) |>
+    # Remove random species (mostly birds) <- something to check on though.
+    filter(!is.na(detdist)) |>
+    # Calculate density
+    mutate(effort = total_season_days * (detdist ^ 2 * pi * (cam_fov_angle / 360)) / 100,
+           # Catch per unit effort
+           cpue = total_duration / effort,
+           # Catch per unit effort in km2
+           cpue_km2 = cpue / 60 / 60 / 24 * 10000) |>
+    separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE) |>
+    # All the NaNs are just combinations where the total_seasons_days is 0.
+    select(project, location, common_name, season, total_season_days, total_duration, density_km2 = cpue_km2)
+
+  if(format == "long") {
+    return(d)
+  } else {
+    t <- d |>
+      select(project, location, season, total_season_days) |>
+      distinct() |>
+      pivot_wider(id_cols = c(project, location), names_from = season, values_from = total_season_days)
+    d <- d |>
+      pivot_wider(id_cols = c(project, location), names_from = c(common_name, season), values_from = density_km2) |>
+      left_join(t, by = c("project", "location")) |>
+      select(project, location, summer, winter, everything())
+    return(d)
+  }
+
+}
+
+#-----------------------------------------------------------------------------------------------------------------------
 
 
