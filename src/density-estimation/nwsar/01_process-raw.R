@@ -16,15 +16,11 @@
 library(wildRtrax) # To download data
 library(keyring)   # For storing credentials safely
 
-library(stringr)
-library(dplyr)
-library(purrr)
-
 # Set path to Shared Google Drive (G Drive)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
-# Source helper functions - most of these will probably be included in wildRtrax in the near future.
-source("./src/functions/helper_fns.R")
+# Source functions for TIFC workflow
+source("./src/functions/tifc_workflow.R")
 
 # Species character strings
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
@@ -64,16 +60,16 @@ image_reports <- map_df(.x = nwsar_proj_ids,
 image_fov_trigger <- image_reports |>
   select(project, location, date_detected, trigger, field_of_view)
 
-# Clean up tags
+# Clean up tags - i.e., consolidate tags, remove tags that are not within the fov, strip down number of columns
 tags_clean <- tag_reports |>
   # Consolidate tags of same species in same image into one row
-  wt_consolidate_tags() |>
-  left_join(image_fov, by = c("project", "location", "date_detected")) |>
+  consolidate_tags() |>
+  left_join(image_fov_trigger, by = c("project", "location", "date_detected")) |>
   filter(field_of_view == "WITHIN") |>
   select(project, location, date_detected, common_name, age_class, sex, number_individuals)
 
 # Add 'N' gap class to images following a 'NONE' image
-df_gap_nones <- add_gap_class_n(tags_clean)
+df_gap_nones <- obtain_n_gap_class(tag_report_clean = tags_clean)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -99,3 +95,32 @@ df_gap_nones |>
   write_csv(paste0(g_drive, "data/processed/probabilistic-gaps/nwsar_all-years_gap-class-nones_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
+
+# Summarise time-by-day for each camera deployment in the two NWSAR projects.
+
+df_tbd_summary <- get_operating_days(
+  image_report = image_fov_trigger,
+  # Keep project
+  include_project = TRUE,
+  # Summarise
+  summarise = TRUE,
+  # Include ABMI seasons
+  .abmi_seasons = TRUE
+)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

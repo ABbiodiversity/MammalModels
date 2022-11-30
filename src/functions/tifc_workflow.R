@@ -1,13 +1,44 @@
-# Helper functions for the TIFC workflow ... to be included in wildRtrax??
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Title:       Functions to improve the TIFC estimation workflow
+# Description:
+# Date:        November 2022
+# Author:      Marcus Becker
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Title:       Consolidate tags
-# Description: Run this function of the tag report to consolidate tags from the same image into the same row.
+# Install required packages if needed
+if (!requireNamespace("dplyr"))
+  install.packages("dplyr")
+if (!requireNamespace("readr"))
+  install.packages("readr")
+if (!requireNamespace("tidyr"))
+  install.packages("tidyr")
+if (!requireNamespace("stringr"))
+  install.packages("stringr")
+if (!requireNamespace("purrr"))
+  install.packages("purrr")
+if (!requireNamespace("lubridate"))
+  install.packages("lubridate")
 
-# Note:        This is an issue with respect to multiple images with the same timestamp.
+# Attach required packages
+library(dplyr)
+library(readr)
+library(tidyr)
+library(stringr)
+library(purrr)
+library(lubridate)
 
-wt_consolidate_tags <- function(x) {
+#-----------------------------------------------------------------------------------------------------------------------
+
+#' Consolidate tags
+#' Run this function of the tag report to consolidate tags from the same image into the same row.
+#' Note: There is an issue with respect to multiple images with the same timestamp.
+#'
+#' @param tag_report Directly from WildTrax
+#'
+
+consolidate_tags <- function(tag_report) {
 
   g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
@@ -15,7 +46,7 @@ wt_consolidate_tags <- function(x) {
   load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
   # The normies
-  y <- x |>
+  y <- tag_report |>
     filter(common_name %in% native_sp,
            !number_individuals == "VNA") |>
     mutate(number_individuals = as.numeric(number_individuals)) |>
@@ -31,12 +62,12 @@ wt_consolidate_tags <- function(x) {
     mutate(number_individuals = as.character(number_individuals))
 
   # Tags of species that have VNA - usually we don't care about these, but don't want to lose info.
-  z <- x |>
+  z <- tag_report |>
     filter(common_name %in% native_sp,
            number_individuals == "VNA")
 
   # All the STAFF/SETUP, etc, then bound back together.
-  x <- x |>
+  x <- tag_report |>
     filter(!common_name %in% native_sp) |>
     bind_rows(y, z)
 
@@ -46,8 +77,11 @@ wt_consolidate_tags <- function(x) {
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Title:       Make VegForDetDist
-# Description: Make VegForDetectionDistance column out of VEGHFAGEclass information
+#' Make VegForDetDist
+#' Make VegForDetectionDistance column out of VEGHFAGEclass information
+#'
+#' @param x A dataframe with VEGHFAGEclass information
+#'
 
 make_vegfordetdist <- function(x) {
 
@@ -68,16 +102,19 @@ make_vegfordetdist <- function(x) {
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Title:       Add 'N' gap class
-# Description: a 'NONE' image is used to demarcate when a series should be truncated because an animal left the field of view.
+#' Obtain N gap class
+#' a 'NONE' image is used to demarcate when a series should be truncated because an animal left the field of view.
+#'
+#' @param tag_report_clean A cleaned up tags report dataframe
+#'
 
-add_gap_class_n <- function(x) {
+obtain_n_gap_class <- function(tag_report_clean) {
 
   # Load native_sp tags
   g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
   load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
-  y <- x |>
+  y <- tag_report_clean |>
     select(project, location, date_detected, common_name) |>
     arrange(project, location, date_detected) |>
     # Create gap class column
@@ -94,43 +131,22 @@ add_gap_class_n <- function(x) {
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Title:       Days in a year
-# Description: Check whether a year is a leap year
-
-library(assertive)
-
-days_in_year <- function(year) {
-  # If year is div. by 400 return TRUE
-  if(is_divisible_by(year, 400)) {
-    return(366)
-  }
-  # If year is div. by 100 return FALSE
-  if(is_divisible_by(year, 100)) {
-    return(365)
-  }
-  # If year is div. by 4 return TRUE
-  if(is_divisible_by(year, 4)) {
-    return(366)
-  }
-  # Otherwise return FALSE
-  365
-}
-
-#-----------------------------------------------------------------------------------------------------------------------
-
-#' @param x Image report from WildTrax; must include the columns `location`, `field_of_view`, and ``
+#' Get operating days
+#' Option to summarise according to ABMI seasonal definitions
+#'
+#' @param image_report Image report from WildTrax; must include the columns `location`, `field_of_view`, and ``
 #' @param include_project logical; Summarise across project, or just by location?
 #' @param summarise logical; Summarise the total number of days?
 #' @param .abmi_seasons logical; Include ABMI seasonal periods? Defaults to FALSE
 #'
 
-get_operating_days <- function(x, include_project = TRUE, summarise = FALSE, .abmi_seasons = FALSE) {
+get_operating_days <- function(image_report, include_project = TRUE, summarise = FALSE, .abmi_seasons = FALSE) {
 
   if(include_project) {
-    x <- x |>
+    x <- image_report |>
       unite("project_location", project, location, sep = "_", remove = TRUE)
   } else {
-    x <- x |>
+    x <- image_report |>
       rename(project_location = location)
   }
 
@@ -183,6 +199,7 @@ get_operating_days <- function(x, include_project = TRUE, summarise = FALSE, .ab
     unnest(date) |>
     ungroup() |>
     select(project_location, date) |>
+    # Remove days where the camera was not working
     anti_join(to_remove, by = c("project_location", "date")) |>
     mutate(operating = 1)
 
@@ -222,17 +239,15 @@ get_operating_days <- function(x, include_project = TRUE, summarise = FALSE, .ab
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# This first one is not suited for our internal purposes - but might be useful code for wildRtrax at some point?
+# This function is not suited for our internal purposes, but might be useful code for wildRtrax at some point?
 
 #'
-#' @param x
+#' @param tag_report
 #'
 
-group_tags_into_series <- function(x, threshold, summarise = FALSE) {
+group_tags_into_series <- function(tag_report, threshold, summarise = FALSE) {
 
-  threshold <- 120
-
-  series <- x %>%
+  series <- tag_report |>
     # Remove records with VNA as number_individuals -> these are misc human & birds
     filter(!number_individuals == "VNA") |>
     # Turn into numeric
@@ -249,7 +264,7 @@ group_tags_into_series <- function(x, threshold, summarise = FALSE) {
     mutate(series = c(1, cumsum(new_detection[-1]) + 1))
     # Flag gaps that will need
 
-  # "Naive" summary. Maybe not useful.
+  # "Naive" summary - no probabilistic gaps, etc.
   if(summarise) {
     series_summary <- series |>
       select(project, location, date_detected, common_name, age_class, sex, number_individuals, series) |>
@@ -268,12 +283,13 @@ group_tags_into_series <- function(x, threshold, summarise = FALSE) {
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Calculate total time for each series. This is for internal purposes only - unless that lookup information could be
-# included as data in the package?
+#' Calculate time by series
+#' This is for internal purposes only - unless that lookup information could be included as data in the package?
+#'
+#' @param tag_report_clean
+#'
 
-#' @param x Tag data (clean, all)
-
-calculate_time_by_series <- function(x) {
+calculate_time_by_series <- function(tag_report_clean) {
 
   # Path to Google Drive
   g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
@@ -290,9 +306,9 @@ calculate_time_by_series <- function(x) {
   tbi <- read_csv(paste0(g_drive, "data/processed/time-btwn-images/abmi-cmu_all-years_tbp_2021-06-25.csv"))
 
   # Retrieve gap class NONES
-  nones <- add_gap_class_n(x)
+  nones <- add_gap_class_n(tag_report_clean)
 
-  series <- x |>
+  series <- tag_report_clean |>
     # Remove records with VNA as number_individuals -> these are misc human & birds
     filter(!number_individuals == "VNA",
            common_name %in% native_sp) |>
@@ -372,18 +388,18 @@ calculate_time_by_series <- function(x) {
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Calculate total time in front of the camera, by deployment, project, and species.
-
-#' @param x Time by series dataframe
-#' @param y Time by day summary; assume 'project_location' field.
+#' Calculate total time in front of the camera, by deployment, project, and species.
+#'
+#' @param series Time by series dataframe
+#' @param tbd Time by day summary; assume 'project_location' field.
 #' @param summer.start.j Julian date of summer period start; defaults to 106 (April 16)
 #' @param summer.end.j Julian date of summer period end; defaults to 288 (October 15)
 #'
 
-sum_total_time <- function(x, y, summer.start.j = 106, summer.end.j = 288) {
+sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288) {
 
   # Summarise total time
-  tt <- x |>
+  tt <- series |>
     unite("project_location", project, location, sep = "_", remove = TRUE) |>
     mutate(julian = as.numeric(format(series_start, "%j")),
            season = ifelse(julian >= summer.start.j & julian <= summer.end.j, "summer", "winter")) |>
@@ -392,17 +408,17 @@ sum_total_time <- function(x, y, summer.start.j = 106, summer.end.j = 288) {
     summarise(total_duration = sum(series_total_time)) |>
     ungroup() |>
     mutate_if(is.factor, as.character) |>
-    left_join(y, by = c("project_location"))
+    left_join(tbd, by = c("project_location"))
 
   # Unique species seen
   sp <- as.character(sort(unique(tt$common_name)))
 
-  tt_nn <- y |>
+  tt_nn <- tbd |>
     # Retrieve only those that had no images of animals
     anti_join(tt, by = "project_location") |>
     expand(project_location, season = c("summer", "winter"), common_name = sp) |>
     # Re-join time-by-day information
-    left_join(y, by = c("project_location")) |>
+    left_join(tbd, by = c("project_location")) |>
     # Add total_duration column, which is zero in these cases
     mutate(total_duration = 0)
 
@@ -421,11 +437,11 @@ sum_total_time <- function(x, y, summer.start.j = 106, summer.end.j = 288) {
 
 # Calculate density at each location
 
-#' @param x Total time in front of the camera by location, season, and species.
-#' @param y Lookup table of the VegForDetectionDistance category of each camera location.
+#' @param tt Total time in front of the camera by location, season, and species.
+#' @param veg Lookup table of the VegForDetectionDistance category of each camera location.
 #' @param cam_fov_angle Numeric; defaults to 40.
 
-calc_density_by_loc <- function(x, y, cam_fov_angle = 40, format = "long") {
+calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long") {
 
   # Path to Google Drive
   g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
@@ -434,12 +450,12 @@ calc_density_by_loc <- function(x, y, cam_fov_angle = 40, format = "long") {
   # EDD species groups
   dist_groups <- read_csv(paste0(g_drive, "data/lookup/species-distance-groups.csv"))
 
-  d <- x |>
+  d <- tt |>
     unite("project_location", project, location, sep = "_", remove = TRUE) |>
     # Join species EDD groups
     left_join(dist_groups, by = "common_name") |>
     # Join detection distance vegetation values
-    left_join(y, by = "project_location") |>
+    left_join(veg, by = "project_location") |>
     # Join EDD predictions
     left_join(edd, by = c("dist_group", "season", "VegForDetectionDistance")) |>
     # Remove random species (mostly birds) <- something to check on though.
@@ -471,5 +487,3 @@ calc_density_by_loc <- function(x, y, cam_fov_angle = 40, format = "long") {
 }
 
 #-----------------------------------------------------------------------------------------------------------------------
-
-
