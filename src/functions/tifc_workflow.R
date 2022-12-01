@@ -215,11 +215,13 @@ get_operating_days <- function(image_report, include_project = TRUE, summarise =
         mutate_if(is.factor, as.character) |>
         group_by(project_location) |>
         mutate(total_days = sum(operating_days)) |>
-        pivot_wider(id_cols = c(project_location, total_days), names_from = season, values_from = operating_days)
+        pivot_wider(id_cols = c(project_location, total_days), names_from = season, values_from = operating_days) |>
+        ungroup()
     } else {
       range <- range |>
         group_by(project_location) |>
-        summarise(total_days = sum(operating))
+        summarise(total_days = sum(operating)) |>
+        ungroup()
     }
   } else {
     range <- range |> select(-operating)
@@ -306,7 +308,7 @@ calculate_time_by_series <- function(tag_report_clean) {
   tbi <- read_csv(paste0(g_drive, "data/processed/time-btwn-images/abmi-cmu_all-years_tbp_2021-06-25.csv"))
 
   # Retrieve gap class NONES
-  nones <- add_gap_class_n(tag_report_clean)
+  nones <- obtain_n_gap_class(tag_report_clean)
 
   series <- tag_report_clean |>
     # Remove records with VNA as number_individuals -> these are misc human & birds

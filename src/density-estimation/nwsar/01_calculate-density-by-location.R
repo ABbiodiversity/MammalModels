@@ -65,16 +65,16 @@ tags_clean <- tag_reports |>
   # Consolidate tags of same species in same image into one row
   consolidate_tags() |>
   left_join(image_fov_trigger, by = c("project", "location", "date_detected")) |>
+  mutate(date_detected = ymd_hms(date_detected)) |>
   filter(field_of_view == "WITHIN") |>
   select(project, location, date_detected, common_name, age_class, sex, number_individuals)
-
-# Add 'N' gap class to images following a 'NONE' image
-df_gap_nones <- obtain_n_gap_class(tag_report_clean = tags_clean)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Save cleaned and binded data to Shared Google Drive
 # (so we don't have to re-download from WildTrax each time)
+
+# Last done: December 1, 2022
 
 # Simple image reports
 image_fov_trigger |>
@@ -90,10 +90,6 @@ tags_clean |>
 tags_clean |>
   write_csv(paste0(g_drive, "data/base/clean/nwsar_all-years_all-data_clean_", Sys.Date(), ".csv"))
 
-# NONE gaps
-df_gap_nones |>
-  write_csv(paste0(g_drive, "data/processed/probabilistic-gaps/nwsar_all-years_gap-class-nones_", Sys.Date(), ".csv"))
-
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Summarise time-by-day for each camera deployment in the two NWSAR projects.
@@ -108,19 +104,60 @@ df_tbd_summary <- get_operating_days(
   .abmi_seasons = TRUE
 )
 
+# Write results
+write_csv(df_tbd_summary, paste0(g_drive, "data/processed/time-by-day/nwsar_all-years_tbd-summary_", Sys.Date(), ".csv"))
+
 #-----------------------------------------------------------------------------------------------------------------------
 
+# Calculate time in front of camera (TIFC)
 
+df_tt <- tags_clean |>
+  # First calculate time by series
+  calculate_time_by_series() |>
+  # Next calculate tifc by location, deployment, species
+  sum_total_time(tbd = df_tbd_summary)
 
+# Write results
+# Full results long:
+write_csv(df_tt, paste0(g_drive, "data/processed/time-in-cam-fov/nwsar_all-years_fov-time_long_", Sys.Date(), ".csv"))
 
+#-----------------------------------------------------------------------------------------------------------------------
 
+# Calculate density at each location
 
+library(googlesheets4)
+library(googledrive)
 
+# Get VegForDetectionDistance information from Google Sheets.
+veghf_sheets <- drive_find(type = "spreadsheet", shared_drive = "ABMI Camera Mammals") |>
+  filter(str_detect(name, "Northwest")) |>
+  select(id) |>
+  pull()
 
+# Dataframe for use in density function
+df_vegdetdist <- map_df(.x = veghf_sheets,
+                        .f = ~ read_sheet(
+                          ss = .x
+                        )) |>
+  select(project, location, VegForDetectionDistance) |>
+  unite("project_location", project, location, sep = "_", remove = TRUE)
 
+# Calculate density (long and wide)
+df_density_long <- calc_density_by_loc(tt = df_tt,
+                                       veg = df_vegdetdist,
+                                       cam_fov_angle = 40,
+                                       format = "long")
 
+df_density_wide <- calc_density_by_loc(tt = df_tt,
+                                       veg = df_vegdetdist,
+                                       cam_fov_angle = 40,
+                                       format = "wide")
 
+# Write results
 
+write_csv(df_density_long, paste0(g_drive, "results/density/deployments/nwsar_all-years_density_long_", Sys.Date(), ".csv"))
 
+write_csv(df_density_wide, paste0(g_drive, "results/density/deployments/nwsar_all-years_density_wide_", Sys.Date(), ".csv"))
 
+#-----------------------------------------------------------------------------------------------------------------------
 
