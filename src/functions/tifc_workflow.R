@@ -428,7 +428,7 @@ sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288
     bind_rows(tt_nn) |>
     arrange(project_location, common_name, season) |>
     mutate(total_season_days = ifelse(season == "summer", total_summer_days, total_winter_days)) |>
-    separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE) |>
+    separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE, extra = "merge") |>
     select(project, location, common_name, season, total_season_days, total_duration)
 
   return(tt_full)
@@ -468,7 +468,7 @@ calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long") {
            cpue = total_duration / effort,
            # Catch per unit effort in km2
            cpue_km2 = cpue / 60 / 60 / 24 * 10000) |>
-    separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE) |>
+    separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE, extra = "merge") |>
     # All the NaNs are just combinations where the total_seasons_days is 0.
     select(project, location, common_name, season, total_season_days, total_duration, density_km2 = cpue_km2)
 
