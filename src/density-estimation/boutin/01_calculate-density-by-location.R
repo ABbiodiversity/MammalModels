@@ -2,9 +2,9 @@
 
 # Project:          BOUTIN
 
-# Title:            Process Raw Data
-# Description:      Process raw BOUTIN camera tag data from WildTrax in preparation for downstream density estimation,
-#                   as well as extract NONE gap class information.
+# Title:            Calculate density of species by project/location
+# Description:      Process raw BOUTIN camera tag data from WildTrax and estimate density using the time in front of
+#                   method.
 # Author:           Marcus Becker
 # Date:             November 2022
 
@@ -21,7 +21,7 @@ library(keyring)   # For storing credentials safely
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Source functions for TIFC workflow
-source("./src/functions/tifc_workflow.R")
+source("./src/functions/estimate-density-tifc.R")
 
 # Species character strings
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
@@ -164,11 +164,3 @@ df_density_long <- calc_density_by_loc(tt = df_tt,
 write_csv(df_density_long, paste0(g_drive, "results/density/deployments/", proj, "_all-years_density_long_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
