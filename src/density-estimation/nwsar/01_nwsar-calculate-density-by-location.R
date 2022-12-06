@@ -2,9 +2,9 @@
 
 # Project:          NWSAR
 
-# Title:            Process Raw Camera Data
-# Description:      Process raw NWSAR camera tag data from WildTrax in preparation for downstream density estimation,
-#                   as well as extract NONE gap class information.
+# Title:            Calculate density of species by project/location
+# Description:      Process raw NWSAR camera tag data from WildTrax and estimate density using the time in front of
+#                   method.
 # Author:           Marcus Becker
 
 # Previous scripts: None
@@ -20,7 +20,7 @@ library(keyring)   # For storing credentials safely
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Source functions for TIFC workflow
-source("./src/functions/tifc_workflow.R")
+source("./src/functions/estimate-density-tifc.R")
 
 # Species character strings
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
@@ -59,7 +59,7 @@ image_reports <- map_df(.x = nwsar_proj_ids,
                           report = "image",
                           weather_cols = FALSE))
 
-# Strip it down to include on relevant information (trigger, field of view)
+# Strip it down to include only relevant information (trigger, field of view)
 image_fov_trigger <- image_reports |>
   select(project, location, date_detected, trigger, field_of_view)
 
@@ -91,7 +91,7 @@ tags_clean |>
 
 # Save (all) cleaned data
 tags_clean |>
-  write_csv(paste0(g_drive, "data/base/clean/" proj, "_all-years_all-data_clean_", Sys.Date(), ".csv"))
+  write_csv(paste0(g_drive, "data/base/clean/", proj, "_all-years_all-data_clean_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 

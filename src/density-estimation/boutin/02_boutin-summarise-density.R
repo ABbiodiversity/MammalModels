@@ -78,7 +78,3 @@ df_proj_density <- df_dep_density_subset |>
 
 write_csv(df_proj_density, paste0(g_drive, "results/density/areas/", proj, "_density-by-project_", Sys.Date(), ".csv"))
 
-
-
-
-
