@@ -53,6 +53,7 @@ pt_2019_to_2022 <- d_long |>
   # Remove ARU-only points
   filter(deployment == "CAM" | deployment == "BOTH") |>
   # Adjustments to the WildtraxProject field need to be made for sites that were revisited.
+  mutate_if(is.factor, as.character) |>
   mutate(project = case_when(
     str_detect(WildtraxProject, "2014|2015|2016|2017") ~ paste0("ABMI Ecosystem Health ", survey_year),
     TRUE ~ WildtraxProject)) |>
@@ -144,6 +145,9 @@ pt_2013_to_2018_all <- bind_rows(
   eh_2013_to_2018
 )
 
+# Write cleaned up version to csv
+write_csv(pt_2013_to_2018_all, paste0(g_drive, "data/lookup/veghf/abmi-cmu_2013-2018_vegsoilhf-detdistveg_", Sys.Date(), ".csv"))
+
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Finally, let's do 2021 and 2022.
@@ -179,6 +183,9 @@ pt_2019_to_2022_all <- bind_rows(
   pt_2019_2020_all,
   pt_2021_2022_all
 )
+
+# Save as csv - these have not been manually checked.
+write_csv(pt_2019_to_2022_all, paste0(g_drive, "data/lookup/veghf/abmi-cmu-nwsar_2019-2022_vegsoilhf_raw_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 

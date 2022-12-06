@@ -1,10 +1,10 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Project:          NWSAR
+# Project:          CMU
 
 # Title:            Calculate density of species by project/location
-# Description:      Process raw NWSAR camera tag data from WildTrax and estimate density using the time in front of
-#                   camera method.
+# Description:      Process raw CMU camera tag data from WildTrax and estimate density using the time in front of camera
+#                   method.
 # Author:           Marcus Becker
 
 # Previous scripts: None
@@ -26,7 +26,7 @@ source("./src/functions/estimate-density-tifc.R")
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
 # Project
-proj <- "nwsar"
+proj <- "cmu"
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -39,20 +39,22 @@ Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
 wt_auth()
 
 # Pull NWSAR project IDs
-nwsar_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
-  filter(str_detect(project, "Northwest")) |>
+cmu_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(str_detect(project, "CMU"),
+         # Remove the Lemming project
+         !str_detect(project, "Lemming")) |>
   pull(project_id) |>
   unlist()
 
 # Download tag and image reports using IDs
-tag_reports <- map_df(.x = nwsar_proj_ids,
+tag_reports <- map_df(.x = cmu_proj_ids,
                       .f = ~ wt_download_report(
                         project_id = .x,
                         sensor_id = "CAM",
                         report = "tag",
                         weather_cols = FALSE))
 
-image_reports <- map_df(.x = nwsar_proj_ids,
+image_reports <- map_df(.x = cmu_proj_ids,
                         .f = ~ wt_download_report(
                           project_id = .x,
                           sensor_id = "CAM",
@@ -77,7 +79,7 @@ tags_clean <- tag_reports |>
 # Save cleaned and binded data to Shared Google Drive
 # (so we don't have to re-download from WildTrax each time)
 
-# Last done: December 1, 2022
+# Last done:
 
 # Simple image reports
 image_fov_trigger |>
@@ -128,22 +130,7 @@ write_csv(df_tt, paste0(g_drive, "data/processed/time-in-cam-fov/", proj, "_all-
 
 # Calculate density at each location
 
-library(googlesheets4)
-library(googledrive)
 
-# Get VegForDetectionDistance information from Google Sheets.
-veghf_sheets <- drive_find(type = "spreadsheet", shared_drive = "ABMI Camera Mammals") |>
-  filter(str_detect(name, "Northwest")) |>
-  select(id) |>
-  pull()
-
-# Dataframe for use in density function
-df_vegdetdist <- map_df(.x = veghf_sheets,
-                        .f = ~ read_sheet(
-                          ss = .x
-                        )) |>
-  select(project, location, VegForDetectionDistance) |>
-  unite("project_location", project, location, sep = "_", remove = TRUE)
 
 # Calculate density (long and wide)
 df_density_long <- calc_density_by_loc(tt = df_tt,
@@ -163,4 +150,10 @@ write_csv(df_density_long, paste0(g_drive, "results/density/deployments/", proj,
 write_csv(df_density_wide, paste0(g_drive, "results/density/deployments/", proj, "_all-years_density_wide_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
 
