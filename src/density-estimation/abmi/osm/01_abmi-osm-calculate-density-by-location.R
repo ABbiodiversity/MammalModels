@@ -152,3 +152,10 @@ write_csv(df_density_long, paste0(g_drive, "results/density/deployments/", proj,
 write_csv(df_density_wide, paste0(g_drive, "results/density/deployments/", proj, "_all-years_density_wide_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
+
+# Pull out trail comparisons
+osm_trail <- df_density_wide |>
+  filter(str_detect(location, "A$|B$"))
+
+#-----------------------------------------------------------------------------------------------------------------------
+

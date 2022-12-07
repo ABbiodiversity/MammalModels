@@ -119,7 +119,7 @@ write_csv(df_tbd_summary, paste0(g_drive, "data/processed/time-by-day/", proj, "
 df_tt <- tags_clean |>
   # First calculate time by series
   calculate_time_by_series() |>
-  # Next calculate tifc by location, deployment, species
+  # Next calculate TIFC by location, deployment, species
   sum_total_time(tbd = df_tbd_summary)
 
 # Write results
@@ -128,18 +128,54 @@ write_csv(df_tt, paste0(g_drive, "data/processed/time-in-cam-fov/", proj, "_all-
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+project <- c("CMU 2017",
+              "CMU 2018",
+              "CMU Ecosystem Monitoring Camera Program 2019",
+              "CMU Ecosystem Monitoring Camera Program 2020",
+              "CMU Ecosystem Monitoring Camera Program 2021")
+
 # Calculate density at each location
 
+# VegForDetectionDistance lookups:
+df_veghf <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_all-years_veghf-soilhf-detdistveg_2021-10-06.csv")) |>
+  filter(str_detect(project, "^CMU")) |>
+  # Note: Purely using location, not project. Locations should be consistent project-to-project.
+  select(location, VegForDetectionDistance) |>
+  distinct()
+
+# Updated values from database:
+# Create database connection to CMU VegHF Checks (SQLite db)
+cvc <- DBI::dbConnect(
+  drv = RSQLite::SQLite(),
+  paste0(g_drive, "database/cmu-veghf-checks.db")
+)
+
+# Tables
+tables <- DBI::dbListTables(conn = cvc) |> str_subset("updates")
+
+# Pull updated data (from visual classification)
+updated_veghf <- map_df(.x = tables, .f = ~ DBI::dbReadTable(conn = cvc, name = .x)) |>
+  filter(!VegForDetectionDistance_updated == "")
+
+# Update VegHF
+df_veghf_updated <- df_veghf |>
+  left_join(updated_veghf, by = "location") |>
+  mutate(VegForDetectionDistance = ifelse(!is.na(VegForDetectionDistance_updated),
+                                          VegForDetectionDistance_updated,
+                                          VegForDetectionDistance)) |>
+  select(1, 2) |>
+  crossing(project) |>
+  unite("project_location", project, location, sep = "_", remove = TRUE)
 
 
-# Calculate density (long and wide)
+# Calculate density
 df_density_long <- calc_density_by_loc(tt = df_tt,
-                                       veg = df_vegdetdist,
+                                       veg = df_veghf_updated,
                                        cam_fov_angle = 40,
                                        format = "long")
 
 df_density_wide <- calc_density_by_loc(tt = df_tt,
-                                       veg = df_vegdetdist,
+                                       veg = df_veghf_updated,
                                        cam_fov_angle = 40,
                                        format = "wide")
 
@@ -151,9 +187,11 @@ write_csv(df_density_wide, paste0(g_drive, "results/density/deployments/", proj,
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+# Pull out Trail (and paired) deployments
 
+# CHR 2018, CHR 2019, ADE 2020
 
+trail <- df_density_wide |>
+  filter(str_detect(location, "CHR") & str_detect(project, "2018|2019") | str_detect(location, "ADE") & str_detect(project, "2020"))
 
-
-
-
+#-----------------------------------------------------------------------------------------------------------------------
