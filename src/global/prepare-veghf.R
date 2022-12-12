@@ -189,6 +189,15 @@ write_csv(pt_2019_to_2022_all, paste0(g_drive, "data/lookup/veghf/abmi-cmu-nwsar
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+# Prepare a VegForDetectionDistance lookup
+
+check <- pt_2019_to_2022_all |>
+  bind_rows(pt_2013_to_2018_all) |>
+  select(2, 1, 5) |>
+  write_csv(paste(g_drive, "data/lookup/veghf/VegForDetectionDistance/"))
+
+#-----------------------------------------------------------------------------------------------------------------------
+
 # Image reports
 
 # Paths to the image reports (already downloaded from WildTrax)
