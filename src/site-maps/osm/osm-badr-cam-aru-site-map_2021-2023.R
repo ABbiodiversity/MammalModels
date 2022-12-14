@@ -52,6 +52,10 @@ sf_hab_treat <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/veg-tre
 sf_decidmix <- sf_hab_treat |> filter(type == "DecidMix40")
 sf_treedlow <- sf_hab_treat |> filter(type == "TreedLow20")
 
+# Proposed 2023 cam/aru sites
+sf_sites_2023 <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/camaru_proposed_sites_osm_badr_2023.shp")) |>
+  st_transform(4326)
+
 # Icon
 cam <- makeAwesomeIcon(
   icon = "camera",
@@ -101,6 +105,7 @@ map <- sf_ab |>
   addMapPane(name = "Boundaries LU", zIndex = 410) |>
   addMapPane(name = "Boundaries JEM", zIndex = 415) |>
   addMapPane(name = "Habitat Treatment Data", zIndex = 420) |>
+  addMapPane(name = "2023 Camera Sites", zIndex = 430) |>
 
   # Add polygon layers:
 
@@ -157,10 +162,21 @@ map <- sf_ab |>
               popup = paste("Treatment: ", "<b>", sf_treedlow$treatment, "</b>"),
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
 
+  # 2023 Camera Sites
+  addAwesomeMarkers(data = sf_sites_2023,
+                    icon = cam,
+                    group = "2023 Camera Sites",
+                    options = leafletOptions(pane = "2023 Camera Sites"),
+                    popup = paste("ID: ", "<b>", sf_sites_2023$camera, "</b>",
+                                  "<br>", "<br>",
+                                  "Project:", "<br>",
+                                  sf_sites_2023$jem)) |>
+
   # Layers control
   addLayersControl(overlayGroups = c("Landscape Units",
                                      "JEM Sites",
-                                     "Satellite Imagery"),
+                                     "Satellite Imagery",
+                                     "2023 Camera Sites"),
                    baseGroups = c("None", "Habitat: DecidMix40+", "Habitat: TreedLow20+"),
                    options = layersControlOptions(collapsed = FALSE),
                    position = "topright") |>
