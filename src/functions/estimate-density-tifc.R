@@ -474,7 +474,7 @@ sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288
   tt_nn <- tbd |>
     # Retrieve only those that had no images of animals
     anti_join(tt, by = "project_location") |>
-    expand(project_location, season = c("summer", "winter"), common_name = sp) |>
+    crossing(season = c("summer", "winter"), common_name = sp) |>
     # Re-join time-by-day information
     left_join(tbd, by = c("project_location")) |>
     # Add total_duration column, which is zero in these cases
@@ -499,7 +499,7 @@ sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288
 #' @param veg Lookup table of the VegForDetectionDistance category of each camera location.
 #' @param cam_fov_angle Numeric; defaults to 40.
 
-calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long") {
+calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long", include_project = TRUE) {
 
   # Path to Google Drive
   g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
