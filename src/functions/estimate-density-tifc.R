@@ -241,6 +241,62 @@ get_operating_days <- function(image_report, include_project = TRUE, summarise =
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+# Define function to extract and summarise number of operating days based on custom date ranges (i.e., monitoring periods)
+# @param x The dataframe of all deployments and operating days
+# @param date_start The start date; will be converted to a Date automatically
+# @param date_end The end date; will be converted to a Date automatically
+
+# Issue: the filter removes 0 combinations, which we probably (?) want to keep.
+
+summarise_op_days_by_mp <- function(x, date_start, date_end, season = TRUE) {
+
+  # Convert date_start and date_end to Date
+  date_start <- as.Date(date_start)
+  date_end <- as.Date(date_end)
+
+  # Summarise based on custom date range
+  if(season) {
+    y <- x |>
+      filter(date >= date_start,
+             date <= date_end) |>
+      mutate_at(c("location", "season"), factor) |>
+      group_by(location, season, .drop = FALSE) |>
+      summarise(operating_days = sum(operating)) |>
+      ungroup() |>
+      pivot_wider(id_cols = location, names_from = season, values_from = operating_days)
+
+    if("winter" %in% names(y)) {
+      y
+    } else {
+      y <- y |> mutate(winter = 0)
+    }
+
+    if("summer" %in% names(y)) {
+      y
+    } else {
+      y <- y |> mutate(summer = 0)
+    }
+
+    z <- y |>
+      mutate(total_days = summer + winter) |>
+      select(location, total_days, total_summer_days = summer, total_winter_days = winter)
+  } else {
+    z <- x |>
+      filter(date >= date_start,
+             date <= date_end) |>
+      mutate_at(c("location"), factor) |>
+      group_by(location, .drop = FALSE) |>
+      summarise(total_days = sum(operating)) |>
+      ungroup()
+  }
+
+  return(z)
+
+}
+
+
+#-----------------------------------------------------------------------------------------------------------------------
+
 # This function is not suited for our internal purposes, but might be useful code for wildRtrax at some point?
 
 #'

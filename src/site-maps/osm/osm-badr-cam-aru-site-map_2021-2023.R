@@ -53,8 +53,9 @@ sf_decidmix <- sf_hab_treat |> filter(type == "DecidMix40")
 sf_treedlow <- sf_hab_treat |> filter(type == "TreedLow20")
 
 # Proposed 2023 cam/aru sites
-sf_sites_2023 <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/camaru_proposed_sites_osm_badr_2023.shp")) |>
-  st_transform(4326)
+sf_sites_2023 <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/camaru_proposed_sites_osm_badr_2023.shp"))
+
+st_crs(sf_sites_2023)
 
 # Icon
 cam <- makeAwesomeIcon(
@@ -125,6 +126,8 @@ map <- sf_ab |>
               smoothFactor = 0.2,
               opacity = 1,
               fillOpacity = 0.05,
+              group = "Landscape Units",
+              options = leafletOptions(pane = "Boundaries LU"),
               popup = paste("Treatment: ", "<b>", sf_lu$label, "</b>",
                             "<br>",
                             "Sampling Year: ", "<b>", sf_lu$year, "</b>",
