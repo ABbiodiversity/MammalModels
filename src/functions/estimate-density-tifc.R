@@ -241,6 +241,62 @@ get_operating_days <- function(image_report, include_project = TRUE, summarise =
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+# Define function to extract and summarise number of operating days based on custom date ranges (i.e., monitoring periods)
+# @param x The dataframe of all deployments and operating days
+# @param date_start The start date; will be converted to a Date automatically
+# @param date_end The end date; will be converted to a Date automatically
+
+# Issue: the filter removes 0 combinations, which we probably (?) want to keep.
+
+summarise_op_days_by_mp <- function(x, date_start, date_end, season = TRUE) {
+
+  # Convert date_start and date_end to Date
+  date_start <- as.Date(date_start)
+  date_end <- as.Date(date_end)
+
+  # Summarise based on custom date range
+  if(season) {
+    y <- x |>
+      filter(date >= date_start,
+             date <= date_end) |>
+      mutate_at(c("location", "season"), factor) |>
+      group_by(location, season, .drop = FALSE) |>
+      summarise(operating_days = sum(operating)) |>
+      ungroup() |>
+      pivot_wider(id_cols = location, names_from = season, values_from = operating_days)
+
+    if("winter" %in% names(y)) {
+      y
+    } else {
+      y <- y |> mutate(winter = 0)
+    }
+
+    if("summer" %in% names(y)) {
+      y
+    } else {
+      y <- y |> mutate(summer = 0)
+    }
+
+    z <- y |>
+      mutate(total_days = summer + winter) |>
+      select(location, total_days, total_summer_days = summer, total_winter_days = winter)
+  } else {
+    z <- x |>
+      filter(date >= date_start,
+             date <= date_end) |>
+      mutate_at(c("location"), factor) |>
+      group_by(location, .drop = FALSE) |>
+      summarise(total_days = sum(operating)) |>
+      ungroup()
+  }
+
+  return(z)
+
+}
+
+
+#-----------------------------------------------------------------------------------------------------------------------
+
 # This function is not suited for our internal purposes, but might be useful code for wildRtrax at some point?
 
 #'
@@ -418,7 +474,7 @@ sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288
   tt_nn <- tbd |>
     # Retrieve only those that had no images of animals
     anti_join(tt, by = "project_location") |>
-    expand(project_location, season = c("summer", "winter"), common_name = sp) |>
+    crossing(season = c("summer", "winter"), common_name = sp) |>
     # Re-join time-by-day information
     left_join(tbd, by = c("project_location")) |>
     # Add total_duration column, which is zero in these cases
@@ -443,7 +499,7 @@ sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288
 #' @param veg Lookup table of the VegForDetectionDistance category of each camera location.
 #' @param cam_fov_angle Numeric; defaults to 40.
 
-calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long") {
+calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long", include_project = TRUE) {
 
   # Path to Google Drive
   g_drive <- "G:/Shared drives/ABMI Camera Mammals/"

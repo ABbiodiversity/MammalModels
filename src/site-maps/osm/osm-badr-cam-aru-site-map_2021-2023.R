@@ -63,12 +63,31 @@ pal_treedlow <-colorFactor(
 )
 
 # Icons
-cam_abmi <- makeAwesomeIcon(
+cam <- makeAwesomeIcon(
   icon = "camera",
   iconColor = "white",
   library = "ion",
   markerColor = "lightgray"
 )
+
+# Proposed 2023 cam/aru sites
+sites_2023 <- read_csv(paste0(g_drive, "osm-badr-site-selection/osm_2023_sites.csv"))
+
+sf_sites_2023 <- sites_2023 |>
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
+  st_transform(4326)
+
+sf_sites_2023 |>
+  st_transform(3400) |>
+  st_write(paste0(g_drive, "osm-badr-site-selection/spatial/sites_2023_v2.shp"))
+
+# All treatment and habitat areas
+sf_all <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/treat-hab-all-2023-lus.shp")) |>
+  clean_names() |>
+  st_transform(4326)
+
+treedlow <- sf_all |> filter(type == "TreedLow20")
+decidmix <- sf_all |> filter(type == "DecidMix40")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -96,11 +115,12 @@ map <- sf_ab |>
                  circleOptions = FALSE,
                  rectangleOptions = FALSE,
                  circleMarkerOptions = FALSE,
-                 markerOptions = drawMarkerOptions(repeatMode = TRUE, markerIcon = cam_abmi),
+                 markerOptions = drawMarkerOptions(repeatMode = TRUE, markerIcon = cam),
                  editOptions = editToolbarOptions(edit = TRUE, remove = TRUE)) |>
   addMapPane(name = "Boundaries LU", zIndex = 410) |>
   addMapPane(name = "Boundaries JEM", zIndex = 415) |>
   addMapPane(name = "Habitat Treatment Data", zIndex = 420) |>
+  addMapPane(name = "2023 Camera Sites", zIndex = 430) |>
 
   # Add polygon layers:
 
@@ -120,6 +140,8 @@ map <- sf_ab |>
               smoothFactor = 0.2,
               opacity = 1,
               fillOpacity = 0.05,
+              group = "Landscape Units",
+              options = leafletOptions(pane = "Boundaries LU"),
               popup = paste("Treatment: ", "<b>", sf_lu$label, "</b>",
                             "<br>",
                             "Sampling Year: ", "<b>", sf_lu$year, "</b>",
@@ -157,10 +179,21 @@ map <- sf_ab |>
               popup = paste("Treatment: ", "<b>", treedlow$treatment, "</b>"),
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
 
+  # 2023 Camera Sites
+  addAwesomeMarkers(data = sf_sites_2023,
+                    icon = cam,
+                    group = "2023 Camera Sites",
+                    options = leafletOptions(pane = "2023 Camera Sites"),
+                    popup = paste("ID: ", "<b>", sf_sites_2023$camera, "</b>",
+                                  "<br>", "<br>",
+                                  "Project:", "<br>",
+                                  sf_sites_2023$jem)) |>
+
   # Layers control
   addLayersControl(overlayGroups = c("Landscape Units",
                                      "JEM Sites",
-                                     "Satellite Imagery"),
+                                     "Satellite Imagery",
+                                     "2023 Camera Sites"),
                    baseGroups = c("None", "Habitat: DecidMix40+", "Habitat: TreedLow20+"),
                    options = layersControlOptions(collapsed = FALSE),
                    position = "topright") |>
@@ -170,6 +203,7 @@ map <- sf_ab |>
             values = ~ treatment,
             opacity = 1)
 
+# View map
 map
 
 #-----------------------------------------------------------------------------------------------------------------------
