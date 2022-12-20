@@ -29,35 +29,45 @@ sf_ab <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/ab_prov.shp"))
   st_transform(4326)
 
 # Landscape Units (LUs)
-sf_lu <- st_read(paste0(g_drive, "OSM-BADR/LU_3YR/LU_3YR.shp")) |>
+sf_lu <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/LU_3Yr_Aug2022/LU3YR_Aug22.shp")) |>
   st_transform(4326) |>
   clean_names() |>
-  select(lu, label, year, deciles, shape_area)
+  select(lu, lu_treatment = lu_treatmnt, label, year, deciles, shape_area)
 
 # JEM units for 2023 (from Jenet)
 # LUs in 2023-2024: 9, 14, 16, 22
-sf_jem <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/2023_24_JEMS_draft.shp")) |>
+sf_jem <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/jem_2023_buffer_1000m.shp")) |>
   st_transform(4326) |>
   clean_names() |>
-  select(lu, site_name, type, treatment) |>
+  select(lu, site_name, type, treatment, buff_dist) |>
   mutate(year = 2023)
 
-# Add buffer to JEMs (will do in Arc - but do here for now to view.)
-sf_jem_buffer <- st_buffer(sf_jem, 1500)
+# Habitat + Treatment layers
+sf_hab_treat <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/veg-treatment-join-clip-to-2023-jems_v2.shp")) |>
+  st_transform(4326) |>
+  clean_names() |>
+  select(type, treatment)
+
+treedlow <- sf_hab_treat |> filter(type == "TreedLow20")
+decidmix <- sf_hab_treat |> filter(type == "DecidMix40")
+
+# Palettes
+pal_decid <- colorFactor(
+  palette = "Dark2",
+  domain = decidmix$treatment
+)
+
+pal_treedlow <-colorFactor(
+  palette = "Dark2",
+  domain = treedlow$treatment
+)
 
 # Icons
-cam_abmi_2021 <- makeAwesomeIcon(
+cam_abmi <- makeAwesomeIcon(
   icon = "camera",
   iconColor = "white",
   library = "ion",
   markerColor = "lightgray"
-)
-
-cam_abmi_2022 <- makeAwesomeIcon(
-  icon = "camera",
-  iconColor = "black",
-  library = "ion",
-  markerColor = "white"
 )
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -86,7 +96,7 @@ map <- sf_ab |>
                  circleOptions = FALSE,
                  rectangleOptions = FALSE,
                  circleMarkerOptions = FALSE,
-                 markerOptions = drawMarkerOptions(repeatMode = TRUE, markerIcon = cam_abmi_2022),
+                 markerOptions = drawMarkerOptions(repeatMode = TRUE, markerIcon = cam_abmi),
                  editOptions = editToolbarOptions(edit = TRUE, remove = TRUE)) |>
   addMapPane(name = "Boundaries LU", zIndex = 410) |>
   addMapPane(name = "Boundaries JEM", zIndex = 415) |>
@@ -117,7 +127,7 @@ map <- sf_ab |>
                             "LU Code: ", "<b>", sf_lu$lu, "</b>")) |>
 
   # JEM sites + 1500m buffer
-  addPolygons(data = sf_jem_buffer,
+  addPolygons(data = sf_jem,
               color = "#6baed6",
               fillColor = "black",
               weight = 1,
@@ -126,22 +136,43 @@ map <- sf_ab |>
               fillOpacity = 0.1,
               group = "JEM Sites",
               options = leafletOptions(pane = "Boundaries JEM"),
-              popup = paste("Habitat Target: ", "<b>", sf_jem_buffer$type, "</b>", "<br>",
+              popup = paste("Habitat Target: ", "<b>", sf_jem$type, "</b>", "<br>",
                             "<br>",
-                            "Treatment Target: ", "<b>", sf_jem_buffer$treatment, "</b>", "<br>",
+                            "Treatment Target: ", "<b>", sf_jem$treatment, "</b>", "<br>",
                             "<br>",
-                            "JEM Site Code: ", "<b>", sf_jem_buffer$site_name, "</b>"),
+                            "JEM Site Code: ", "<b>", sf_jem$site_name, "</b>"),
+              highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
+
+  # Decidmix40 + HF treatments layer
+  addPolygons(data = decidmix, color = "grey50", fillColor = ~ pal_decid(treatment),
+              weight = 1, smoothFactor = 0.2, opacity = 1, fillOpacity = 0.5, group = "Habitat: DecidMix40+",
+              options = leafletOptions(pane = "Habitat Treatment Data"),
+              popup = paste("Treatment: ", "<b>", decidmix$treatment, "</b>"),
+              highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
+
+  # Treedlow + HF treatments layer
+  addPolygons(data = treedlow, color = "grey50", fillColor = ~ pal_treedlow(treatment),
+              weight = 1, smoothFactor = 0.2, opacity = 1, fillOpacity = 0.5, group = "Habitat: TreedLow20+",
+              options = leafletOptions(pane = "Habitat Treatment Data"),
+              popup = paste("Treatment: ", "<b>", treedlow$treatment, "</b>"),
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
 
   # Layers control
   addLayersControl(overlayGroups = c("Landscape Units",
                                      "JEM Sites",
                                      "Satellite Imagery"),
-                   baseGroups = c("None"),
+                   baseGroups = c("None", "Habitat: DecidMix40+", "Habitat: TreedLow20+"),
                    options = layersControlOptions(collapsed = FALSE),
-                   position = "topright")
+                   position = "topright") |>
+
+  # Legend
+  addLegend(data = decidmix, position = "topright", pal = pal_decid,
+            values = ~ treatment,
+            opacity = 1)
 
 map
+
+#-----------------------------------------------------------------------------------------------------------------------
 
 
 
