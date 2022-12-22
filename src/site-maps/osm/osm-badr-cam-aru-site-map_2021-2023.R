@@ -81,10 +81,14 @@ sf_sites_2023 |>
   st_transform(3400) |>
   st_write(paste0(g_drive, "osm-badr-site-selection/spatial/sites_2023_v2.shp"))
 
+library(rmapshaper)
+
 # All treatment and habitat areas
 sf_all <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/treat-hab-all-2023-lus.shp")) |>
   clean_names() |>
-  st_transform(4326)
+  st_transform(4326) |>
+  select(type, treatment) |>
+  ms_simplify()
 
 treedlow <- sf_all |> filter(type == "TreedLow20")
 decidmix <- sf_all |> filter(type == "DecidMix40")
