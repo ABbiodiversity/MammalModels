@@ -57,6 +57,8 @@ roads <- sf_sites_2023 |>
   filter(tretmnt == "Roads")
 plant_mine <- sf_sites_2023 |>
   filter(tretmnt == "Plant/Mine")
+pre_insitu <- sf_sites_2023 |>
+  filter(tretmnt == "Pre Insitu")
 
 # All treatment and habitat areas
 sf_all <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/treat-hab-all-2023-lus.shp")) |>
@@ -240,6 +242,15 @@ map <- sf_osr |>
                                   "Notes:", "<br>",
                                   roads$cmr_nts)) |>
 
+  addAwesomeMarkers(data = pre_insitu,
+                    icon = cam,
+                    group = "Cam/ARU (Pre Insitu)",
+                    options = leafletOptions(pane = "2023 Camera Sites"),
+                    popup = paste("Location: ", "<b>", pre_insitu$camera, "</b>",
+                                  "<br>", "<br>",
+                                  "Notes:", "<br>",
+                                  pre_insitu$cmr_nts)) |>
+
   # Layers control
   addLayersControl(overlayGroups = c("Satellite Imagery",
                                      "Landscape Units",
@@ -249,7 +260,8 @@ map <- sf_osr |>
                                      "Cam/ARU (Low Activity Well Pads)",
                                      "Cam/ARU (Low Disturbance/Reference)",
                                      "Cam/ARU (Plant/Mine)",
-                                     "Cam/ARU (Roads)"),
+                                     "Cam/ARU (Roads)",
+                                     "Cam/ARU (Pre Insitu)"),
                    baseGroups = c("None", "Habitat: DecidMix40+", "Habitat: TreedLow20+"),
                    options = layersControlOptions(collapsed = FALSE),
                    position = "topright") |>
