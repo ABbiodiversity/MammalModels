@@ -24,32 +24,57 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/projects/"
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Alberta
-sf_ab <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/ab_prov.shp")) |>
+# OSR
+sf_osr <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/AB_OSR.shp")) |>
   st_transform(4326)
 
-# Landscape Units (LUs)
+# Landscape Units (LUs) for all 3 years.
 sf_lu <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/LU_3Yr_Aug2022/LU3YR_Aug22.shp")) |>
   st_transform(4326) |>
   clean_names() |>
   select(lu, lu_treatment = lu_treatmnt, label, year, deciles, shape_area)
 
-# JEM units for 2023 (from Jenet)
-# LUs in 2023-2024: 9, 14, 16, 22
-sf_jem <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/jem_2023_buffer_1000m.shp")) |>
-  st_transform(4326) |>
-  clean_names() |>
-  select(lu, site_name, type, treatment, buff_dist) |>
-  mutate(year = 2023)
+# New JEMs
+sf_jem <- read_csv(paste0(g_drive, "osm-badr-site-selection/jems_2023_v2.csv")) |>
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
+  st_transform(3400) |>
+  st_buffer(dist = 1500, nQuadSegs = 100)
 
-# Habitat + Treatment layers
-sf_hab_treat <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/veg-treatment-join-clip-to-2023-jems_v2.shp")) |>
-  st_transform(4326) |>
-  clean_names() |>
-  select(type, treatment)
+# Proposed 2023 Camera/ARU sites:
+sf_sites_2023 <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/camaru_osm_sites_2023_v3.shp")) |>
+  st_transform(4326)
 
-treedlow <- sf_hab_treat |> filter(type == "TreedLow20")
-decidmix <- sf_hab_treat |> filter(type == "DecidMix40")
+# High Activity In Situ
+high_insitu <- sf_sites_2023 |>
+  filter(tretmnt == "High Activity Insitu Well Pads")
+dense_linear <- sf_sites_2023 |>
+  filter(tretmnt == "Dense Linear Features")
+low_wellpads <- sf_sites_2023 |>
+  filter(tretmnt == "Low Activity Well Pads")
+reference <- sf_sites_2023 |>
+  filter(tretmnt == "Low Disturbance/Reference")
+roads <- sf_sites_2023 |>
+  filter(tretmnt == "Roads")
+plant_mine <- sf_sites_2023 |>
+  filter(tretmnt == "Plant/Mine")
+
+# All treatment and habitat areas
+sf_all <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/treat-hab-all-2023-lus.shp")) |>
+  clean_names() |>
+  select(type, treatment) |>
+  st_intersection(sf_jem) |>
+  st_transform(4326)
+
+# TreedLow20 layer
+treedlow <- sf_all |>
+  filter(type == "TreedLow20")
+
+# DecidMix40 layer
+decidmix <- sf_all |>
+  filter(type == "DecidMix40")
+
+# Change project of JEMs
+sf_jem <- st_transform(sf_jem, crs = 4326)
 
 # Palettes
 pal_decid <- colorFactor(
@@ -65,39 +90,16 @@ pal_treedlow <-colorFactor(
 # Icons
 cam <- makeAwesomeIcon(
   icon = "camera",
-  iconColor = "white",
+  iconColor = "black",
   library = "ion",
-  markerColor = "lightgray"
+  markerColor = "white"
 )
-
-# Proposed 2023 cam/aru sites
-sites_2023 <- read_csv(paste0(g_drive, "osm-badr-site-selection/osm_2023_sites.csv"))
-
-sf_sites_2023 <- sites_2023 |>
-  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
-  st_transform(4326)
-
-sf_sites_2023 |>
-  st_transform(3400) |>
-  st_write(paste0(g_drive, "osm-badr-site-selection/spatial/sites_2023_v2.shp"))
-
-library(rmapshaper)
-
-# All treatment and habitat areas
-sf_all <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/treat-hab-all-2023-lus.shp")) |>
-  clean_names() |>
-  st_transform(4326) |>
-  select(type, treatment) |>
-  ms_simplify()
-
-treedlow <- sf_all |> filter(type == "TreedLow20")
-decidmix <- sf_all |> filter(type == "DecidMix40")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Create interactive map for viewing
 
-map <- sf_ab |>
+map <- sf_osr |>
   leaflet() |>
   addTiles() |>
   addProviderTiles("Esri.WorldImagery",
@@ -184,20 +186,70 @@ map <- sf_ab |>
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
 
   # 2023 Camera Sites
-  addAwesomeMarkers(data = sf_sites_2023,
+  addAwesomeMarkers(data = dense_linear,
                     icon = cam,
-                    group = "2023 Camera Sites",
+                    group = "Cam/ARU (Dense Linear Features)",
                     options = leafletOptions(pane = "2023 Camera Sites"),
-                    popup = paste("ID: ", "<b>", sf_sites_2023$camera, "</b>",
+                    popup = paste("Location: ", "<b>", dense_linear$camera, "</b>",
                                   "<br>", "<br>",
-                                  "Project:", "<br>",
-                                  sf_sites_2023$jem)) |>
+                                  "Notes:", "<br>",
+                                  dense_linear$cmr_nts)) |>
+
+  addAwesomeMarkers(data = high_insitu,
+                    icon = cam,
+                    group = "Cam/ARU (High Activity Insitu Well Pads)",
+                    options = leafletOptions(pane = "2023 Camera Sites"),
+                    popup = paste("Location: ", "<b>", high_insitu$camera, "</b>",
+                                  "<br>", "<br>",
+                                  "Notes:", "<br>",
+                                  high_insitu$cmr_nts)) |>
+
+  addAwesomeMarkers(data = low_wellpads,
+                    icon = cam,
+                    group = "Cam/ARU (Low Activity Well Pads)",
+                    options = leafletOptions(pane = "2023 Camera Sites"),
+                    popup = paste("Location: ", "<b>", low_wellpads$camera, "</b>",
+                                  "<br>", "<br>",
+                                  "Notes:", "<br>",
+                                  low_wellpads$cmr_nts)) |>
+
+  addAwesomeMarkers(data = reference,
+                    icon = cam,
+                    group = "Cam/ARU (Low Disturbance/Reference)",
+                    options = leafletOptions(pane = "2023 Camera Sites"),
+                    popup = paste("Location: ", "<b>", reference$camera, "</b>",
+                                  "<br>", "<br>",
+                                  "Notes:", "<br>",
+                                  reference$cmr_nts)) |>
+
+  addAwesomeMarkers(data = plant_mine,
+                    icon = cam,
+                    group = "Cam/ARU (Plant/Mine)",
+                    options = leafletOptions(pane = "2023 Camera Sites"),
+                    popup = paste("Location: ", "<b>", plant_mine$camera, "</b>",
+                                  "<br>", "<br>",
+                                  "Notes:", "<br>",
+                                  plant_mine$cmr_nts)) |>
+
+  addAwesomeMarkers(data = roads,
+                    icon = cam,
+                    group = "Cam/ARU (Roads)",
+                    options = leafletOptions(pane = "2023 Camera Sites"),
+                    popup = paste("Location: ", "<b>", roads$camera, "</b>",
+                                  "<br>", "<br>",
+                                  "Notes:", "<br>",
+                                  roads$cmr_nts)) |>
 
   # Layers control
-  addLayersControl(overlayGroups = c("Landscape Units",
+  addLayersControl(overlayGroups = c("Satellite Imagery",
+                                     "Landscape Units",
                                      "JEM Sites",
-                                     "Satellite Imagery",
-                                     "2023 Camera Sites"),
+                                     "Cam/ARU (Dense Linear Features)",
+                                     "Cam/ARU (High Activity Insitu Well Pads)",
+                                     "Cam/ARU (Low Activity Well Pads)",
+                                     "Cam/ARU (Low Disturbance/Reference)",
+                                     "Cam/ARU (Plant/Mine)",
+                                     "Cam/ARU (Roads)"),
                    baseGroups = c("None", "Habitat: DecidMix40+", "Habitat: TreedLow20+"),
                    options = layersControlOptions(collapsed = FALSE),
                    position = "topright") |>
@@ -212,8 +264,7 @@ map
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+# Save map
+htmlwidgets::saveWidget(map, file = "./docs/osm_cam-aru_site_map.html", selfcontained = FALSE)
 
-
-
-
-
+#-----------------------------------------------------------------------------------------------------------------------
