@@ -46,13 +46,13 @@ veg_current <- data.frame(as.matrix(veg_current)) |>
 
 # Add in info about km2 cells - lat, long, natural region and subregion, landuse framework
 kgrid_veg_current_north <- kgrid |>
-  mutate(lat = ifelse(POINT_Y < 51.5, 51.5, POINT_Y)) |>
-  select(long = POINT_X, true_lat = POINT_Y, lat, nr = NRNAME, nsr = NSRNAME, luf = LUF_NAME, AHM:pAspen) |>
+  mutate(Lat = ifelse(POINT_Y < 51.5, 51.5, POINT_Y)) |>
+  select(Long = POINT_X, TrueLat = POINT_Y, Lat, NR = NRNAME, NSR = NSRNAME, LUF = LUF_NAME, AHM:pAspen) |>
   rownames_to_column(var = "LinkID") |>
   # Join veghf information
   left_join(veg_current, by = "LinkID") |>
   # Include only the north cells (by definition, anything that isn't in the grassland natural region)
-  filter(!nr == "Grassland") |>
+  filter(!NR == "Grassland") |>
   # Combine veg categories in the km2 grid to match available coefficients
   mutate(TreedSwamp = rowSums(across(TreedSwamp1:TreedSwamp9)),
          TreedFen = rowSums(across(TreedFen1:TreedFen9)),
@@ -69,18 +69,18 @@ kgrid_veg_current_north <- kgrid |>
   # Remove the oldest age class columns
   select(-ends_with("9")) |>
   # Add alternative NSR groupings for modeling; note that the Boreal NR is broken down further
-  mutate(nr_alt = case_when(
-    nsr == "Central Parkland" | nsr == "Foothills Parkland" | nsr == "Peace River Parkland" ~ "Parkland",
-    nsr == "Dry Mixedwood" ~ "DryMixedwood",
-    nsr == "Central Mixedwood" ~ "CentralMixedwood",
-    nsr == "Lower Foothills" | nsr == "Upper Foothills" ~ "Foothills",
-    nsr == "Lower Boreal Highlands" | nsr == "Upper Boreal Highlands" | nsr == "Boreal Subarctic" | nsr == "Northern Mixedwood" ~ "North",
-    nsr == "Kazan Uplands" | nsr == "Peace-Athabasca Delta" | nsr == "Athabasca Plain" ~ "Shield",
-    nsr == "Montane" | nsr == "Subalpine" | nsr == "Alpine" ~ "Mountain"
+  mutate(NSR_ALT = case_when(
+    NSR == "Central Parkland" | NSR == "Foothills Parkland" | NSR == "Peace River Parkland" ~ "NSR1Parkland",
+    NSR == "Dry Mixedwood" ~ "NSR1DryMixedwood",
+    NSR == "Central Mixedwood" ~ "NSR1CentralMixedwood",
+    NSR == "Lower Foothills" | NSR == "Upper Foothills" ~ "NSR1Foothills",
+    NSR == "Lower Boreal Highlands" | NSR == "Upper Boreal Highlands" | NSR == "Boreal Subarctic" | NSR == "Northern Mixedwood" ~ "NSR1North",
+    NSR == "Kazan Uplands" | NSR == "Peace-Athabasca Delta" | NSR == "Athabasca Plain" ~ "NSR1Shield",
+    NSR == "Montane" | NSR == "Subalpine" | NSR == "Alpine" ~ "NSR1Mountain"
   )) |>
   # Split `nr_alt` into wide form
   mutate(value = 1) |>
-  pivot_wider(names_from = nr_alt, values_from = value, values_fill = list(value = 0))
+  pivot_wider(names_from = NSR_ALT, values_from = value, values_fill = list(value = 0))
 
 #rm(veg_current)
 gc()
@@ -133,13 +133,13 @@ veg_reference <- data.frame(as.matrix(veg_reference)) |>
 
 # Add in info about km2 cells - lat, long, natural region and subregion, landuse framework
 kgrid_veg_reference_north <- kgrid |>
-  mutate(lat = ifelse(POINT_Y < 51.5, 51.5, POINT_Y)) |>
-  select(long = POINT_X, true_lat = POINT_Y, lat, nr = NRNAME, nsr = NSRNAME, luf = LUF_NAME, AHM:pAspen) |>
+  mutate(Lat = ifelse(POINT_Y < 51.5, 51.5, POINT_Y)) |>
+  select(Long = POINT_X, TrueLat = POINT_Y, Lat, NR = NRNAME, NSR = NSRNAME, LUF = LUF_NAME, AHM:pAspen) |>
   rownames_to_column(var = "LinkID") |>
   # Join veghf information
   left_join(veg_reference, by = "LinkID") |>
   # Include only the north cells (by definition, anything that isn't in the grassland natural region)
-  filter(!nr == "Grassland") |>
+  filter(!NR == "Grassland") |>
   # Combine veg categories in the km2 grid to match available coefficients
   mutate(TreedSwamp = rowSums(across(TreedSwamp1:TreedSwamp9)),
          TreedFen = rowSums(across(TreedFen1:TreedFen9)),
@@ -156,18 +156,18 @@ kgrid_veg_reference_north <- kgrid |>
   # Remove the oldest age class columns
   select(-ends_with("9")) |>
   # Add alternative NSR groupings for modeling; note that the Boreal NR is broken down further
-  mutate(nr_alt = case_when(
-    nsr == "Central Parkland" | nsr == "Foothills Parkland" | nsr == "Peace River Parkland" ~ "Parkland",
-    nsr == "Dry Mixedwood" ~ "DryMixedwood",
-    nsr == "Central Mixedwood" ~ "CentralMixedwood",
-    nsr == "Lower Foothills" | nsr == "Upper Foothills" ~ "Foothills",
-    nsr == "Lower Boreal Highlands" | nsr == "Upper Boreal Highlands" | nsr == "Boreal Subarctic" | nsr == "Northern Mixedwood" ~ "North",
-    nsr == "Kazan Uplands" | nsr == "Peace-Athabasca Delta" | nsr == "Athabasca Plain" ~ "Shield",
-    nsr == "Montane" | nsr == "Subalpine" | nsr == "Alpine" ~ "Mountain"
+  mutate(NSR_ALT = case_when(
+    NSR == "Central Parkland" | NSR == "Foothills Parkland" | NSR == "Peace River Parkland" ~ "NSR1Parkland",
+    NSR == "Dry Mixedwood" ~ "NSR1DryMixedwood",
+    NSR == "Central Mixedwood" ~ "NSR1CentralMixedwood",
+    NSR == "Lower Foothills" | NSR == "Upper Foothills" ~ "NSR1Foothills",
+    NSR == "Lower Boreal Highlands" | NSR == "Upper Boreal Highlands" | NSR == "Boreal Subarctic" | NSR == "Northern Mixedwood" ~ "NSR1North",
+    NSR == "Kazan Uplands" | NSR == "Peace-Athabasca Delta" | NSR == "Athabasca Plain" ~ "NSR1Shield",
+    NSR == "Montane" | NSR == "Subalpine" | NSR == "Alpine" ~ "NSR1Mountain"
   )) |>
   # Split `nr_alt` into wide form
   mutate(value = 1) |>
-  pivot_wider(names_from = nr_alt, values_from = value, values_fill = list(value = 0))
+  pivot_wider(names_from = NSR_ALT, values_from = value, values_fill = list(value = 0))
 
 #-----------------------------------------------------------------------------------------------------------------------
 

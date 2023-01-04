@@ -406,6 +406,7 @@ for (sp in 1:length(SpTable)) {
         aic.wt.age.models[i]<-exp(-1/2*q[1])/sum(exp(-1/2*q))
       }
       names(aic.wt.age.models)<-c("Spruce","Pine","Decid","Mixedwood","TreedBog","DecidMixed","UpCon","TreedAll")
+
       # 2.3 Then make age predictions only if the spline model is better than the null, and only for (groupings of) stand types in the pa model
       age.flag<-rep(0,10)  # Flag for separate age predictions for each stand type {Spruce, Pine, Deciduous, Mixedwood, TreedBog, TreedWet (includes TreedSwamp), DecidMixed, UpCon, UplandForest, TreedAll) (0=no, 1=yes)
       p.age<-p.age.se<-array(NA,c(10,9))  # Predictions for 10 stand types, 9 age classes
@@ -504,7 +505,7 @@ for (sp in 1:length(SpTable)) {
       aic.wt.age.models.save[seas,sp,]<-aic.wt.age.models
 
       # 3. Calculate total abundance coefficients
-      # 3.1 Assemble presence/absence coefficients for each veg+HF type then multiply by appropriate Coef.agp term to generate Coef.mean matrixincluding expanding out stand types that have ages, to populate entire Coef.pa matrix,
+      # 3.1 Assemble presence/absence coefficients for each veg+HF type then multiply by appropriate Coef.agp term to generate Coef.mean matrix including expanding out stand types that have ages, to populate entire Coef.pa matrix,
       for (i in 1:length(terms.pa1)) {
         j<-as.character(pm$VegType[pm[,terms.pa1[i]]==1])  # The fine veg+HF types that are covered by the (potentially broader) variable included in the best model
         for (j1 in 1:length(j)) {

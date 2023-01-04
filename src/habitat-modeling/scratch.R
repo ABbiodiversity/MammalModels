@@ -24,3 +24,20 @@ check <- kgrid_veg_current_north %>%
 
 check1 <- check %>%
   pivot_wider(names_from = nr_alt, values_from = n, values_fill = list(n = 0))
+
+check <- d1 |> filter(is.na(NearestSite) & is.na(Lat) & is.na(Long)) |>
+  select(location, project, NearestSite, Lat, Long)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
