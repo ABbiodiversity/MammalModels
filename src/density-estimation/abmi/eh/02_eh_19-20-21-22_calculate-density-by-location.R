@@ -1,6 +1,6 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Project:          ABMI (Off-Grid)
+# Project:          ABMI (Ecosystem Health)
 
 # Title:            Calculate density of species by project/location
 # Description:      Process raw ABMI Off-Grid camera tag data from WildTrax and estimate density using the time in front of
@@ -26,7 +26,7 @@ source("./src/functions/estimate-density-tifc.R")
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
 # Project
-proj <- "og"
+proj <- "eh"
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -38,21 +38,21 @@ Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
 # Authenticate into WildTrax
 wt_auth()
 
-# Pull OG project IDs
-og_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
-  filter(str_detect(project, "Off-Grid|Focal|ABMI Amphib|Edge")) |>
+# Pull EH project IDs - 2019, 2020, 2021, and 2022.
+eh_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(str_detect(project, "Health 2019|Health 2020|Health 2021|Health 2022")) |>
   pull(project_id) |>
   unlist()
 
 # Download tag and image reports using IDs
-tag_reports <- map_df(.x = og_proj_ids,
+tag_reports <- map_df(.x = eh_proj_ids,
                       .f = ~ wt_download_report(
                         project_id = .x,
                         sensor_id = "CAM",
                         report = "tag",
                         weather_cols = FALSE))
 
-image_reports <- map_df(.x = og_proj_ids,
+image_reports <- map_df(.x = eh_proj_ids,
                         .f = ~ wt_download_report(
                           project_id = .x,
                           sensor_id = "CAM",
@@ -77,25 +77,25 @@ tags_clean <- tag_reports |>
 # Save cleaned and binded data to Shared Google Drive
 # (so we don't have to re-download from WildTrax each time)
 
-# Last done: December 6, 2022
+# Last done: January 5, 2023
 
 # Simple image reports
 image_fov_trigger |>
-  write_csv(paste0(g_drive, "data/lookup/images/", proj, "_all-years_image-report_simple.csv"))
+  write_csv(paste0(g_drive, "data/lookup/images/", proj, "_19-20-21-22_image-report_simple.csv"))
 
 # Only tags of species
 tags_clean |>
   # Remove all non-native mammal images
   filter(common_name %in% native_sp) |>
-  write_csv(paste0(g_drive, "data/base/clean/", proj, "_all-years_native-sp_clean_", Sys.Date(), ".csv"))
+  write_csv(paste0(g_drive, "data/base/clean/", proj, "_19-20-21-22_native-sp_clean_", Sys.Date(), ".csv"))
 
 # Save (all) cleaned data
 tags_clean |>
-  write_csv(paste0(g_drive, "data/base/clean/", proj, "_all-years_all-data_clean_", Sys.Date(), ".csv"))
+  write_csv(paste0(g_drive, "data/base/clean/", proj, "_19-20-21-22_all-data_clean_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Summarise time-by-day for each camera deployment in the two NWSAR projects.
+# Summarise time-by-day for each camera deployment in the four EH projects (19, 20, 21, 22).
 
 df_tbd_summary <- get_operating_days(
   image_report = image_fov_trigger,
@@ -108,7 +108,7 @@ df_tbd_summary <- get_operating_days(
 )
 
 # Write results
-write_csv(df_tbd_summary, paste0(g_drive, "data/processed/time-by-day/", proj, "_all-years_tbd-summary_", Sys.Date(), ".csv"))
+write_csv(df_tbd_summary, paste0(g_drive, "data/processed/time-by-day/", proj, "_19-20-21-22_tbd-summary_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -122,7 +122,7 @@ df_tt <- tags_clean |>
 
 # Write results
 # Full results long:
-write_csv(df_tt, paste0(g_drive, "data/processed/time-in-cam-fov/", proj, "_all-years_fov-time_long_", Sys.Date(), ".csv"))
+write_csv(df_tt, paste0(g_drive, "data/processed/time-in-cam-fov/", proj, "_19-20-21-22_fov-time_long_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -134,24 +134,17 @@ library(googlesheets4)
 library(googledrive)
 
 # Get VegForDetectionDistance information from Google Sheets.
+# Note: Only 2019-2022 available here.
 veghf_sheets <- drive_find(type = "spreadsheet", shared_drive = "ABMI Camera Mammals") |>
-  filter(str_detect(name, "Focal|Amphibian")) |>
+  filter(str_detect(name, "Ecosystem Health")) |>
   select(id) |>
   pull()
 
 # Dataframe for use in density function
-df_vegdetdist_focal <- map_df(.x = veghf_sheets,
+df_vegdetdist <- map_df(.x = veghf_sheets,
                               .f = ~ read_sheet(ss = .x)) |>
   select(project, location, VegForDetectionDistance) |>
   unite("project_location", project, location, sep = "_", remove = TRUE)
-
-# Bring in information form 2013-2018 contained in lookup file (manually checked in the)
-df_vegdetdist <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_2013-2018_vegsoilhf-detdistveg_2022-12-06.csv")) |>
-  # This lookup contains only OG projects and the Edge-Interior project
-  filter(str_detect(project, "Off-Grid|Edge")) |>
-  select(project, location, VegForDetectionDistance) |>
-  unite("project_location", project, location, sep = "_", remove = TRUE) |>
-  bind_rows(df_vegdetdist_focal)
 
 # Calculate density (long and wide)
 df_density_long <- calc_density_by_loc(tt = df_tt,
@@ -166,8 +159,11 @@ df_density_wide <- calc_density_by_loc(tt = df_tt,
 
 # Write results
 
-write_csv(df_density_long, paste0(g_drive, "results/density/deployments/", proj, "_all-years_density_long_", Sys.Date(), ".csv"))
+write_csv(df_density_long, paste0(g_drive, "results/density/deployments/", proj, "_19-20-21-22_density_long_", Sys.Date(), ".csv"))
 
-write_csv(df_density_wide, paste0(g_drive, "results/density/deployments/", proj, "_all-years_density_wide_", Sys.Date(), ".csv"))
+write_csv(df_density_wide, paste0(g_drive, "results/density/deployments/", proj, "_19-20-21-22_density_wide_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
+
+
+

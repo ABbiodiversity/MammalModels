@@ -475,8 +475,6 @@ sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288
     # Retrieve only those that had no images of animals
     anti_join(tt, by = "project_location") |>
     crossing(season = c("summer", "winter"), common_name = sp) |>
-    # Re-join time-by-day information
-    left_join(tbd, by = c("project_location")) |>
     # Add total_duration column, which is zero in these cases
     mutate(total_duration = 0)
 
