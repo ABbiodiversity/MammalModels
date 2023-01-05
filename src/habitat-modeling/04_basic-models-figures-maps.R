@@ -101,7 +101,7 @@ DF.res.null<-data.frame(Intercept=1,
                         NSR1Mountain=1/7)
 
 # Truncate mapped area to just approximate polygon around sampled points.  Polygon determined by trial and error from map.  Needs to be changed every year
-jpeg(file="G:/Shared drives/ABMI Camera Mammals/results/habitat-models/2022/analysis-north/Spatial projection area NORTH.jpg",height=600,width=400)
+jpeg(file="G:/Shared drives/ABMI Camera Mammals/results/habitat-models/2022/analysis-north/maps/Spatial projection area NORTH.jpg",height=600,width=400)
 plot(km2$Long,km2$TrueLat,pch=16,cex=0.3)  # Northern region
 points(d$Long,d$TrueLat,pch=16,cex=1,col="red")  # Sampled points
 poly.long<-c(-120.1,-120.1,-115,-112.5,-112.8,-120.1,-120.1)  # These are the longitudes of the polygon that bounds the area to be excluded from mapping - 2020 version
@@ -1262,18 +1262,160 @@ for (sp in 1:length(SpTable)) {
 
 }  # Next species
 
+#-----------------------------------------------------------------------------------------------------------------------
 
+# 8. Export .csv files for website or other uses
+# Veg and HF coefficients
+lu.names<-read.csv("G:/Shared drives/ABMI Camera Mammals/data/lookup/Lookup for coefficient table names North June 2020.csv")  # To translate names used for coefficients here to official names.  This seems to change several times a year - never know what is current.
+Coef.mean.all<-cbind(Coef.mean.all,rep(0,nrow(Coef.mean.all)),rep(0,nrow(Coef.mean.all)))  # Add columns for bare and water
+Coef.lci.all<-cbind(Coef.lci.all,rep(0,nrow(Coef.lci.all)),rep(0,nrow(Coef.lci.all)))  # Add columns for bare and water
+Coef.uci.all<-cbind(Coef.uci.all,rep(0,nrow(Coef.uci.all)),rep(0,nrow(Coef.uci.all)))  # Add columns for bare and water
+Coef.pa.all<-cbind(Coef.pa.all,rep(0,nrow(Coef.pa.all)),rep(0,nrow(Coef.pa.all)))  # Add columns for bare and water
+colnames(Coef.mean.all)[(ncol(Coef.mean.all)-1):ncol(Coef.mean.all)]<-c("Bare","Water")  # Currently not modeled so assumed to be 0
+colnames(Coef.lci.all)[(ncol(Coef.lci.all)-1):ncol(Coef.lci.all)]<-c("Bare","Water")  # Currently not modeled so assumed to be 0
+colnames(Coef.uci.all)[(ncol(Coef.uci.all)-1):ncol(Coef.uci.all)]<-c("Bare","Water")  # Currently not modeled so assumed to be 0
+colnames(Coef.pa.all)[(ncol(Coef.pa.all)-1):ncol(Coef.pa.all)]<-c("Bare","Water")  # Currently not modeled so assumed to be 0
+i<-match(lu.names$CoefName,colnames(Coef.mean.all))  # Check for NA's
+Coef.official<-Coef.mean.all[,i]
+i<-match(lu.names$CoefName,colnames(Coef.lci.all))  # Check for NA's
+Coef.official.lci<-Coef.lci.all[,i]
+i<-match(lu.names$CoefName,colnames(Coef.uci.all))  # Check for NA's
+Coef.official.uci<-Coef.uci.all[,i]
+i<-match(lu.names$CoefName,colnames(Coef.pa.all))  # Check for NA's
+Coef.pa.all<-Coef.pa.all[,i]
+colnames(Coef.official)<-colnames(Coef.official.lci)<-colnames(Coef.official.uci)<-colnames(Coef.pa.all)<-lu.names$OfficialName
+rownames(Coef.official)<-rownames(Coef.official.lci)<-rownames(Coef.official.uci)<-rownames(Coef.pa.all)<-SpTable
+# and climate/space coefficients
+Res.coef.official<-Res.coef  # Seems to be in right format already
+# Save
+fname<-paste(fname.sumout,"OFFICIAL coefficients.Rdata")
+save(file=fname,Coef.official,Coef.official.lci,Coef.official.uci,Res.coef.official,Coef.pa.all)  # Save to compile later with South results
 
+# AUC fit
+q<-data.frame(Sp=SpTable,AUC.fit=auc.fit)
+write.table(q,file=paste0(g_drive, "AUC of fit for camera mammals North Nov 2021.csv"),sep=",",row.names=F)
 
+# Lure effects
+fname<-"G:/Shared drives/ABMI Camera Mammals/data/processed/lure/Lure effects North 2022.csv"
+q<-data.frame(Season="Summer",Measure="PresAbs",t(lure.pa[1,]))
+q<-rbind(q,data.frame(Season="Summer",Measure="AGP",t(lure.agp[1,])))
+q<-rbind(q,data.frame(Season="Winter",Measure="PresAbs",t(lure.pa[2,])))
+q<-rbind(q,data.frame(Season="Winter",Measure="AGP",t(lure.agp[2,])))
+names(q)<-c("Season","Measure",SpTable)
+write.table(q,file=fname,sep=",",row.names=FALSE)
 
+# Veg+HF Model weights
+fname<-paste0(g_drive, "Model weights Veg+HF North.csv")
+q<-data.frame(Season="Summer",Measure="PresAbs",Model=1:ncol(aic.wt.pa.save[1,,]),t(aic.wt.pa.save[1,,]))
+q<-rbind(q,data.frame(Season="Summer",Measure="AGP",Model=1:ncol(aic.wt.agp.save[1,,]),t(aic.wt.agp.save[1,,])))
+q<-rbind(q,data.frame(Season="Winter",Measure="PresAbs",Model=1:ncol(aic.wt.pa.save[2,,]),t(aic.wt.pa.save[2,,])))
+q<-rbind(q,data.frame(Season="Winter",Measure="AGP",Model=1:ncol(aic.wt.agp.save[2,,]),t(aic.wt.agp.save[2,,])))
+names(q)<-c("Season","Measure","Model",SpTable)
+write.table(q,file=fname,sep=",",row.names=FALSE)
 
+# Age Model weights
+fname<-paste0(g_drive, "Model weights Age stand groupings.csv")
+q<-data.frame(Season="Summer",Measure="PresAbs",Grouping=c("Separate","Intermediate","Combined"),t(aic.wt.age.save[1,,]))
+q<-rbind(q,data.frame(Season="Winter",Measure="PresAbs",Grouping=c("Separate","Intermediate","Combined"),t(aic.wt.age.save[2,,])))
+names(q)<-c("Season","Measure","Grouping",SpTable)
+write.table(q,file=fname,sep=",",row.names=FALSE)
+fname<-paste0(g_drive, "Model weights Age spline versus null.csv")
+q<-data.frame(Season="Summer",Measure="PresAbs",VegType=c("Spruce","Pine","Decid","Mixedwood","TreedBog","UpCon","DecidMixed","All"),t(aic.wt.age.models.save[1,,]))
+q<-rbind(q,data.frame(Season="Winter",Measure="PresAbs",VegType=c("Spruce","Pine","Decid","Mixedwood","TreedBog","UpCon","DecidMixed","All"),t(aic.wt.age.models.save[2,,])))
+write.table(q,file=fname,sep=",",row.names=FALSE)
 
+# SC and 150m veg BIC, variance components, best models
+#fname<-"C:/Dave/ABMI/Cameras/Coefficients/2021/Analysis north/SC and 150m veg best models model weights.csv"
+#write.table(file=fname,bic.sc150m,sep=",",col.names=NA)
+#fname<-"C:/Dave/ABMI/Cameras/Coefficients/2021/Analysis north/SC and 150m veg best models variance components.csv"
+#write.table(file=fname,var.sc150m,sep=",",col.names=NA)
+#fname<-"C:/Dave/ABMI/Cameras/Coefficients/2021/Analysis north/SC and 150m veg best models.csv"
+#write.table(file=fname,best.model.sc150m,sep=",",col.names=NA)
 
+# 9. Use/availability figures for all species with >3 detections (separate section, because larger species list)
+# Uses Peter's terminology and lines from his script
+library(RColorBrewer)
+#d1<-d[d$NR=="Boreal" | d$NR=="Foothills" | d$NR=="Canadian Shield" ,]   # Excluding parkland for this
+d1<-d  # NOT excluding parkland for this
+x<-data.frame(Deciduous=d1$Decid,Mixedwood=d1$Mixedwood,WhiteSpruce=d1$Spruce,Pine=d1$Pine,BlackSpruce=d1$TreedBog,TreedFen=d1$TreedFen,Open=d1$GrassShrub,Wetland=d1$OpenWet,
+              HFor=d1$HFor,Crop=d1$Crop,TameP=d1$TameP,RoughP=d1$RoughP,RurUrbInd=d1$RurUrbInd,Well=d1$Well,HardLin=d1$HardLin,SoftLin=d1$SoftLin)
+pAvail<-colMeans(x*d1$TotalDays)  # Correction here is only for sampling length.  Detection distance not included, for simplicity
+pAvail<-pAvail/sum(pAvail)  # Proportional availability of types
+col<-brewer.pal(8, "Accent")[c(1,1,1,1, 2,2,3,5, 7,rep(8,7))]
+op<-par(mar=c(6,4,2,2)+0.1, las=2)
+WRSI<-rWRSI<-array(NA,c(length(SpTable.ua),length(col)))  # Store results for each species
+colnames(WRSI)<-colnames(rWRSI)<-names(x)
+for (sp in 1:length(SpTable.ua)) {
+  y.w<-d[,paste(SpTable.ua[sp],"Winter",sep="")]
+  y.s<-d[,paste(SpTable.ua[sp],"Summer",sep="")]
+  y.ave<-(ifelse(is.na(y.w),0,y.w*d$WinterDays)+ifelse(is.na(y.s),0,y.s*d$SummerDays)) / (ifelse(is.na(y.s),0,d$SummerDays) + ifelse(is.na(y.w),0,d$WinterDays))
+  y.ave<-ifelse(is.na(y.ave),0,y.ave)  # Glitch in CMU data compilation in 2019 - species that didn't occur at all in that dataset are still NA here, should be 0.
+  fname<-paste(fname.useavail,SpTable.ua[sp],".png",sep="")
+  png(file=fname,width=480,height=480)
+  par(mar=c(6,4,2,2)+0.1, las=2)
+  pUse<-colMeans(x * sign(y.ave))
+  pUse<-pUse/sum(pUse)
+  WRSI[sp,]<-pUse/pAvail  # Simple use/availability
+  rWRSI[sp,]=(exp(2 * log(WRSI[sp,])) - 1)/(1 + exp(2 * log(WRSI[sp,])))  # Transform to -1 to 1 (from Peter)
+  x1<-barplot(rWRSI[sp,], horiz=FALSE, ylab="Affinity",space=NULL, col=col, border=col, ylim=c(-1,1), axes=FALSE)
+  axis(side=2)
+  abline(h=0, col="red4", lwd=2)
+  mtext(side=3,at=x1[1],adj=0,taxa.file$Species[match(SpTable.ua[sp],taxa.file$Label)],cex=1.2,col="grey40",las=1)
+  # Add sample size
+  text(max(x1),0.97,paste("Detected at",sum(sign(y.ave)),"of",nrow(d),"camera locations"),cex=1.2,adj=1,col="grey40")
+  graphics.off()
+}
+par(op)
+# Save table for all species
+#ua<-data.frame(SpLabel=SpTable.ua,Species=taxa.file$Species[match(SpTable.ua,taxa.file$Label)],WRSI,rWRSI)  # Original version
+#names(ua)<-c("SpLabel","Species",paste(names(x),"WRSI"),paste(names(x),"rWRSI"))  # Original version
+UseavailNorth<-rWRSI  # Official version
+rownames(UseavailNorth)<-SpTable.ua  # Official version
+fname<-paste(fname.useavail,"UseavailNorth.Rdata",sep="")
+save(UseavailNorth,file=fname)
 
+# 10. Information for header file saying what information is available for what species - to be compiled with south
+q<-data.frame(SpeciesID=SpTable.ua,ScientificName=NA,TSNID=NA,CommonName=taxa.file$Species[match(SpTable.ua,taxa.file$Label)],
+              ModelNorth=!is.na(match(SpTable.ua,SpTable)),ModelSouth=NA,Nonnative=FALSE,
+              LinkHabitatNorth=ifelse(is.na(match(SpTable.ua,SpTable)),NA,"Logit/Log"),LinkHabitatSouth=NA,
+              LinkSpclimNorth=ifelse(is.na(match(SpTable.ua,SpTable)),NA,c("Log","Logit")[sc.option[match(SpTable.ua,SpTable)]]),LinkSpclimSouth=NA,
+              ModelNorthWinter=!is.na(match(SpTable.ua,gsub("Winter","",SpTable.w))),ModelNorthSummer=!is.na(match(SpTable.ua,gsub("Summer","",SpTable.s))),
+              UseavailNorth=TRUE,UseavailSouth=NA,
+              ModelSouthWinter=NA,ModelSouthSummer=NA)
+fname<-paste(fname.sumout," Header table north.csv",sep="")
+write.table(file=fname,q,sep=",",row.names=FALSE)
 
+# 11. Extra section - produces initial grouping of sites for cross-validation.  May have to be revised by eye.
+D.coord <- d[ , c("Long", "TrueLat")]
+names(D.coord) <- c("longitude", "latitude")
+require(fossil)
+# geodist <- earth.dist (D.coord)  # Ermias method - Too slow!
+geodist<-dist(data.frame(long=111*D.coord$longitude,lat=65*D.coord$latitude))
+geo.gps <- hclust (geodist , method = "ward") #I have checked other algorthms and ward seems to give better cluster
+Group.geo <- cutree (geo.gps, k=24) #k is nuber of clustrrs#
+plot(d$Long,d$TrueLat,pch=18,cex=2.5,col=rainbow(24,s=0.5)[Group.geo], main="Geographical distance based groupings")
+text(d$Long,d$TrueLat,d$Site,cex=0.6)
+ds<-data.frame(location_project=d$location_project,Group=Group.geo)
+ds<-ds[duplicated(ds$location_project)==FALSE,]
+write.table(file="C:/Dave/ABMI/Data/Site info/Groups for BS and subareas/Site groupings for North mammals 24 groups Nov 2021.csv",ds,sep=",",row.names=F)
 
+# 12.  Extra bit to do boxplots of range of 150m broad veg+HF variable when point veg+HF is or isn't that broad type
+#var.list<-c("xAlien","xSucc","xNonlin","xLin","xTHF","xDecid","xUpCon","xLowTreed","xLowOpen","xUpOpen","xUpland","xLowland")
+#fname.start<-"C:/Dave/ABMI/Cameras/Coefficients/2020/Analysis north/Figures/Boxplots 150m vs point/"
+#for (i in 1:length(var.list)) {
+#	fname<-paste(fname.start,"Boxplot 150m vs point veg+HF ",var.list[i],".png",sep="")
+#	png(file=fname,height=500,width=500)
+#		y<-d[,var.list[i]]
+#		point.name<-gsub("x","",var.list[i])
+#		if (var.list[i]=="xLowTreed") point.name<-"TreedWet"
+#		if (var.list[i]=="xLowOpen") point.name<-"OpenWet"
+#		if (var.list[i]=="xUpOpen") point.name<-"GrassShrub"
+#		x<-d[,point.name]
+#		boxplot(y~x,ylab=paste("Proportion ",point.name," 150m",sep=""),xlab="Point veg+HF type",bty="l",cex.axis=1.3,cex.lab=1.4,col="cyan3",border="blue",xaxt="n",lwd=2)
+#		axis(side=1,at=c(1,2),c(paste("Not",point.name),point.name),cex.axis=1.3)
+#		mtext(side=3,at=0.8,adj=0,point.name,cex=1.4)
+#	graphics.off()
+#}
 
-
-
-
+#-----------------------------------------------------------------------------------------------------------------------
 

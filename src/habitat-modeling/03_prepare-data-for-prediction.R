@@ -2,7 +2,7 @@
 
 # Project(s):       ABMI EH, ABMI OG, CMU, BG, NWSAR
 
-# Title:            Coefficient Analysis (North)
+# Title:            Coefficient Analysis (North) - Prepare data
 # Description:
 # Author:           Marcus Becker, David J. Huggard
 
