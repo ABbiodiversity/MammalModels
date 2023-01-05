@@ -164,6 +164,3 @@ write_csv(df_density_long, paste0(g_drive, "results/density/deployments/", proj,
 write_csv(df_density_wide, paste0(g_drive, "results/density/deployments/", proj, "_19-20-21-22_density_wide_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
-
-
-

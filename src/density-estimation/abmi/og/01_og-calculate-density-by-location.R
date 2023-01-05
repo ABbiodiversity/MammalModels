@@ -15,6 +15,7 @@
 
 library(wildRtrax) # To download data
 library(keyring)   # For storing credentials safely
+library(fs) # File management
 
 # Set path to Shared Google Drive (G Drive)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
@@ -95,6 +96,18 @@ tags_clean |>
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+# If needed (not re-downloading from WildTrax), import data:
+
+image_fov_trigger <- read_csv(paste0(g_drive, "data/lookup/images/og_all-years_image-report_simple.csv"))
+
+# Find appropriate file
+file <- list.files(path = paste0(g_drive, "data/base/clean"), full.names = TRUE) |>
+  str_subset(pattern = "og_all-years_all-data_clean")
+# Import
+tags_clean <- read_csv(file)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
 # Summarise time-by-day for each camera deployment in the two NWSAR projects.
 
 df_tbd_summary <- get_operating_days(
@@ -110,6 +123,19 @@ df_tbd_summary <- get_operating_days(
 # Write results
 write_csv(df_tbd_summary, paste0(g_drive, "data/processed/time-by-day/", proj, "_all-years_tbd-summary_", Sys.Date(), ".csv"))
 
+# Put old results in `archive` folder:
+files <- list.files(path = paste0(g_drive, "data/processed/time-by-day"), full.names = TRUE) |>
+  str_subset(pattern = "og_all-years_tbd-summary")
+# Find the most recent file (should always have the date appended at the end)
+latest <- files |>
+  str_sub(start = -14, end = -5) |>
+  max()
+# List all the old files
+old_files <- files |>
+  str_subset(pattern = latest, negate = TRUE)
+# Move them to the archive folder
+file_move(old_files, paste0(g_drive, "data/processed/time-by-day/archive"))
+
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Calculate time in front of camera (TIFC)
@@ -123,6 +149,19 @@ df_tt <- tags_clean |>
 # Write results
 # Full results long:
 write_csv(df_tt, paste0(g_drive, "data/processed/time-in-cam-fov/", proj, "_all-years_fov-time_long_", Sys.Date(), ".csv"))
+
+# Put old results in `archive` folder:
+files <- list.files(path = paste0(g_drive, "data/processed/time-in-cam-fov"), full.names = TRUE) |>
+  str_subset(pattern = "og_all-years_fov-time_long")
+# Find the most recent file (should always have the date appended at the end)
+latest <- files |>
+  str_sub(start = -14, end = -5) |>
+  max()
+# List all the old files
+old_files <- files |>
+  str_subset(pattern = latest, negate = TRUE)
+# Move them to the archive folder
+file_move(old_files, paste0(g_drive, "data/processed/time-in-cam-fov/archive"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -145,7 +184,7 @@ df_vegdetdist_focal <- map_df(.x = veghf_sheets,
   select(project, location, VegForDetectionDistance) |>
   unite("project_location", project, location, sep = "_", remove = TRUE)
 
-# Bring in information form 2013-2018 contained in lookup file (manually checked in the)
+# Bring in information form 2013-2018 contained in lookup file (manually checked in the past)
 df_vegdetdist <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_2013-2018_vegsoilhf-detdistveg_2022-12-06.csv")) |>
   # This lookup contains only OG projects and the Edge-Interior project
   filter(str_detect(project, "Off-Grid|Edge")) |>
@@ -166,8 +205,21 @@ df_density_wide <- calc_density_by_loc(tt = df_tt,
 
 # Write results
 
-write_csv(df_density_long, paste0(g_drive, "results/density/deployments/", proj, "_all-years_density_long_", Sys.Date(), ".csv"))
+write_csv(df_density_long, paste0(g_drive, "results/density/deployments", proj, "_all-years_density_long_", Sys.Date(), ".csv"))
 
 write_csv(df_density_wide, paste0(g_drive, "results/density/deployments/", proj, "_all-years_density_wide_", Sys.Date(), ".csv"))
+
+# Put old results in `archive` folder:
+files <- list.files(path = paste0(g_drive, "results/density/deployments"), full.names = TRUE) |>
+  str_subset(pattern = "og_all-years_density")
+# Find the most recent file (should always have the date appended at the end)
+latest <- files |>
+  str_sub(start = -14, end = -5) |>
+  max()
+# List all the old files
+old_files <- files |>
+  str_subset(pattern = latest, negate = TRUE)
+# Move them to the archive folder
+file_move(old_files, paste0(g_drive, "results/density/deployments/archive"))
 
 #-----------------------------------------------------------------------------------------------------------------------
