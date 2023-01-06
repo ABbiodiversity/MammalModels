@@ -1,10 +1,10 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Project:          BU (BG)
+# Project:          ABMI (Ecosystem Health 2014, 2015, 2016, 2017, 2018)
 
 # Title:            Calculate density of species by project/location
-# Description:      Process raw BU (BG 2016) camera tag data from WildTrax and estimate density using the time in front of
-#                   method.
+# Description:      Process raw ABMI Ecosystem Health camera tag data from WildTrax and estimate density using the time
+#                   in front of camera method.
 # Author:           Marcus Becker
 
 # Previous scripts: None
@@ -22,14 +22,17 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 # Source functions for TIFC workflow
 source("./src/functions/estimate-density-tifc.R")
 
+# Write and archive function
+source("./src/functions/write-and-archive.R")
+
 # Species character strings
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
 # Project
-proj <- "bg"
+proj <- "eh"
 
-# Date
-date <- Sys.Date()
+# Years
+years <- "_14-15-16-17-18"
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -41,21 +44,21 @@ Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
 # Authenticate into WildTrax
 wt_auth()
 
-# Pull BG project ID
-bg_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
-  filter(str_detect(project, "Big Grids 2016")) |>
+# Pull EH project IDs - 2014, 2015, 2016, 2017, and 2018.
+eh_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(str_detect(project, "Health 2014|Health 2015|Health 2016|Health 2017|Health 2018")) |>
   pull(project_id) |>
   unlist()
 
 # Download tag and image reports using IDs
-tag_reports <- map_df(.x = bg_proj_ids,
+tag_reports <- map_df(.x = eh_proj_ids,
                       .f = ~ wt_download_report(
                         project_id = .x,
                         sensor_id = "CAM",
                         report = "tag",
                         weather_cols = FALSE))
 
-image_reports <- map_df(.x = bg_proj_ids,
+image_reports <- map_df(.x = id,
                         .f = ~ wt_download_report(
                           project_id = .x,
                           sensor_id = "CAM",
@@ -80,38 +83,35 @@ tags_clean <- tag_reports |>
 # Save cleaned and binded data to Shared Google Drive
 # (so we don't have to re-download from WildTrax each time)
 
-# Last done: January 5, 2023
+# Last done: NEEDS TO BE DONE
 
 # Simple image reports
 image_fov_trigger |>
-  write_csv(paste0(g_drive, "data/lookup/images/", proj, "_all-years_image-report_simple.csv"))
+  write_csv(paste0(g_drive, "data/lookup/images/", proj, "_image-report_simple.csv"))
 
 # Only tags of species
 tags_clean |>
   # Remove all non-native mammal images
   filter(common_name %in% native_sp) |>
-  write_csv(paste0(g_drive, "data/base/clean/", proj, "_all-years_native-sp_clean_", Sys.Date(), ".csv"))
+  write_csv(paste0(g_drive, "data/base/clean/", proj, "_native-sp_clean_", Sys.Date(), ".csv"))
 
 # Save (all) cleaned data
 tags_clean |>
-  write_csv(paste0(g_drive, "data/base/clean/", proj, "_all-years_all-data_clean_", Sys.Date(), ".csv"))
+  write_csv(paste0(g_drive, "data/base/clean/", proj, "_all-data_clean_", Sys.Date(), ".csv"))
+
+# This is the temporary solution - use data processed previously.
+tags_clean <- read_csv(paste0(g_drive, "data/base/clean/abmi-cmu_all-years_all-data_clean_2021-10-07.csv")) |>
+  # Filter for appropriate projects
+  filter(str_detect(project, "Health 2014|Health 2015|Health 2016|Health 2017|Health 2018")) |>
+  # Remove OG deployments
+  filter(!str_detect(location, "OG")) |>
+  select(project, location, date_detected, common_name, age_class, sex, number_individuals)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# If needed (not re-downloading from WildTrax), import data:
+# Summarise time-by-day for each camera deployment in the five EH projects (14, 15, 16, 17, 18).
 
-image_fov_trigger <- read_csv(paste0(g_drive, "data/lookup/images/", proj, "_all-years_image-report_simple.csv"))
-
-# Find appropriate tag data file
-file <- list.files(path = paste0(g_drive, "data/base/clean"), full.names = TRUE) |>
-  str_subset(pattern = paste0(proj, "_all-years_all-data_clean"))
-# Import
-tags_clean <- read_csv(file)
-
-#-----------------------------------------------------------------------------------------------------------------------
-
-# Summarise time-by-day for each camera deployment in the ABMI & ACME OSM projects.
-
+# HAS NOT BEEN DONE
 df_tbd_summary <- get_operating_days(
   image_report = image_fov_trigger,
   # Keep project
@@ -122,25 +122,16 @@ df_tbd_summary <- get_operating_days(
   .abmi_seasons = TRUE
 )
 
-# Write results
+# Write results - HAS NOT BEEN DONE
+write_csv(df_tbd_summary, paste0(g_drive, "data/processed/time-by-day/", proj, "_tbd-summary_", Sys.Date(), ".csv"))
 
-path <- "data/processed/time-by-day/"
-file <- "_all-years_tbd-summary_"
-
-write_csv(df_tbd_summary, paste0(g_drive, path, proj, file, date, ".csv"))
-
-# Put old results in `archive` folder:
-files <- list.files(path = paste0(g_drive, path), full.names = TRUE) |>
-  str_subset(pattern = paste0(proj, file))
-# Find the most recent file (should always have the date appended at the end)
-latest <- files |>
-  str_sub(start = -14, end = -5) |>
-  max()
-# List all the old files
-old_files <- files |>
-  str_subset(pattern = latest, negate = TRUE)
-# Move them to the archive folder
-file_move(old_files, paste0(g_drive, path, "archive"))
+# This is the temporary solution - use data processed previously.
+df_tbd_summary <- read_csv(paste0(g_drive, "data/processed/time-by-day/abmi-cmu_all-years_tbd-summary_2021-10-07.csv")) |>
+  # Filter for appropriate projects
+  filter(str_detect(project, "Health 2014|Health 2015|Health 2016|Health 2017|Health 2018")) |>
+  # Remove OG deployments
+  filter(!str_detect(location, "OG")) |>
+  unite("project_location", project, location, sep = "_")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -152,34 +143,23 @@ df_tt <- tags_clean |>
   # Next calculate tifc by location, deployment, species
   sum_total_time(tbd = df_tbd_summary)
 
-# Write results
+# Write new results and archive old results:
 
-path <- "data/processed/time-in-cam-fov/"
-file <- "_all-years_fov-time_long_"
-
-# Full results long:
-write_csv(df_tt, paste0(g_drive, path, proj, file, date, ".csv"))
-
-# Put old results in `archive` folder:
-files <- list.files(path = paste0(g_drive, path), full.names = TRUE) |>
-  str_subset(pattern = paste0(proj, file))
-# Find the most recent file (should always have the date appended at the end)
-latest <- files |>
-  str_sub(start = -14, end = -5) |>
-  max()
-# List all the old files
-old_files <- files |>
-  str_subset(pattern = latest, negate = TRUE)
-# Move them to the archive folder
-file_move(old_files, paste0(g_drive, path, "archive"))
+write_and_archive(
+  data = df_tt,
+  type = "tt",
+  project = proj,
+  years = years
+)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Calculate density at each location
 
-# VegHF information for BG deployments
-df_vegdetdist <- read_csv(paste0(g_drive, "data/lookup/veghf/bg_2016_veghf-point_2021-10-31.csv")) |>
-  make_vegfordetdist() |>
+# VegHF information for EH deployments
+df_vegdetdist <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_2013-2018_vegsoilhf-detdistveg_2022-12-06.csv")) |>
+  filter(str_detect(project, "ABMI")) |>
+  filter(!str_detect(location, "OG")) |>
   unite("project_location", project, location, sep = "_", remove = TRUE)
 
 # Calculate density (long and wide)
@@ -193,26 +173,20 @@ df_density_wide <- calc_density_by_loc(tt = df_tt,
                                        cam_fov_angle = 40,
                                        format = "wide")
 
-# Write results
+# Write new results and archive old results
 
-path <- "results/density/deployments/"
-file <- "_all-years_density_"
+write_and_archive(
+  data = df_density_long,
+  type = "dl",
+  project = proj,
+  years = years
+)
 
-# Both long and wide formats
-write_csv(df_density_long, paste0(g_drive, path, proj, file, "long_", date, ".csv"))
-write_csv(df_density_wide, paste0(g_drive, path, proj, file, "wide_", date, ".csv"))
-
-# Put old results in `archive` folder:
-files <- list.files(path = paste0(g_drive, path), full.names = TRUE) |>
-  str_subset(pattern = paste0(proj, file))
-# Find the most recent file (should always have the date appended at the end)
-latest <- files |>
-  str_sub(start = -14, end = -5) |>
-  max()
-# List all the old files
-old_files <- files |>
-  str_subset(pattern = latest, negate = TRUE)
-# Move them to the archive folder
-file_move(old_files, paste0(g_drive, path, "archive"))
+write_and_archive(
+  data = df_density_wide,
+  type = "dw",
+  project = proj,
+  years = years
+)
 
 #-----------------------------------------------------------------------------------------------------------------------

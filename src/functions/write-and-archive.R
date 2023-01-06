@@ -32,7 +32,7 @@ write_and_archive <- function(data, type, project, years) {
 
   if (type == "dw") {
     path <- "results/density/deployments/"
-    file <- "_density_wide"
+    file <- "_density_wide_"
   }
 
   # Write new data

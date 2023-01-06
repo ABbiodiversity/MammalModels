@@ -1,6 +1,6 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Project(s):      ABMI EH, ABMI OG, CMU, BG, NWSAR
+# Project(s):       EH, OG, OSM, CMU, BG, NWSAR
 
 # Title:            Prepare data for habitat modeling
 # Description:      Prepare animal density, point veghf, and location data for habitat modeling.
@@ -15,7 +15,7 @@ library(readr)
 library(dplyr)
 library(tidyr)
 library(stringr)
-library(janitor)
+library(purrr)
 
 # Root directory (Google Drive)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
@@ -23,82 +23,128 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Import density data (long form):
-df_dens_abmicmu <- read_csv(paste0(g_drive, "results/density/deployments/abmi-cmu_all-years_density_long_2021-10-07.csv"))
-df_dens_nwsar   <- read_csv(paste0(g_drive, "results/density/deployments/nwsar_all-years_density_long_2021-07-23.csv"))
-df_dens_bg      <- read_csv(paste0(g_drive, "results/density/deployments/bg_all-years_density_long_2021-10-31.csv"))
 
-# All species (presumably all are in ABMI/CMU)
-species <- df_dens_abmicmu |>
-  select(common_name) |>
-  distinct()
+projects <- paste0(c("eh", "cmu", "osm", "og", "nwsar", "bg"), collapse = "|")
 
-# Missing species in NWSAR and BG
-missing_nwsar <- species |>
-  anti_join(df_dens_nwsar, by = "common_name")
-missing_bg <- species |>
-  anti_join(df_dens_bg, by = "common_name")
+# List files
+files <- list.files(path = paste0(g_drive, "results/density/deployments"), full.names = TRUE) |>
+  str_subset(pattern = projects) |>
+  # Remove wide form
+  str_subset(pattern = "wide", negate = TRUE)
 
-# Create dataframes of NWSAR and BG deployments with missing species (0 or NA for density)
-df_dens_nwsar_missing <- df_dens_nwsar |>
-  select(location, project, season, total_season_days) |>
+# Read in density data
+dens <- map_df(.x = files, .f = read_csv)
+
+# All species
+sp <- unique(dens$common_name)
+
+# Missing combinations
+missing <- dens |>
+  select(project, location, season, total_season_days) |>
   distinct() |>
-  crossing(missing_nwsar) |>
+  crossing(common_name = sp) |>
+  anti_join(dens, by = c("project", "location", "season", "total_season_days", "common_name")) |>
   arrange(location, common_name) |>
-  # Density is NA if total season days is 0
-  mutate(density_km2 = ifelse(total_season_days > 0, 0, NA))
-
-df_dens_bg_missing <- df_dens_bg |>
-  select(location, project, season, total_season_days) |>
-  distinct() |>
-  crossing(missing_bg) |>
-  arrange(location, common_name) |>
-  # Density is NA if total season days is 0
-  mutate(density_km2 = ifelse(total_season_days > 0, 0, NA))
+  # Density is NaN if totaly season days is 0
+  mutate(density_km2 = ifelse(total_season_days > 0, 0, NaN))
 
 # Bind together
-df_dens_all <- df_dens_abmicmu |>
-  # NWSAR, including missing
-  bind_rows(df_dens_nwsar, df_dens_nwsar_missing) |>
-  # BG, including missing
-  bind_rows(df_dens_bg, df_dens_bg_missing)
+dens_all <- dens |>
+  bind_rows(missing)
+
+# Check
+check <- dens_all |>
+  group_by(project, location, season) |>
+  tally() # Should have 36 records (one for each species)
 
 # Widen
-df_season_days <- df_dens_all |>
-  select(location, project, season, total_season_days) |>
+season_days <- dens_all |>
+  select(project, location, season, total_season_days) |>
   distinct() |>
-  pivot_wider(id_cols = c(location, project), names_from = season, values_from = total_season_days)
+  pivot_wider(id_cols = c(project, location), names_from = season, values_from = total_season_days)
 
-df_dens_all_wide <- df_dens_all |>
-  pivot_wider(id_cols = c(location, project), names_from = c(common_name, season), values_from = density_km2) |>
-  left_join(df_season_days, by = c("location", "project")) |>
-  select(location, project, summer, winter, everything()) |>
-  # Clean up column names
-  clean_names() |>
+dens_all_wide <- dens_all |>
+  pivot_wider(id_cols = c(project, location), names_from = c(common_name, season), values_from = density_km2) |>
+  left_join(season_days, by = c("project", "location")) |>
+  select(project, location, summer, winter, everything()) |>
   # Remove SK CMU grids: LRN, AUB, MCC, DEW
   filter(!str_detect(location, "LRN|AUB|MCC|DEW"))
 
-# Save file
-write_csv(df_dens_all_wide,
-          paste0(g_drive, "results/density/deployments/abmi-cmu-bg-nwsar_all-years_density_wide_", Sys.Date(), ".csv"))
+# Write new data
+write_csv(dens_all_wide, paste0(g_drive, "results/density/deployments/all-projects_all-years_wide-density-for-habitat-modeling.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Point VegHF (from GIS)
-df_pveghf_abmicmu <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_all-years_veghf-soilhf-detdistveg_2021-10-06.csv"))
-# Confusingly, NWSAR also contains 3 grids of CMU 2020.
-df_pveghf_nwsar   <- read_csv(paste0(g_drive, "data/lookup/veghf/nwsar-cmu_2020_veghf-point_2021-10-31.csv"))
-df_pveghf_bg      <- read_csv(paste0(g_drive, "data/lookup/veghf/bg_2016_veghf-point_2021-10-31.csv"))
+# Point VegHF (from GIS and subsequent manual checking)
 
-# I wonder what we need the detdistveg for. Maybe I will leave that out for now. I'm sure it will come up, Dave was
-# pretty adamant about needing it.
+library(googlesheets4)
+library(googledrive)
 
-# Combine
-df_pveghf_all <- df_pveghf_abmicmu |>
-  select(1:3) |>
-  bind_rows(df_pveghf_bg, df_pveghf_nwsar) |>
-  # Remove SK grids
+# Get VegHF information from Google Sheets (for projects 2019 and newer: EH 2019-2022, OG 2019 & 2020, NWSAR)
+# Note: Does not include any CMU
+veghf_sheets <- drive_find(type = "spreadsheet", shared_drive = "ABMI Camera Mammals") |>
+  filter(str_detect(name, "VegHF Checks")) |>
+  select(id) |>
+  pull()
+
+veghf_recent <- map_df(.x = veghf_sheets, .f = ~ read_sheet(ss = .x)) |>
+  # Correct VegHF based on manual checking
+  mutate(VEGHFAGEclass = ifelse(is.na(CheckedVEGHFAGEclass), VEGHFAGEclass, CheckedVEGHFAGEclass)) |>
+  select(project, location, VEGHFAGEclass)
+
+# Newer CMU
+veghf_recent_cmu <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu-nwsar_2019-2022_vegsoilhf_raw_2022-12-06.csv")) |>
+  filter(str_detect(project, "CMU")) |>
+  select(project, location, VEGHFAGEclass)
+
+# Older VegHF information - EH 2015-2018, CMU 2017 & 2018, OG 2015-2018
+veghf_older <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_2013-2018_vegsoilhf-detdistveg_2022-12-06.csv")) |>
+  select(project, location, VEGHFAGEclass)
+
+unique(veghf_older$project)
+
+# BG
+veghf_bg <- read_csv(paste0(g_drive, "data/lookup/veghf/bg_2016_veghf-point_2021-10-31.csv")) |>
+  select(project, location, VEGHFAGEclass)
+
+# OSM (no ACME included here)
+
+# Verify using metadata specifically for OSM deployments
+osm_metadata <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv")) |>
+  select(project, location, treatment, fine_scale) |>
+  filter(str_detect(treatment, "dense|activity"),
+         fine_scale == "On") |>
+  mutate(VEGHFAGEclass_upd = case_when(
+    str_detect(treatment, "dense") ~ "SeismicLineNarrow",
+    str_detect(treatment, "low") ~ "WellSite",
+    str_detect(treatment, "high") ~ "IndustrialSiteRural"
+  )) |>
+  select(1, 2, 5)
+
+veghf_osm <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu-nwsar_2019-2022_vegsoilhf_raw_2022-12-06.csv")) |>
+  filter(str_detect(project, "OSM")) |>
+  select(project, location, VEGHFAGEclass) |>
+  left_join(osm_metadata) |>
+  mutate(VEGHFAGEclass = ifelse(is.na(VEGHFAGEclass_upd), VEGHFAGEclass, VEGHFAGEclass_upd)) |>
+  select(-VEGHFAGEclass_upd)
+
+# Combine all projects together
+veghf_all <- bind_rows(
+  veghf_recent,
+  veghf_recent_cmu,
+  veghf_older,
+  veghf_bg,
+  veghf_osm) |>
+  # Remove the SK grids from the CMU projects
   filter(!str_detect(location, "LRN|AUB|MCC|DEW"))
-  # Still quite a few NAs: random CMU, Amphibian Monitoring, Southern Focal, etc.
+
+# All the projects
+unique(veghf_all$project)
+
+# Write
+write_csv(veghf_all, paste0(g_drive, "data/lookup/veghf/all-projects_all-years_veghfageclass-for-habitat-modeling.csv"))
+
+#-----------------------------------------------------------------------------------------------------------------------
 
 # 150m VegHF (from GIS)
 df_150veghf_abmi  <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi_all-years_veghf-150m-buffer_2021-11-25.csv"))

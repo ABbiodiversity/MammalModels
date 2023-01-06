@@ -1,10 +1,10 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Project:          ABMI (Ecosystem Health)
+# Project:          ABMI (Ecosystem Health 2019, 2020, 2021, 2022)
 
 # Title:            Calculate density of species by project/location
-# Description:      Process raw ABMI Off-Grid camera tag data from WildTrax and estimate density using the time in front of
-#                   camera method.
+# Description:      Process raw ABMI Ecosystem Health camera tag data from WildTrax and estimate density using the time
+#                   in front of camera method.
 # Author:           Marcus Becker
 
 # Previous scripts: None
@@ -27,6 +27,9 @@ load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
 # Project
 proj <- "eh"
+
+# Years
+years <- "_19-20-21-22"
 
 #-----------------------------------------------------------------------------------------------------------------------
 
