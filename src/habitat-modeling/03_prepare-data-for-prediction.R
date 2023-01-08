@@ -26,10 +26,10 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 # Import data and lookup files
 
 # Density data (wide)
-df_dens_all_wide <- read_csv(paste0(g_drive, "results/density/deployments/abmi-cmu-bg-nwsar_all-years_density_wide_2022-01-13.csv"))
+df_dens_all_wide <- read_csv(paste0(g_drive, "results/density/deployments/all-projects_all-years_wide-density-for-habitat-modeling.csv"))
 
 # Point VegHF
-df_pveghf_all <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu-nwsar-bg_all-years_veghf_2022-01-13.csv"))
+df_pveghf_all <- read_csv(paste0(g_drive, "data/lookup/veghf/all-projects_all-years_veghfageclass-for-habitat-modeling.csv"))
 
 # Human footprint lookup classes
 df_hf <- read_csv(paste0(g_drive, "data/lookup/locations/lookup-hf-class.csv"))
@@ -41,7 +41,9 @@ df_pred_matrix <- read_csv(paste0(g_drive, "data/lookup/veghf/prediction-matrix_
 df_site_climate <- read_csv(paste0(g_drive, "data/lookup/climate/site-climate-summary_v2020.csv"))
 
 # Public locations - note: using Dave's version for now.
-df_locations <- read_csv(paste0(g_drive, "data/lookup/locations/Deployment locations all Nov 2021.csv"))
+# df_locations <- read_csv(paste0(g_drive, "data/lookup/locations/Deployment locations all Nov 2021.csv"))
+
+df_locations <- read_csv(paste0(g_drive, "data/lookup/locations/all-projects_all-years_locations-for-habitat-modeling.csv"))
 
 # No NWSAR and BG lure ... but these are both unlured.
 df_lure <- read_csv(paste0(g_drive, "data/lookup/lure/abmi-cmu_all-years_lure_2021-10-07.csv"))
@@ -55,16 +57,11 @@ colnames(d1) <- gsub("_summer","Summer", colnames(d1))
 colnames(d1) <- gsub("_winter","Winter", colnames(d1))
 colnames(d1) <- gsub("\\.", "", colnames(d1))
 # Eliminate projects that don't use ABMI protocols or are otherwise weird.
-project.list<-c("ABMI Ecosystem Health","ABMI Northern Focal Areas","Big Grids","CMU","Northwest Species at Risk")  # Qualifying projects, except that ABMI Ecosystem Health includes several unrelated projects (in the data file that I used) - those are excluded below
-d1$Use<-0
-for (i in 1:length(project.list))	d1$Use<-ifelse(substr(d1$project,1,nchar(project.list[i]))==project.list[i],1,d1$Use)  # Mark to use if in qualifying project
-# Then take out weird projects included as part of ABMI Ecosystem Health project.  This may change in new datafile with updated project names.
-d1$Use<-ifelse(substr(d1$location,1,5)=="OG-EI",0,d1$Use)  # Excluding all EI, even though interior deployment were used previously - just easier here
-d1$Use<-ifelse(substr(d1$location,1,7)=="OG-CITS",0,d1$Use)
-d1$Use<-ifelse(substr(d1$location,1,5)=="OG-RIVR",0,d1$Use)
-d1<-d1[d1$Use==1,]
+# Qualifying projects
+d1 <- d1 |>
+  filter(str_detect(project, "ABMI Ecosystem Health|Northern Focal|Big Grids|CMU|Northwest|ABMI Off-Grid Monitoring|ABMI OSM"))
 
-# 4,845 records remain.
+# 5,602 records remain.
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -142,18 +139,26 @@ table(v$Nonlin)
 # Add lat long, natural regions, etc. to sites
 # First add in nearest.sites for non-ABMI studies that do not have that info in the deployment name
 s1 <- df_locations  # Summarized from larger meta-data file - changes include adding nearest site where obvious from Deployment name, changing column names back to original names
-s1$Year<-NULL  # No need for Year in this file - just creates duplicates in merge below
+# s1$Year<-NULL  # No need for Year in this file - just creates duplicates in merge below
 names(s1)[which(names(s1)=="Site Name")]<-"location"
-s1$Lat<-as.numeric(as.character(s1$`Public Latitude`))
-s1$Long<-as.numeric(as.character(s1$`Public Longitude`))
+s1$Lat<-as.numeric(as.character(s1$latitude))
+s1$Long<-as.numeric(as.character(s1$longitude))
 # Do corrections for old/unique naming systems, where possible
-s1$location<-gsub("-000","-",s1$location)
-s1$location<-gsub("-00","-",s1$location)
-s1$location<-gsub("-0","-",s1$location)
-s1$location<-ifelse(substr(s1$location,1,5)=="ABMI-",substr(s1$location,6,nchar(s1$location)),s1$location)  # Remove initial "ABMI-" because not used in density file locations (but leave in other cases, like "OG-ABMI-...")
-s1<-s1[duplicated(s1$location)==FALSE,]  # Get rid of duplicated locations
-d1<-merge(d1,s1[,c("location","NearestSite","Long","Lat")],all.x=TRUE)  # Check for loss of info: d1$location[is.na(d1$NearestSite)] - AUB grid, a few LID, a few others
+#s1$location<-gsub("-000","-",s1$location)
+#s1$location<-gsub("-00","-",s1$location)
+#s1$location<-gsub("-0","-",s1$location)
+#s1$location<-ifelse(substr(s1$location,1,5)=="ABMI-",substr(s1$location,6,nchar(s1$location)),s1$location)  # Remove initial "ABMI-" because not used in density file locations (but leave in other cases, like "OG-ABMI-...")
+#s1<-s1[duplicated(s1$location)==FALSE,]  # Get rid of duplicated locations
+#d2<-merge(d1,s1[,c("location","NearestSite","Long","Lat")],all.x=TRUE)  # Check for loss of info: d1$location[is.na(d1$NearestSite)] - AUB grid, a few LID, a few others
+d2 <- d1 |>
+  left_join(s1, by = c("project", "location")) |>
+  select(-c(latitude, longitude))
+
+# Somehow 2019 and 2022 got duplicated?
+check <- s1 |> group_by(project, location) |> tally()
+
 # Get rid of those deployments without nearest site info or lat/long
+
 # Note: Modified by Marcus. Mistake in Dave's code?
 d1<-d1[!(is.na(d1$NearestSite) & is.na(d1$Lat)),]
 d1$NearestSite<-as.numeric(as.character(d1$NearestSite))  # Warning message about NA's is okay - trying to change some "" records for NA's here

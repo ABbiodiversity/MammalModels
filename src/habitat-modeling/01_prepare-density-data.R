@@ -36,9 +36,9 @@ files <- list.files(path = paste0(g_drive, "results/density/deployments"), full.
 dens <- map_df(.x = files, .f = read_csv)
 
 # All species
-sp <- unique(dens$common_name)
+sp <- unique(dens$common_name) # 36 total have been detected in these projects
 
-# Missing combinations
+# In order to combine, need to fill out missing species x location x season combinations
 missing <- dens |>
   select(project, location, season, total_season_days) |>
   distinct() |>
@@ -57,7 +57,7 @@ check <- dens_all |>
   group_by(project, location, season) |>
   tally() # Should have 36 records (one for each species)
 
-# Widen
+# Widen for modeling
 season_days <- dens_all |>
   select(project, location, season, total_season_days) |>
   distinct() |>
@@ -80,38 +80,48 @@ write_csv(dens_all_wide, paste0(g_drive, "results/density/deployments/all-projec
 library(googlesheets4)
 library(googledrive)
 
-# Get VegHF information from Google Sheets (for projects 2019 and newer: EH 2019-2022, OG 2019 & 2020, NWSAR)
+# Get VegHF information from Google Sheets for these projects (2019 and more recent):
+# - EH 2019-2022
+# - OG 2019 & 2020 (i.e., Focal Areas)
+# - NWSAR
 # Note: Does not include any CMU
+
+# Sheet IDs
 veghf_sheets <- drive_find(type = "spreadsheet", shared_drive = "ABMI Camera Mammals") |>
   filter(str_detect(name, "VegHF Checks")) |>
   select(id) |>
   pull()
 
+# Read in relevant sheets
 veghf_recent <- map_df(.x = veghf_sheets, .f = ~ read_sheet(ss = .x)) |>
-  # Correct VegHF based on manual checking
+  # Correct VegHF based on manual checking - done by Dave H.
   mutate(VEGHFAGEclass = ifelse(is.na(CheckedVEGHFAGEclass), VEGHFAGEclass, CheckedVEGHFAGEclass)) |>
   select(project, location, VEGHFAGEclass)
 
-# Newer CMU
+# More recent CMU projects (2019-2021) - prepared from prepare-veghf script.
 veghf_recent_cmu <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu-nwsar_2019-2022_vegsoilhf_raw_2022-12-06.csv")) |>
   filter(str_detect(project, "CMU")) |>
   select(project, location, VEGHFAGEclass)
 
-# Older VegHF information - EH 2015-2018, CMU 2017 & 2018, OG 2015-2018
+# Older projects - prepared from prepare-veghf script:
+# - EH 2015-2018
+# - CMU 2017 & 2018
+# - OG 2015-2018
 veghf_older <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_2013-2018_vegsoilhf-detdistveg_2022-12-06.csv")) |>
   select(project, location, VEGHFAGEclass)
 
 unique(veghf_older$project)
 
-# BG
+# Big Grid
 veghf_bg <- read_csv(paste0(g_drive, "data/lookup/veghf/bg_2016_veghf-point_2021-10-31.csv")) |>
   select(project, location, VEGHFAGEclass)
 
 # OSM (no ACME included here)
 
-# Verify using metadata specifically for OSM deployments
+# Verify using metadata specifically for certain OSM deployments
 osm_metadata <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv")) |>
   select(project, location, treatment, fine_scale) |>
+  # On-footprint for the following treatments: dense linear features, high activity in situ, low activity well pads
   filter(str_detect(treatment, "dense|activity"),
          fine_scale == "On") |>
   mutate(VEGHFAGEclass_upd = case_when(
@@ -125,6 +135,7 @@ veghf_osm <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu-nwsar_2019-202
   filter(str_detect(project, "OSM")) |>
   select(project, location, VEGHFAGEclass) |>
   left_join(osm_metadata) |>
+  # Updated GIS information if needed
   mutate(VEGHFAGEclass = ifelse(is.na(VEGHFAGEclass_upd), VEGHFAGEclass, VEGHFAGEclass_upd)) |>
   select(-VEGHFAGEclass_upd)
 
@@ -176,16 +187,6 @@ write_csv(df_pveghf_all, paste0(g_drive, "data/lookup/veghf/abmi-cmu-nwsar-bg_al
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Locations - nearest ABMI site. Seems like this will be handled at a later step.
-
-df_loc_abmicmu <- read_csv(paste0(g_drive, "data/lookup/locations/abmi-cmu_public-locations_2021-10-20.csv"))
-
-df_loc_nwsar <- read_csv(paste0(g_drive, "data/lookup/locations/nwsar_public-locations_2021-09-12.csv"))
-
-df_loc_bg <- read_csv(paste0(g_drive, "data/lookup/locations/bg_public-locations_2022-01-10.csv"))
-
-# Bind together and save
-bind_rows(df_loc_abmicmu, df_loc_nwsar, df_loc_bg) |>
-  write_csv(paste0(g_drive, "data/lookup/locations/abmi-cmu-nwsar-bg_public-locations_", Sys.Date(), ".csv"))
+# Locations - nearest ABMI site.
 
 #-----------------------------------------------------------------------------------------------------------------------
