@@ -42,7 +42,7 @@ df_site_climate <- read_csv(paste0(g_drive, "data/lookup/climate/site-climate-su
 
 # Public locations - note: using Dave's version for now.
 # df_locations <- read_csv(paste0(g_drive, "data/lookup/locations/Deployment locations all Nov 2021.csv"))
-
+# New version:
 df_locations <- read_csv(paste0(g_drive, "data/lookup/locations/all-projects_all-years_locations-for-habitat-modeling.csv"))
 
 # No NWSAR and BG lure ... but these are both unlured.
@@ -138,9 +138,12 @@ table(v$Nonlin)
 
 # Add lat long, natural regions, etc. to sites
 # First add in nearest.sites for non-ABMI studies that do not have that info in the deployment name
-s1 <- df_locations  # Summarized from larger meta-data file - changes include adding nearest site where obvious from Deployment name, changing column names back to original names
+s1 <- df_locations |>  # Summarized from larger meta-data file - changes include adding nearest site where obvious from Deployment name, changing column names back to original names
+  # Somehow 2019 and 2020 got duplicated?
+  distinct()
+
 # s1$Year<-NULL  # No need for Year in this file - just creates duplicates in merge below
-names(s1)[which(names(s1)=="Site Name")]<-"location"
+#names(s1)[which(names(s1)=="Site Name")]<-"location"
 s1$Lat<-as.numeric(as.character(s1$latitude))
 s1$Long<-as.numeric(as.character(s1$longitude))
 # Do corrections for old/unique naming systems, where possible
@@ -152,30 +155,41 @@ s1$Long<-as.numeric(as.character(s1$longitude))
 #d2<-merge(d1,s1[,c("location","NearestSite","Long","Lat")],all.x=TRUE)  # Check for loss of info: d1$location[is.na(d1$NearestSite)] - AUB grid, a few LID, a few others
 d2 <- d1 |>
   left_join(s1, by = c("project", "location")) |>
-  select(-c(latitude, longitude))
-
-# Somehow 2019 and 2022 got duplicated?
-check <- s1 |> group_by(project, location) |> tally()
+  select(-c(latitude, longitude)) |>
+  # Missing some locations. Not many (~60), so will proceed here without them. To fix one day.
+  filter(!is.na(Lat))
 
 # Get rid of those deployments without nearest site info or lat/long
 
 # Note: Modified by Marcus. Mistake in Dave's code?
-d1<-d1[!(is.na(d1$NearestSite) & is.na(d1$Lat)),]
-d1$NearestSite<-as.numeric(as.character(d1$NearestSite))  # Warning message about NA's is okay - trying to change some "" records for NA's here
+#d1<-d1[!(is.na(d1$NearestSite) & is.na(d1$Lat)),]
+#d1$NearestSite<-as.numeric(as.character(d1$NearestSite))  # Warning message about NA's is okay - trying to change some "" records for NA's here
+
 s<-df_site_climate  # To get ABMI site lat longs, and then natural regions via nearest ABMI sites
 names(s)[which(names(s)=="PUBLIC_LONGITUDE")]<-"Long"
 names(s)[which(names(s)=="PUBLIC_LATTITUDE")]<-"Lat"
 names(s)[which(names(s)=="NATURAL_REGIONS")]<-"NR"
 names(s)[which(names(s)=="NATURAL_SUBREGIONS")]<-"NSR"
 names(s)[which(names(s)=="LANDUSE_FRAMEWORK")]<-"LUF"
-for (i in 1:nrow(d1)) {  # Fill in missing nearest ABMI sites
+
+d1 <- d2 |>
+  mutate(NearestSite = NA)
+
+# Fill in missing nearest ABMI sites
+for (i in 1:nrow(d1)) {
   if (is.na(d1$NearestSite[i]) & !is.na(d1$Lat[i])) d1$NearestSite[i]<-s$SITE_ID[which.min(sqrt((d1$Long[i]-s$Long)^2 + (d1$Lat[i]-s$Lat)^2))]  # The nearest site based on lat long (without worrying about different km-scaling of lat and long here)
 }
+
+# Looks good.
+check <- d1 |> select(project, location, Lat, Long, NearestSite)
+
 # Fill in missing lat longs
-i<-which(is.na(d1$Lat))
-d1$Lat[i]<-s$Lat[match(d1$NearestSite[i],s$SITE_ID)]
-d1$Long[i]<-s$Long[match(d1$NearestSite[i],s$SITE_ID)]
+#i<-which(is.na(d1$Lat))
+#d1$Lat[i]<-s$Lat[match(d1$NearestSite[i],s$SITE_ID)]
+#d1$Long[i]<-s$Long[match(d1$NearestSite[i],s$SITE_ID)]
+
 q<-merge(d1,s[,c("SITE_ID","NR","NSR","LUF","AHM","PET","FFP","MAP","MAT","MCMT","MWMT")],by.x="NearestSite",by.y="SITE_ID")  # Check for loss of sites
+
 q$TrueLat<-q$Lat
 q$Lat<-ifelse(q$Lat<51.5,51.5,q$Lat)  # Truncated latitude for spatial modeling
 # Then merge in veg
@@ -184,7 +198,7 @@ q$location_project <- paste(q$location, q$project, sep = "_")
 q0<-merge(q,v[,-(1:4)],by="location_project")  # Check for loss of sites.  These are CMU sites in Saskatchewan or new CMU sites where the point veg+HF hasn't been done or was lost.  Plus a few oddball sites.
 d<-q0
 
-# Okay, we kept a lot more this time. 4,800 records remain.
+# Okay, we kept a lot more this time. 5,479 now.
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -260,6 +274,8 @@ d$UplandForest<-d$UpCon+d$DecidMixed  # Upland, except GrassShrub
 d$Upland<-1-d$Lowland-d$THF-d$WetlandMargin
 # CHECK for max of some of these groups being >1 - indicates duplication somewhere, which needs to be corrected
 
+# All good.
+
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Remove sites not in North (boreal or foothills)
@@ -267,14 +283,13 @@ d$UseAsNorth<-ifelse(d$NR=="Boreal" | d$NR=="Canadian Shield" | d$NR=="Foothills
 d$UseAsNorth<-ifelse(d$Water==1,"N",d$UseAsNorth)
 d<-d[d$UseAsNorth=="Y",]
 
-# 3,974 records remain.
+# 4,694 records remain.
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Add NSR grouping
 d$NSR1<-c(rep("Parkland",3),"DryMixedwood","CentralMixedwood",rep("Foothills",2),rep("North",4),rep("Shield",3),rep("Mountain",3))[match(d$NSR,c("Central Parkland","Foothills Parkland","Peace River Parkland","Dry Mixedwood","Central Mixedwood",
                                                                                                                                                  "Lower Foothills","Upper Foothills","Lower Boreal Highlands","Upper Boreal Highlands","Boreal Subarctic","Northern Mixedwood","Athabasca Plain","Kazan Uplands","Peace-Athabasca Delta","Montane","Subalpine","Alpine"))]
-
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Add Lured info
@@ -284,6 +299,7 @@ lure <- df_lure |>
 lure<-lure[duplicated(lure$location_project)==FALSE,]  # Not sure why there are duplicated records here
 names(lure)[which(names(lure)=="lure")]<-"Lured"  # Keep the same as previous version, for subsequent scripts
 q<-merge(d,lure[,c("location_project","Lured")],all.x=TRUE)  # Check for NAs in Lured - figure out correct value and add to lure file
+
 # Turn all NAs to 'No'
 q <- q |> mutate(Lured = ifelse(is.na(Lured), "No", Lured))
 d<-q
@@ -310,16 +326,16 @@ d$wt.s<-1/as.numeric(q[match(d$location,names(q))])
 d$wt.s<-ifelse(d$wt.s==Inf,0,d$wt.s)  # no weight to locations that have never been sampled (10+ days) in summer
 q<-by(ifelse(d$WinterDays>=10,1,0),d$location,sum)
 d$wt.w<-1/as.numeric(q[match(d$location,names(q))])
-d$wt.w<-ifelse(d$wt.w==Inf,0,d$wt.w)  # no weight to locdeploymentsation that have never been sampled (10+ days) in winter
+d$wt.w<-ifelse(d$wt.w==Inf,0,d$wt.w)  # no weight to loc deployment station that have never been sampled (10+ days) in winter
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Set up list of species to analyse, separately for summer and winter
 # Includes main analysis list as SpTable, and larger group to do use/availability for as SpTable.ua
-FirstSpCol.s<-which(names(d)=="badgerSummer")  # Find species names.  Check if species list changes
-LastSpCol.s<-which(names(d)=="woodland_caribouSummer")
-FirstSpCol.w<-which(names(d)=="badgerWinter")  # Find species names
-LastSpCol.w<-which(names(d)=="woodland_caribouWinter")
+FirstSpCol.s<-which(names(d)=="BeaverSummer")  # Find species names.  Check if species list changes
+LastSpCol.s<-which(names(d)=="White-tailed Jack RabbitSummer")
+FirstSpCol.w<-which(names(d)=="BeaverWinter")  # Find species names
+LastSpCol.w<-which(names(d)=="White-tailed Jack RabbitWinter")
 # Summer species table
 SpTable.s<-SpTable.s.ua<-names(d)[FirstSpCol.s:LastSpCol.s] # All speciesXseasons
 SpTable.s<-SpTable.s[regexpr("Summer",SpTable.s)>0]  # and Summer only

@@ -39,8 +39,9 @@ SpTable<-sort(unique(c(gsub("Summer","",SpTable.s),gsub("Winter","",SpTable.w)))
 SpTable.ua<-sort(unique(c(gsub("Summer","",SpTable.s.ua),gsub("Winter","",SpTable.w.ua))))  # And the larger list for use-availability
 
 # Specify space/climate ("sc") model options for each species in SpTable  1=based on total abundance, 2=based on presence/absence only, 3=none.  Based on results of cross-validation at site and regional level.
-sc.option<-c(1,2,3,2,2,2,3,3,3,3,1,1,3,3,2,2,2,3,2,2,3,3)  # These are the decisions from the 2019, for the record - overruled in next line
-sc.option<-rep(2,length(sc.option))  # Currently running all with sc based only on presence/absence, due to problems in AGP-based models
+#sc.option<-c(1,2,3,2,2,2,3,3,3,3,1,1,3,3,2,2,2,3,2,2,3,3)  # These are the decisions from the 2019, for the record - overruled in next line
+
+sc.option<-rep(2,length(SpTable))  # Currently running all with sc based only on presence/absence, due to problems in AGP-based models
 data.frame(SpTable,sc.option)  # Check that these are in right order (if different options are being used for different species!)
 
 # Get nice species names
