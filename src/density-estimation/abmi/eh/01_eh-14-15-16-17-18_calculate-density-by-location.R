@@ -100,12 +100,24 @@ tags_clean |>
   write_csv(paste0(g_drive, "data/base/clean/", proj, "_all-data_clean_", Sys.Date(), ".csv"))
 
 # This is the temporary solution - use data processed previously.
-tags_clean <- read_csv(paste0(g_drive, "data/base/clean/abmi-cmu_all-years_all-data_clean_2021-10-07.csv")) |>
+tags_clean <- read_csv(paste0(g_drive, "data/base/clean/archive/abmi-cmu_all-years_all-data_clean_2021-10-07.csv")) |>
   # Filter for appropriate projects
   filter(str_detect(project, "Health 2014|Health 2015|Health 2016|Health 2017|Health 2018")) |>
   # Remove OG deployments
   filter(!str_detect(location, "OG")) |>
   select(project, location, date_detected, common_name, age_class, sex, number_individuals)
+
+# Issue with the tag names
+sp <- tags_clean |> select(common_name) |> distinct() |> filter(!common_name %in% native_sp)
+
+tags_clean <- tags_clean |>
+  mutate(common_name = case_when(
+    common_name == "Grizzly bear" ~ "Grizzly Bear",
+    common_name == "Mule deer" ~ "Mule Deer",
+    common_name == "Red fox" ~ "Red Fox",
+    common_name == "Mountain goat" ~ "Mountain Goat",
+    TRUE ~ common_name
+  ))
 
 #-----------------------------------------------------------------------------------------------------------------------
 

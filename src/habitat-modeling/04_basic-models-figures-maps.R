@@ -1259,7 +1259,7 @@ for (sp in 1:length(SpTable)) {
 
   #  Save AIC wts for each species - models themselves not being saved in R format, because haven't been using
   fname<-paste(fname.Robjects," ",SpTable[sp],".Rdata",sep="")
-  save(file=fname,aic.wt.pa.save,aic.wt.agp.save,aic.age,aic.wt.age.models.save,aic.wt.age.save)
+  save(file=fname,aic.wt.pa.save,aic.wt.agp.save,aic.age,aic.wt.age.models.save,aic.wt.age.save, best.model.sc.pa, m.sc.pa)
 
 }  # Next species
 
