@@ -32,7 +32,7 @@ km2file.out <- "G:/Shared drives/ABMI Camera Mammals/data/processed/km2-grid/km2
 fname.150mVegModels <- paste0(g_drive, "R objects/Veg 150m best model")  # Start of file name to save best model using 150m veg as well as that model combined with best space/climate model (for separate graphing)
 
 # File name for previously processed datafile+veg+HF, km2 grid info, SpTable, and look-up matrix for veg groups
-dataset.out<-"G:/Shared drives/ABMI Camera Mammals/data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2021.RData"
+dataset.out<-"G:/Shared drives/ABMI Camera Mammals/data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData"
 load(dataset.out)
 SpTable.w<-SpTable.w[SpTable.w!="black_bearWinter"]  # Bears have enough occurrences in winter to meet criterion, but they are just flukey encounters - don't run winter models
 SpTable<-sort(unique(c(gsub("Summer","",SpTable.s),gsub("Winter","",SpTable.w))))  # All modeled species, summer and/or winter
@@ -1110,10 +1110,10 @@ for (sp in 1:length(SpTable)) {
   # No models if option=3
 
   # 6.2. Change models if necessary when a non-best model is more accurate than the best model - CHECK ALL WITH NEW DATA
-  if (SpTable[sp]=="Muledeer") best.model.sc.pa<-11
+  if (SpTable[sp]=="MuleDeer") best.model.sc.pa<-11
   if (SpTable[sp]=="Wolverine") best.model.sc.pa<-2
   if (SpTable[sp]=="WhitetailedJackRabbit") best.model.sc.pa<-2
-  if (SpTable[sp]=="Redfox") best.model.sc.pa<-8  # Difficult spatial distribution - this gives soft approximation to overall pattern without extreme values at edges (mountains)
+  if (SpTable[sp]=="RedFox") best.model.sc.pa<-8  # Difficult spatial distribution - this gives soft approximation to overall pattern without extreme values at edges (mountains)
   if (SpTable[sp]=="GrayWolf") best.model.sc.pa<-1  # None give reasonable patterns for this widespread but rare species
   if (SpTable[sp]=="SnowshoeHare") best.model.sc.pa<-2
   if (SpTable[sp]=="WoodlandCaribou") best.model.sc.pa<-3  # The best and other good model over-predict the undersampled NW.  This option is less bad.  Shouldn't really be showing that part of the province yet...
@@ -1121,7 +1121,7 @@ for (sp in 1:length(SpTable)) {
   c1<-coef(m.sc.pa[[best.model.sc.pa]])  # Variable names in best sc model
 
   # And post-hoc modifications of coefficients when necessary - CHECK ALL WITH NEW DATA
-  if (SpTable[sp]=="Grizzlybear") c1<-c(c1,"NSR1North"= -16, "NSR1Shield"= -16, "NSR1CentralMixedwood" = -2)  # Add to (partially) censor those NSR1's
+  if (SpTable[sp]=="GrizzlyBear") c1<-c(c1,"NSR1North"= -16, "NSR1Shield"= -16, "NSR1CentralMixedwood" = -2)  # Add to (partially) censor those NSR1's
   if (SpTable[sp]=="Wolverine") c1<-c1/3  # This makes the spatial modeling less extreme for this rarely detected species
   if (SpTable[sp]=="Moose") c1<-c1/2  # This makes the spatial modeling less extreme for this species
   if (SpTable[sp]=="SnowshoeHare") c1<-c1/2  # This makes the spatial modeling less extreme for this species
@@ -1259,7 +1259,7 @@ for (sp in 1:length(SpTable)) {
 
   #  Save AIC wts for each species - models themselves not being saved in R format, because haven't been using
   fname<-paste(fname.Robjects," ",SpTable[sp],".Rdata",sep="")
-  save(file=fname,aic.wt.pa.save,aic.wt.agp.save,aic.age,aic.wt.age.models.save,aic.wt.age.save, best.model.sc.pa, m.sc.pa)
+  save(file=fname,aic.wt.pa.save,aic.wt.agp.save,aic.age,aic.wt.age.models.save,aic.wt.age.save, best.model.sc.pa, m.sc.pa, d2)
 
 }  # Next species
 

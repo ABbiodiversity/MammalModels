@@ -36,7 +36,7 @@ files <- list.files(path = paste0(g_drive, "results/density/deployments"), full.
 dens <- map_df(.x = files, .f = read_csv)
 
 # All species
-sp <- unique(dens$common_name) # 36 total have been detected in these projects
+sp <- unique(dens$common_name) # 39 total have been detected in these projects
 
 # In order to combine, need to fill out missing species x location x season combinations
 missing <- dens |>
@@ -55,7 +55,7 @@ dens_all <- dens |>
 # Check
 check <- dens_all |>
   group_by(project, location, season) |>
-  tally() # Should have 36 records (one for each species)
+  tally() # Should have 39 records (one for each species)
 
 # Widen for modeling
 season_days <- dens_all |>
