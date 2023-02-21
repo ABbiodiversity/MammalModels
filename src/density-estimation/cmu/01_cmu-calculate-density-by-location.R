@@ -198,6 +198,7 @@ df_veghf_updated <- df_veghf |>
   crossing(project) |>
   unite("project_location", project, location, sep = "_", remove = TRUE)
 
+DBI::dbDisconnect(cvc)
 
 # Calculate density
 df_density_long <- calc_density_by_loc(tt = df_tt,

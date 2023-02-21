@@ -363,7 +363,7 @@ SpTable.w.ua<-SpTable.w.ua[-which(occ1.w<3)]  # Omit species with <3 occurrences
 pm <- df_pred_matrix
 
 # To save combined species-veg-HF file, plus SpTable.
-save(file = paste0(g_drive, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2021.RData"),
+save(file = paste0(g_drive, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData"),
      d,FirstSpCol.s,LastSpCol.s,FirstSpCol.w,LastSpCol.w,SpTable.s,SpTable.s.ua,SpTable.w,SpTable.w.ua,pm)
 
 #-----------------------------------------------------------------------------------------------------------------------

@@ -22,11 +22,17 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 # Source functions for TIFC workflow
 source("./src/functions/estimate-density-tifc.R")
 
+# Write and archive function
+source("./src/functions/write-and-archive.R")
+
 # Species character strings
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
 # Project
 proj <- "bg"
+
+# Years
+years <- "_all-years"
 
 # Date
 date <- Sys.Date()
@@ -122,25 +128,13 @@ df_tbd_summary <- get_operating_days(
   .abmi_seasons = TRUE
 )
 
-# Write results
-
-path <- "data/processed/time-by-day/"
-file <- "_all-years_tbd-summary_"
-
-write_csv(df_tbd_summary, paste0(g_drive, path, proj, file, date, ".csv"))
-
-# Put old results in `archive` folder:
-files <- list.files(path = paste0(g_drive, path), full.names = TRUE) |>
-  str_subset(pattern = paste0(proj, file))
-# Find the most recent file (should always have the date appended at the end)
-latest <- files |>
-  str_sub(start = -14, end = -5) |>
-  max()
-# List all the old files
-old_files <- files |>
-  str_subset(pattern = latest, negate = TRUE)
-# Move them to the archive folder
-file_move(old_files, paste0(g_drive, path, "archive"))
+# Write new results and archive old results
+write_and_archive(
+  data = df_tbd_summary,
+  type = "tbd",
+  project = proj,
+  years = years
+)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -152,26 +146,13 @@ df_tt <- tags_clean |>
   # Next calculate tifc by location, deployment, species
   sum_total_time(tbd = df_tbd_summary)
 
-# Write results
-
-path <- "data/processed/time-in-cam-fov/"
-file <- "_all-years_fov-time_long_"
-
-# Full results long:
-write_csv(df_tt, paste0(g_drive, path, proj, file, date, ".csv"))
-
-# Put old results in `archive` folder:
-files <- list.files(path = paste0(g_drive, path), full.names = TRUE) |>
-  str_subset(pattern = paste0(proj, file))
-# Find the most recent file (should always have the date appended at the end)
-latest <- files |>
-  str_sub(start = -14, end = -5) |>
-  max()
-# List all the old files
-old_files <- files |>
-  str_subset(pattern = latest, negate = TRUE)
-# Move them to the archive folder
-file_move(old_files, paste0(g_drive, path, "archive"))
+# Write new results and archive old results
+write_and_archive(
+  data = df_tt,
+  type = "tt",
+  project = proj,
+  years = years
+)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -193,26 +174,20 @@ df_density_wide <- calc_density_by_loc(tt = df_tt,
                                        cam_fov_angle = 40,
                                        format = "wide")
 
-# Write results
+# Write new results and archive old results
 
-path <- "results/density/deployments/"
-file <- "_all-years_density_"
+write_and_archive(
+  data = df_density_long,
+  type = "dl",
+  project = proj,
+  years = years
+)
 
-# Both long and wide formats
-write_csv(df_density_long, paste0(g_drive, path, proj, file, "long_", date, ".csv"))
-write_csv(df_density_wide, paste0(g_drive, path, proj, file, "wide_", date, ".csv"))
-
-# Put old results in `archive` folder:
-files <- list.files(path = paste0(g_drive, path), full.names = TRUE) |>
-  str_subset(pattern = paste0(proj, file))
-# Find the most recent file (should always have the date appended at the end)
-latest <- files |>
-  str_sub(start = -14, end = -5) |>
-  max()
-# List all the old files
-old_files <- files |>
-  str_subset(pattern = latest, negate = TRUE)
-# Move them to the archive folder
-file_move(old_files, paste0(g_drive, path, "archive"))
+write_and_archive(
+  data = df_density_wide,
+  type = "dw",
+  project = proj,
+  years = years
+)
 
 #-----------------------------------------------------------------------------------------------------------------------

@@ -22,6 +22,9 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 # Source functions for TIFC workflow
 source("./src/functions/estimate-density-tifc.R")
 
+# Write and archive function
+source("./src/functions/write-and-archive.R")
+
 # Species character strings
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
@@ -98,6 +101,18 @@ tags_clean |>
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+# If needed (not re-downloading from WildTrax), import data:
+
+image_fov_trigger <- read_csv(paste0(g_drive, "data/lookup/images/", proj, years, "_image-report_simple.csv"))
+
+# Find appropriate tag data file
+file <- list.files(path = paste0(g_drive, "data/base/clean"), full.names = TRUE) |>
+  str_subset(pattern = paste0(proj, years, "_all-data_clean"))
+# Import
+tags_clean <- read_csv(file)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
 # Summarise time-by-day for each camera deployment in the four EH projects (19, 20, 21, 22).
 
 df_tbd_summary <- get_operating_days(
@@ -110,8 +125,13 @@ df_tbd_summary <- get_operating_days(
   .abmi_seasons = TRUE
 )
 
-# Write results
-write_csv(df_tbd_summary, paste0(g_drive, "data/processed/time-by-day/", proj, "_19-20-21-22_tbd-summary_", Sys.Date(), ".csv"))
+# Write new results and archive old results
+write_and_archive(
+  data = df_tbd_summary,
+  type = "tbd",
+  project = proj,
+  years = years
+)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -123,9 +143,13 @@ df_tt <- tags_clean |>
   # Next calculate tifc by location, deployment, species
   sum_total_time(tbd = df_tbd_summary)
 
-# Write results
-# Full results long:
-write_csv(df_tt, paste0(g_drive, "data/processed/time-in-cam-fov/", proj, "_19-20-21-22_fov-time_long_", Sys.Date(), ".csv"))
+# Write new results and archive old results
+write_and_archive(
+  data = df_tt,
+  type = "tt",
+  project = proj,
+  years = years
+)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -160,10 +184,19 @@ df_density_wide <- calc_density_by_loc(tt = df_tt,
                                        cam_fov_angle = 40,
                                        format = "wide")
 
-# Write results
+# Write new results and archive old results
 
-write_csv(df_density_long, paste0(g_drive, "results/density/deployments/", proj, "_19-20-21-22_density_long_", Sys.Date(), ".csv"))
+write_and_archive(
+  data = df_density_long,
+  type = "dl",
+  project = proj,
+  years = years
+)
 
-write_csv(df_density_wide, paste0(g_drive, "results/density/deployments/", proj, "_19-20-21-22_density_wide_", Sys.Date(), ".csv"))
-
+write_and_archive(
+  data = df_density_wide,
+  type = "dw",
+  project = proj,
+  years = years
+)
 #-----------------------------------------------------------------------------------------------------------------------
