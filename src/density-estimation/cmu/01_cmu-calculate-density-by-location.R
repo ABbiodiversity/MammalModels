@@ -44,13 +44,15 @@ Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
 # Authenticate into WildTrax
 wt_auth()
 
-# Pull NWSAR project IDs
+# Pull CMU project IDs
 cmu_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
   filter(str_detect(project, "CMU"),
          # Remove the Lemming project
          !str_detect(project, "Lemming")) |>
   pull(project_id) |>
   unlist()
+
+cmu_proj_ids <- 904
 
 # Download tag and image reports using IDs
 tag_reports <- map_df(.x = cmu_proj_ids,
@@ -60,6 +62,7 @@ tag_reports <- map_df(.x = cmu_proj_ids,
                         report = "tag",
                         weather_cols = FALSE))
 
+# Note: There is an issue now - a column has been added, image_exif_temperature
 image_reports <- map_df(.x = cmu_proj_ids,
                         .f = ~ wt_download_report(
                           project_id = .x,
@@ -75,6 +78,7 @@ image_fov_trigger <- image_reports |>
 tags_clean <- tag_reports |>
   # Consolidate tags of same species in same image into one row
   consolidate_tags() |>
+  mutate(date_detected = ymd_hms(date_detected)) |>
   left_join(image_fov_trigger, by = c("project", "location", "date_detected")) |>
   mutate(date_detected = ymd_hms(date_detected)) |>
   filter(field_of_view == "WITHIN") |>
