@@ -457,6 +457,8 @@ calculate_time_by_series <- function(tag_report_clean) {
               series_start = min(date_detected),
               series_end = max(date_detected)) |>
     ungroup() |>
+    # Double the series time of single-series images (halved in an earlier step when it shouldn't be)
+    mutate(series_total_time = ifelse(n_images < 2, series_total_time * 2, series_total_time)) |>
     select(project, location, series_num, common_name, series_start, series_end, series_total_time, n_images)
 
   return(tts)
