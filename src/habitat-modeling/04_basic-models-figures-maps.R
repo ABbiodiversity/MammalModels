@@ -1181,25 +1181,43 @@ for (sp in 1:length(SpTable)) {
 
   # 6.5 Full maps for North
   # This includes veg types, surrounding HF and additional climate and spatial effects
-  km2.pveg<-colSums(Coef.mean.all[sp,]*t(km2.1[,colnames(Coef.mean.all)]))   # Prediction based on veg types only.  Note: water, barren and mines not included, so they are treated as 0.  km2.1 is the full km2 truncated to the sampled polygon
-  km2.pres<-colSums(Res.coef[sp,]*t(km2.sc[,colnames(Res.coef)]))  # Prediction of residual effect (note: Uses truncated latitude "Lat", but point is plotted at true latitude)
-  km2.pveg.ref<-colSums(Coef.mean.all[sp,vnames.b]*t(km2.b.1[,vnames.b]))   # Prediction based on non-HF veg types only for reference. .b.1 is the full km2.b truncated to the sampled polygon
-  km2.pres.ref<-colSums(Res.coef[sp,]*t(km2.sc[,colnames(Res.coef)]))  # Prediction of residual effect (note: Uses truncated latitude "Lat", but point is plotted at true latitude)
-  if (sc.option[sp]==1 | sc.option[sp]==3) {  # Use this also for no model - all 0 coefficients become 1 multipliers on exp scale
-    km2.p<-km2.pveg*exp(km2.pres) # Using simple multiplication of residual effect, to avoid offset problems
-    km2.p.ref<-km2.pveg.ref*exp(km2.pres.ref)  # Using simple multiplication of residual effect, to avoid offset problems - here, for log-linked residual total abundance predictions
+  # Prediction based on veg types only.  Note: water, barren and mines not included, so they are treated as 0.
+  # km2.1 is the full km2 truncated to the sampled polygon
+  km2.pveg<-colSums(Coef.mean.all[sp,]*t(km2.1[,colnames(Coef.mean.all)]))
+  # Prediction of residual effect (note: Uses truncated latitude "Lat", but point is plotted at true latitude)
+  km2.pres<-colSums(Res.coef[sp,]*t(km2.sc[,colnames(Res.coef)]))
+  # Prediction based on non-HF veg types only for reference. .b.1 is the full km2.b truncated to the sampled polygon
+  km2.pveg.ref<-colSums(Coef.mean.all[sp,vnames.b]*t(km2.b.1[,vnames.b]))
+  # Prediction of residual effect (note: Uses truncated latitude "Lat", but point is plotted at true latitude)
+  km2.pres.ref<-colSums(Res.coef[sp,]*t(km2.sc[,colnames(Res.coef)]))
+
+  # Use this also for no model - all 0 coefficients become 1 multipliers on exp scale
+  if (sc.option[sp]==1 | sc.option[sp]==3) {
+    # Using simple multiplication of residual effect, to avoid offset problems
+    km2.p<-km2.pveg*exp(km2.pres)
+    # Using simple multiplication of residual effect, to avoid offset problems - here, for log-linked residual total abundance predictions
+    km2.p.ref<-km2.pveg.ref*exp(km2.pres.ref)
   }
-  if (sc.option[sp]==2) {  # Logit scale, and need to extract veg presence/absence and AGP components
-    km2.pveg.pa<-colSums(Coef.pa.all[sp,]*t(km2.1[,colnames(Coef.pa.all)]))   # Presence/absence prediction based on veg types only.  Note: water, barren and mines not included, so they are treated as 0.  km2.1 is the full km2 truncated to the sampled polygon
-    km2.pveg.agp<-ifelse(km2.pveg.pa<0.0001,0,km2.pveg/km2.pveg.pa)  # This is the abundance-given-presence prediction for each km2 raster, to be multiplied by the sc-adjusted presence/absence
-    km2.p<-plogis(qlogis(0.998*km2.pveg.pa+0.001)+km2.pres) * km2.pveg.agp  # Using simple multiplication of residual effect, to avoid offset problems - here, for logit-linked residual presence/absence predictions.  And multiply by agp to get total abundance.
-    km2.p<-ifelse(is.na(km2.p),0,km2.p)  # This is if the prediction is 0
+
+  # Logit scale, and need to extract veg presence/absence and AGP components
+  if (sc.option[sp]==2) {
+    # Presence/absence prediction based on veg types only.  Note: water, barren and mines not included, so they are treated as 0.
+    # km2.1 is the full km2 truncated to the sampled polygon
+    km2.pveg.pa<-colSums(Coef.pa.all[sp,]*t(km2.1[,colnames(Coef.pa.all)]))
+    # This is the abundance-given-presence prediction for each km2 raster, to be multiplied by the sc-adjusted presence/absence
+    km2.pveg.agp<-ifelse(km2.pveg.pa<0.0001,0,km2.pveg / km2.pveg.pa)
+    # Using simple multiplication of residual effect, to avoid offset problems - here, for logit-linked residual presence/absence predictions.
+    # And multiply by agp to get total abundance.
+    km2.p<-plogis(qlogis(0.998*km2.pveg.pa+0.001)+km2.pres) * km2.pveg.agp
+    # This is if the prediction is 0
+    km2.p<-ifelse(is.na(km2.p),0,km2.p)
     # And repeat for reference
     km2.pveg.pa.ref<-colSums(Coef.pa.all[sp,vnames.b]*t(km2.b.1[,vnames.b]))   # Presence/absence prediction based on veg types only.  Note: water, barren and mines not included, so they are treated as 0.  km2.b.1 is the full km2.b truncated to the sampled polygon
     km2.pveg.agp.ref<-ifelse(km2.pveg.pa.ref<0.0001,0,km2.pveg.ref/km2.pveg.pa.ref)  # This is the abundance-given-presence prediction for each km2 raster, to be multiplied by the sc-adjusted presence/absence
     km2.p.ref<-plogis(qlogis(0.998*km2.pveg.pa.ref+0.001)+km2.pres.ref) * km2.pveg.agp.ref  # Using simple multiplication of residual effect, to avoid offset problems - here, for logit-linked residual presence/absence predictions. And multiply by agp to get total abundance.
     km2.p.ref<-ifelse(is.na(km2.p.ref),0,km2.p.ref)  # This is if the prediction is 0
   }
+
   x.ref1<-km2.p.ref  # Colour gradient direct with predicted abundance
   x.curr1<-km2.p
   #	x.curr1<-ifelse(x.curr1<min(pCount),min(pCount),x.curr1)  # Some extreme low values otherwise
@@ -1259,7 +1277,7 @@ for (sp in 1:length(SpTable)) {
 
   #  Save AIC wts for each species - models themselves not being saved in R format, because haven't been using
   fname<-paste(fname.Robjects," ",SpTable[sp],".Rdata",sep="")
-  save(file=fname,aic.wt.pa.save,aic.wt.agp.save,aic.age,aic.wt.age.models.save,aic.wt.age.save, best.model.sc.pa, m.sc.pa, d2)
+  save(file=fname,aic.wt.pa.save,aic.wt.agp.save,aic.age,aic.wt.age.models.save,aic.wt.age.save)
 
 }  # Next species
 
