@@ -1267,7 +1267,8 @@ for (sp in 1:length(SpTable)) {
 
 # 8. Export .csv files for website or other uses
 # Veg and HF coefficients
-lu.names<-read.csv("G:/Shared drives/ABMI Camera Mammals/data/lookup/Lookup for coefficient table names North June 2020.csv")  # To translate names used for coefficients here to official names.  This seems to change several times a year - never know what is current.
+lu.names<-read.csv("G:/Shared drives/ABMI Camera Mammals/data/lookup/Lookup for coefficient table names North June 2020.csv")
+# To translate names used for coefficients here to official names.  This seems to change several times a year - never know what is current.
 Coef.mean.all<-cbind(Coef.mean.all,rep(0,nrow(Coef.mean.all)),rep(0,nrow(Coef.mean.all)))  # Add columns for bare and water
 Coef.lci.all<-cbind(Coef.lci.all,rep(0,nrow(Coef.lci.all)),rep(0,nrow(Coef.lci.all)))  # Add columns for bare and water
 Coef.uci.all<-cbind(Coef.uci.all,rep(0,nrow(Coef.uci.all)),rep(0,nrow(Coef.uci.all)))  # Add columns for bare and water
@@ -1289,12 +1290,12 @@ rownames(Coef.official)<-rownames(Coef.official.lci)<-rownames(Coef.official.uci
 # and climate/space coefficients
 Res.coef.official<-Res.coef  # Seems to be in right format already
 # Save
-fname<-paste(fname.sumout,"OFFICIAL coefficients.Rdata")
+fname<-paste(fname.sumout,"OFFICIAL coefficients_2023-02-28.Rdata")
 save(file=fname,Coef.official,Coef.official.lci,Coef.official.uci,Res.coef.official,Coef.pa.all)  # Save to compile later with South results
 
 # AUC fit
 q<-data.frame(Sp=SpTable,AUC.fit=auc.fit)
-write.table(q,file=paste0(g_drive, "AUC of fit for camera mammals North Nov 2021.csv"),sep=",",row.names=F)
+write.table(q,file=paste0(g_drive, "AUC of fit for camera mammals North Feb 2023.csv"),sep=",",row.names=F)
 
 # Lure effects
 fname<-"G:/Shared drives/ABMI Camera Mammals/data/processed/lure/Lure effects North 2022.csv"
