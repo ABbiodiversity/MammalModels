@@ -23,15 +23,15 @@ load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
 # Import data
 
-# Species densities
+# OSM species densities
 d1 <- read_csv(paste0(g_drive, "results/density/deployments/osm_all-years_density_wide_2023-03-07.csv")) |>
   # Remove ACME locations
   filter(!str_detect(project, "ACME"))
 
 # OSM deployment treatment metadata
-s <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv"))
+df_meta <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv"))
 
-# Lure effects
+# Lure effects - processed by DJH
 lure <- read_csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv")) |>
   # Remove periods to use same names as density file
   mutate(common_name = str_remove_all(Species, "\\."))
@@ -46,19 +46,34 @@ s2 <- read.csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/fi
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Join deployment metadata to species densities
-d2 <- s |>
+# Join OSM deployment metadata to OSM species densities
+d2 <- df_meta |>
   # Join does include the cameras paired with ACME (no relevant metadata)
   left_join(d1, by = c("project", "location")) |>
   # Remove Wetland cameras
   filter(!vegetation == "wetland") |>
   # Clean up fine scale edge treatment specification
   mutate(fine_scale = str_remove(fine_scale, " metres"),
-         fine_scale = ifelse(fine_scale == "200" | fine_scale == "600", "300", fine_scale))
-
-colnames(d2) <- gsub("_summer","Summer", colnames(d2))
-colnames(d2) <- gsub("_winter","Winter", colnames(d2))
-colnames(d2) <- gsub("\\.", "", colnames(d1))
+         fine_scale = ifelse(fine_scale == "200" | fine_scale == "600", "300", fine_scale)) |>
+  # Clean up column names
+  rename_at(vars(ends_with("_summer")), ~ str_replace(., "_summer", "Summer")) |>
+  rename_at(vars(ends_with("_winter")), ~ str_replace(., "_winter", "Winter")) |>
+  rename(SummerDays = summer, WinterDays = winter, Lured = lure) |>
+  select(-camera) |>
+  # Update treatment names
+  mutate(treatment = case_when(
+    treatment == "reference" ~ "Low Disturbance/Reference",
+    treatment == "road buffer" ~ "Roads",
+    treatment == "dense linear features" ~ "Dense Linear Features",
+    treatment == "high activity in situ" ~ "High Activity Insitu Well Pads",
+    treatment == "low activity well pads" ~ "Low Activity Well Pads",
+    treatment == "plant/mine buffer" ~ "Plant/Mine Buffer",
+    treatment == "pre-insitu" ~ "Pre-Insitu"
+  )) |>
+  mutate(vegetation = case_when(
+    vegetation == "treedlow20" ~ "TreedLow20",
+    vegetation == "decidmix40" ~ "DecidMix40"
+  ))
 
 # Summarise number of OSM cameras (sub-samples) per treatment and vegetation type (2021)
 d2 |>
@@ -68,40 +83,44 @@ d2 |>
 
 # Add ABMI EH and OG deployments
 s <- bind_rows(s1, s2) |>
-  # Add a "-1" to the end of OG 2018
+  # Add a "-1" to the end of OG 2018 in order to join properly
   mutate(location = ifelse(project == "ABMI Off-Grid Monitoring 2018", paste0(location, "-1"), location)) |>
   left_join(d, by = c("location", "project")) |>
   # Remove records with no density information
   filter(!is.na(location_project)) |>
+  # Include only the most recent (re)visit
   arrange(location, desc(project)) |>
   group_by(location) |>
-  filter(row_number() == 1)
+  filter(row_number() == 1) |>
+  select(1:87, Lured) |>
+  # Landscape Unit not relevant - unless I do a spatial join? But we don't care yet in this first-pass analysis.
+  mutate(landscape_unit = 9999) |>
+  # 'JEM' unit for ABMI sites is the site number
+  mutate(jem = NearestSite) |>
+  # Standardize edge distances to 4 classes
+  mutate(fine_scale = str_remove(fine_scale, " metres")) |>
+  mutate(fine_scale = case_when(
+    fine_scale == "150" ~ "100",
+    fine_scale == "170" ~ "100",
+    fine_scale == "200" ~ "300",
+    fine_scale == "250" ~ "300",
+    fine_scale == "350" ~ "300",
+    fine_scale == "400" ~ "300",
+    fine_scale == "450" ~ "300",
+    fine_scale == "50" ~ "30",
+    fine_scale == "600" ~ "300",
+    TRUE ~ fine_scale
+  )) |>
+  mutate(fine_scale = ifelse(treatment == "Low Disturbance/Reference", NA, fine_scale),
+         fine_scale = ifelse(treatment == "Roads" & is.na(fine_scale), "300", fine_scale)) |>
+  select(project, location, Lured, landscape_unit, jem, treatment, vegetation, fine_scale,
+         SummerDays:`White-tailed Jack RabbitWinter`)
+
+# Combine OSM and supplemental ABMI sites together
+d <- bind_rows(s, d2)
 
 
-# Make the column names compatible
-names(d2)<-gsub("\\.","",names(d2))
-names(d)<-gsub("Winter","_winter",names(d))
-names(d)<-gsub("Summer","_summer",names(d))
-names(d)[which(names(d)=="Lured")]<-"lure"
-names(d)[which(names(d)=="_winterDays")]<-"winter"
-names(d)[which(names(d)=="_summerDays")]<-"summer"
-d$landscape_unit<-"9999"  # Not assigned for ABMI sites
-d$jem<-substr(d$location,1,3)  # The "JEM" unit for ABMI sites is just the site (with OG sites added to the nearest site).  This line only works because all ABMI sites in OSM have 3 digits (i.e., >=100, <1000)
-d$jem<-ifelse(substr(d$location,1,7)=="OG-ABMI",substr(d$location,9,11),d$jem)  # This line only works because the only OG sites are OG-ABMI and the nearest ABMI sites has 3 digits in all cases
-d$camera<-9999
-# Standardize the edge distances to 4 classes
-fs1<-c("10","100","100","100","300","300","30","300","300","300","300","30","300","Off","On")[match(d$fine_scale,c("10 metres","100 metres","150 metres","170 metres","200 metres","250 metres","30 metres","300 metres","350 metres","400 metres","450 metres","50 metres","600 metres","Off","On"))]  # Check with table(d$fine_scale,fs1) and sum(is.na(fs1))
-d$fine_scale<-fs1
-# And use the simpler JEM treatment names
-t1<-c("reference","low activity well pads","plant/mine buffer","road buffer","dense linear features","high activity in situ")[match(d$treatment,c("Low Disturbance/Reference","Low Activity Well Pads","Plant/Mine Buffer","Roads","Dense Linear Features","High Activity Insitu Well Pads"))]  # NOTE: No pre-insitu among ABMI sites?
-t1<-ifelse(is.na(t1),as.character(d$treatment),t1)  # This is for the cases that were right to begin with
-d$treatment<-t1
-# And standardize vegetation
-d$vegetation<-tolower(d$vegetation)
-# Correct some mistakes in meta-data
-d$fine_scale<-ifelse(is.na(d$fine_scale) & d$vegetation!="wetland","Off",d$fine_scale)
-d$fine_scale<-ifelse(d$treatment=="reference",NA,as.character(d$fine_scale))  # These are all "Off" in the ABMI meta-data, all NA in OSM data
-d$fine_scale<-ifelse(d$treatment=="road buffer" & d$fine_scale=="Off","300",as.character(d$fine_scale))
+
 # Then add to BADR cameras
 d<-rbind(d2,d[,colnames(d2)])
 
