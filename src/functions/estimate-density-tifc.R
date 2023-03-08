@@ -159,49 +159,68 @@ get_operating_days <- function(image_report, include_project = TRUE, summarise =
     filter(n > 1) |>
     select(project_location)
 
-  inter_pairs <- x |>
-    filter(field_of_view == "START - First Good Image in FOV" | field_of_view == "END - Last Good Image in FOV") |>
-    # Return all rows with a match in inter
-    semi_join(inter, by = c("project_location")) |>
-    arrange(project_location, date_detected) |>
-    select(project_location, date_detected, field_of_view) |>
-    group_by(project_location) |>
-    # This code is gross. Do we still need to do this for camera data pre-2019?
-    mutate(starts_again = ifelse(lead(field_of_view) == "START - First Good Image in FOV" & field_of_view == "END - Last Good Image in FOV", 1, NA),
-           restart = ifelse(lag(starts_again) == "1" & lag(field_of_view) == "END - Last Good Image in FOV", 1, NA)) |>
-    filter(starts_again == "1" | restart == "1") |>
-    select(-c(starts_again, restart)) |>
-    ungroup() |>
-    group_split(field_of_view) |>
-    bind_cols(.name_repair = "unique") |>
-    mutate(time_diff = difftime(`date_detected...5`, `date_detected...2`, units = "hours")) |>
-    filter(time_diff > 12) |>
-    select(1:3, 5, 6)
+  if(nrow(inter) > 0) {
 
-  to_remove <- inter_pairs |>
-    mutate(end_date = as.Date(`date_detected...2`),
-           start_date = as.Date(`date_detected...5`)) |>
-    select(project_location = 1, end_date, start_date) |>
-    rowwise() |>
-    mutate(date = list(seq(from = end_date, to = start_date, by = "day"))) |>
-    unnest(date) |>
-    select(project_location, date)
+    inter_pairs <- x |>
+      filter(field_of_view == "START - First Good Image in FOV" | field_of_view == "END - Last Good Image in FOV") |>
+      # Return all rows with a match in inter
+      semi_join(inter, by = c("project_location")) |>
+      arrange(project_location, date_detected) |>
+      select(project_location, date_detected, field_of_view) |>
+      group_by(project_location) |>
+      # This code is gross. Do we still need to do this for camera data pre-2019?
+      mutate(starts_again = ifelse(lead(field_of_view) == "START - First Good Image in FOV" & field_of_view == "END - Last Good Image in FOV", 1, NA),
+            restart = ifelse(lag(starts_again) == "1" & lag(field_of_view) == "END - Last Good Image in FOV", 1, NA)) |>
+      filter(starts_again == "1" | restart == "1") |>
+      select(-c(starts_again, restart)) |>
+      ungroup() |>
+      group_split(field_of_view) |>
+      bind_cols(.name_repair = "unique") |>
+      mutate(time_diff = difftime(`date_detected...5`, `date_detected...2`, units = "hours")) |>
+      filter(time_diff > 12) |>
+      select(1:3, 5, 6)
 
-  range <- x |>
-    # Remove Out of Range images
-    filter(field_of_view == "WITHIN") |>
-    group_by(project_location) |>
-    summarise(start_date = as.Date(min(date_detected)),
-              end_date = as.Date(max(date_detected))) |>
-    filter(!is.na(end_date)) |>
-    group_by(project_location) |>
-    mutate(date = list(seq(from = start_date, to = end_date, by = "day"))) |>
-    unnest(date) |>
-    ungroup() |>
-    select(project_location, date) |>
-    # Remove days where the camera was not working
-    anti_join(to_remove, by = c("project_location", "date")) |>
-    mutate(operating = 1)
+    to_remove <- inter_pairs |>
+      mutate(end_date = as.Date(`date_detected...2`),
+            start_date = as.Date(`date_detected...5`)) |>
+      select(project_location = 1, end_date, start_date) |>
+      rowwise() |>
+      mutate(date = list(seq(from = end_date, to = start_date, by = "day"))) |>
+      unnest(date) |>
+      select(project_location, date)
+
+    range <- x |>
+      # Remove Out of Range images
+      filter(field_of_view == "WITHIN") |>
+      group_by(project_location) |>
+      summarise(start_date = as.Date(min(date_detected)),
+                end_date = as.Date(max(date_detected))) |>
+      filter(!is.na(end_date)) |>
+      group_by(project_location) |>
+      mutate(date = list(seq(from = start_date, to = end_date, by = "day"))) |>
+      unnest(date) |>
+      ungroup() |>
+      select(project_location, date) |>
+      # Remove days where the camera was not working
+      anti_join(to_remove, by = c("project_location", "date")) |>
+      mutate(operating = 1)
+  } else {
+
+    range <- x |>
+      # Remove Out of Range images
+      filter(field_of_view == "WITHIN") |>
+      group_by(project_location) |>
+      summarise(start_date = as.Date(min(date_detected)),
+                end_date = as.Date(max(date_detected))) |>
+      filter(!is.na(end_date)) |>
+      group_by(project_location) |>
+      mutate(date = list(seq(from = start_date, to = end_date, by = "day"))) |>
+      unnest(date) |>
+      ungroup() |>
+      select(project_location, date) |>
+      mutate(operating = 1)
+
+  }
 
   if(summarise) {
     if(.abmi_seasons) {
@@ -438,6 +457,8 @@ calculate_time_by_series <- function(tag_report_clean) {
               series_start = min(date_detected),
               series_end = max(date_detected)) |>
     ungroup() |>
+    # Double the series time of single-series images (halved in an earlier step when it shouldn't be)
+    mutate(series_total_time = ifelse(n_images < 2, series_total_time * 2, series_total_time)) |>
     select(project, location, series_num, common_name, series_start, series_end, series_total_time, n_images)
 
   return(tts)
