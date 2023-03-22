@@ -10,7 +10,7 @@
 library(readr)
 library(dplyr)
 library(stringr)
-library(RColorBrewer)
+library(tidyr)
 library(ggplot2)
 
 # Root directory
@@ -34,7 +34,7 @@ df_nwsar <- df_nwsar |>
   mutate(project = str_replace_all(project, "[^0-9]", ""))
 
 predators <- c("Black Bear", "Canada Lynx", "Gray Wolf")
-prey <- c("White-tailed Deer", "Moose", "Woodland Caribou")
+prey <- c("White-tailed Deer", "Moose", "Woodland Caribou", "Snowshoe Hare")
 
 # Predators plot
 df_nwsar |>
@@ -89,7 +89,7 @@ df_tbd <- read_csv(paste0(g_drive, "data/processed/time-by-day/nwsar_20-21_tbd-s
     str_detect(grid, "SOR|CMP|NOR") ~ "Caribou Mountains"),
     levels = c("Chinchaga", "Caribou Mountains"))) |>
   mutate(project = str_replace_all(project, "[^0-9]", "")) |>
-  group_by(range) |>
+  group_by(project, grid) |>
   summarise(mean_effort = mean(total_days, na.rm = TRUE))
 
 # Write data out for Jillian

@@ -27,7 +27,8 @@ df_dep_density <- read_csv(paste0(g_drive, "results/density/deployments/nwsar_20
 
 # Species of interest
 sp <- c("White-tailed Deer", "Black Bear", "Moose", "Woodland Caribou", "Gray Wolf",
-        "Canada Lynx", "Grizzly Bear", "Wolverine", "Mule Deer")
+        "Canada Lynx", "Grizzly Bear", "Wolverine", "Mule Deer", "Cougar", "Elk (wapiti)",
+        "Snowshoe Hare")
 
 # Minimum seasonal days requirement
 min_season_days <- 20
@@ -54,6 +55,10 @@ df_dep_density_subset <- df_dep_density |>
   # Parse out grids
   separate(location, into = c("grid", "station"), sep = "-", remove = TRUE) |>
   select(project, grid, station, common_name, full_density_km2)
+
+lynx <- df_dep_density_subset |>
+  filter(common_name == "Gray Wolf") |>
+  filter(grid == "RUN")
 
 # Estimate density at the grid scale, by sampling period (i.e., project)
 df_grid_density <- df_dep_density_subset |>

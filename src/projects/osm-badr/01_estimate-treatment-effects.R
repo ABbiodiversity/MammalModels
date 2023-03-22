@@ -33,8 +33,8 @@ df_meta <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_d
 
 # Lure effects - processed by DJH
 lure <- read_csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv")) |>
-  # Remove periods to use same names as density file
-  mutate(common_name = str_remove_all(Species, "\\."))
+  # Remove periods and use spaces instead in species common names
+  mutate(Species = str_replace_all(Species, "\\.", " "))
 
 # Processed main camera density file
 dataset.out<-paste0(g_drive, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData")
@@ -48,18 +48,18 @@ s2 <- read.csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/fi
 
 # Join OSM deployment metadata to OSM species densities
 d2 <- df_meta |>
-  # Join does include the cameras paired with ACME (no relevant metadata)
+  # Join does not include the cameras paired with ACME (no relevant metadata)
   left_join(d1, by = c("project", "location")) |>
-  # Remove Wetland cameras
+  # Remove Wetland cameras - not analyzed here.
   filter(!vegetation == "wetland") |>
   # Clean up fine scale edge treatment specification
   mutate(fine_scale = str_remove(fine_scale, " metres"),
          fine_scale = ifelse(fine_scale == "200" | fine_scale == "600", "300", fine_scale)) |>
-  # Clean up column names
+  # Clean up column names to match non-BADR data
   rename_at(vars(ends_with("_summer")), ~ str_replace(., "_summer", "Summer")) |>
   rename_at(vars(ends_with("_winter")), ~ str_replace(., "_winter", "Winter")) |>
   rename(SummerDays = summer, WinterDays = winter, Lured = lure) |>
-  select(-camera) |>
+  #select(-camera) |>
   # Update treatment names
   mutate(treatment = case_when(
     treatment == "reference" ~ "Low Disturbance/Reference",
@@ -81,7 +81,7 @@ d2 |>
   tally() |>
   arrange(treatment, fine_scale, vegetation)
 
-# Add ABMI EH and OG deployments
+# Add non-BADR data (ABMI EH and OG)
 s <- bind_rows(s1, s2) |>
   # Add a "-1" to the end of OG 2018 in order to join properly
   mutate(location = ifelse(project == "ABMI Off-Grid Monitoring 2018", paste0(location, "-1"), location)) |>
@@ -96,8 +96,8 @@ s <- bind_rows(s1, s2) |>
   # Landscape Unit not relevant - unless I do a spatial join? But we don't care yet in this first-pass analysis.
   mutate(landscape_unit = 9999) |>
   # 'JEM' unit for ABMI sites is the site number
-  mutate(jem = NearestSite) |>
-  # Standardize edge distances to 4 classes
+  mutate(jem = as.character(NearestSite)) |>
+  # Standardize edge distances to 4 classes used in BADR
   mutate(fine_scale = str_remove(fine_scale, " metres")) |>
   mutate(fine_scale = case_when(
     fine_scale == "150" ~ "100",
@@ -111,55 +111,74 @@ s <- bind_rows(s1, s2) |>
     fine_scale == "600" ~ "300",
     TRUE ~ fine_scale
   )) |>
+  # A few more random fixes
   mutate(fine_scale = ifelse(treatment == "Low Disturbance/Reference", NA, fine_scale),
-         fine_scale = ifelse(treatment == "Roads" & is.na(fine_scale), "300", fine_scale)) |>
-  select(project, location, Lured, landscape_unit, jem, treatment, vegetation, fine_scale,
+         fine_scale = ifelse(treatment == "Roads" & is.na(fine_scale), "300", fine_scale),
+         fine_scale = ifelse(treatment == "Dense Linear Features" & is.na(fine_scale), "Off", fine_scale),
+         camera = "9999") |>
+  select(project, location, landscape_unit, jem, camera, treatment, vegetation, fine_scale, Lured,
          SummerDays:`White-tailed Jack RabbitWinter`)
 
+# Columns to maintain (removing species not detected in OSM)
+col <- intersect(colnames(s), colnames(d2))
+
 # Combine OSM and supplemental ABMI sites together
-d <- bind_rows(s, d2)
+d <- s |>
+  select(all_of(col)) |>
+  bind_rows(d2)
 
+# Summarise number of total cameras (sub-samples) per treatment and vegetation type
+d |>
+  group_by(vegetation, treatment, fine_scale) |>
+  tally() |>
+  arrange(treatment, fine_scale, vegetation)
 
+# Analyzable species (with >15 occurrences, including some in the OSM cameras)
+SpTable<-c("BlackBear","CanadaLynx","Coyote","Fisher","GrayWolf","Marten","Moose","SnowshoeHare","WhitetailedDeer","WoodlandCaribou")
+sp.names<-c("Black Bear","Canada Lynx","Coyote","Fisher","Gray Wolf","Marten","Moose","Snowshoe Hare","White-tailed Deer","Woodland Caribou")
 
-# Then add to BADR cameras
-d<-rbind(d2,d[,colnames(d2)])
+min.season.days <- 20
+min.total.days <- 40
 
-# Summarize number of cameras (before these are combined into replicates below)
-write.table(table(paste(d$treatment,d$vegetation),ifelse(is.na(d$fine_scale),"NA",as.character(d$fine_scale))), file="C:/Dave/ABMI/Cameras/2022 analysis/OSM 2022/Table of fine scale treatment by jem treatmentXveg including extra ABMI - n cameras.csv",sep=",",col.names=NA)
+days <- d |>
+  select(project, location, SummerDays, WinterDays) |>
+  pivot_longer(cols = c(SummerDays, WinterDays), names_to = "season", values_to = "total_season_days") |>
+  mutate(season = str_remove(season, "Days"))
 
-# Set densities with <20 operating days in season to NA
-i<-which(d$summer<20)
-j<-which(regexpr("_summer",names(d))>0)
-d[i,j]<-NA
-i<-which(d$winter<20)
-j<-which(regexpr("_winter",names(d))>0)
-d[i,j]<-NA
+meta <- d |>
+  select(project:Lured) |>
+  distinct()
 
-# Analyzable species - >15 occurrences
-sp.first<-which(names(d)=="Beaver_summer")
-sp.last<-which(names(d)=="WoodlandCaribou_winter")
-occ1<-colSums(sign(d[,sp.first:sp.last]),na.rm=TRUE)
-occ2<-by(occ1,substr(names(occ1),1,nchar(names(occ1))-7),sum)  # Using simple sum of summer and winter (whether or not they were at the same deployment)
-occ<-as.numeric(occ2)
-names(occ)<-names(occ2)
-SpTable<-names(occ)[occ>15]
-SpTable<-c("BlackBear","CanadaLynx","Coyote","Fisher","GrayWolf","Marten","Moose","SnowshoeHare","WhitetailedDeer","WoodlandCaribou")  # Excluding a few species that get added only because of the ABMI cameras
-sp.names<-c("Black Bear","Lynx","Coyote","Fisher","Wolf","Marten","Moose","Snowshoe Hare","White-tailed Deer","Woodland Caribou")
+d3 <- d |>
+  select(-c(SummerDays, WinterDays)) |>
+  pivot_longer(cols = BeaverSummer:MuskratWinter, names_to = "common_name", values_to = "density") |>
+  mutate(season = ifelse(str_detect(common_name, "Summer"), "Summer", "Winter"),
+         common_name = str_remove(common_name, "Summer$|Winter$")) |>
+  filter(common_name %in% sp.names) |>
+  left_join(days, by = c("project", "location", "season")) |>
+  filter(total_season_days >= min.season.days) |>
+  group_by(project, location, common_name) |>
+  mutate(total_days = sum(total_season_days)) |>
+  # Remove deployments that don't meet minimum requirement for total days:
+  filter(total_days >= min.total.days) |>
+  # Density considering both seasons together:
+  summarise(full_density_km2 = mean(density)) |>
+  ungroup() |>
+  left_join(meta, by = c("project", "location")) |>
+  pivot_wider(id_cols = c(project, location, landscape_unit:Lured), names_from = common_name, values_from = full_density_km2)
 
-# Calculate average density for the two seasons
-for (sp in 1:length(SpTable)) {
-  sp.summer<-paste(SpTable[sp],"summer",sep="_")
-  sp.winter<-paste(SpTable[sp],"winter",sep="_")
-  d[,SpTable[sp]]<-ifelse(is.na(d[,sp.winter]) | SpTable[sp]=="Black.Bear",d[,sp.summer],ifelse(is.na(d[,sp.summer]),d[,sp.winter],(d[,sp.summer]+d[,sp.winter])/2))  # Use summer if winter=NA (or bear), winter if summer=NA, average if both not NA
-}
+d <- d3
+SpTable <- sp.names
 
 # Figure out variance of log abundance-given-presence, using all (individual) cameras
 log.var<-NULL
 for (sp in 1:length(SpTable)) {
-  dx<-data.frame(Treat=paste(d$treatment,d$fine_scale,d$vegetation),Camera=d$camera,Count=d[,SpTable[sp]]/ifelse(!is.na(d$lure) & d$lure=="Yes",lure$TA[lure$Species==SpTable[sp]],1))  # Count includes direct lure adjustment
-  dx1<-dx[dx$Count>0,]
-  m<-lm(log(Count)~Treat,data=dx1)  # Using residual after means for treatment X fine_scale X vegetation
-  log.var[sp]<-(summary(m)$sigma)^2  # Residual variance
+  dx<-data.frame(Treat=paste(d$treatment,d$fine_scale,d$vegetation),
+                 Camera = d$camera,
+                 Count = d[,SpTable[sp]]/ifelse(!is.na(d$Lured) & d$Lured=="Yes", lure$TA[lure$Species==SpTable[sp]], 1))  # Count includes direct lure adjustment
+  #dx1<-dx[dx$Count>0,]
+  #m<-lm(log(Count)~Treat,data=dx1)  # Using residual after means for treatment X fine_scale X vegetation
+  #log.var[sp]<-(summary(m)$sigma)^2  # Residual variance
 }
 
 # Set up summaries
