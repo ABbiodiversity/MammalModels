@@ -329,21 +329,21 @@ str(x.hf)
 blackbear_mean <- x.hf[1, , 1:2, 2] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
   mutate(common_name = "Black Bear")
 
 blackbear_lci <- x.hf[1, , 1:2, 3] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
   mutate(common_name = "Black Bear")
 
 blackbear_uci <- x.hf[1, , 1:2, 4] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
   mutate(common_name = "Black Bear")
 
@@ -355,21 +355,21 @@ blackbear <- blackbear_mean |>
 cl_mean <- x.hf[2, , 1:2, 2] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
   mutate(common_name = "Canada Lynx")
 
 cl_lci <- x.hf[2, , 1:2, 3] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
   mutate(common_name = "Canada Lynx")
 
 cl_uci <- x.hf[2, , 1:2, 4] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
   mutate(common_name = "Canada Lynx")
 
@@ -381,21 +381,21 @@ cl <- cl_mean |>
 coyote_mean <- x.hf[3, , 1:2, 2] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
   mutate(common_name = "Coyote")
 
 coyote_lci <- x.hf[3, , 1:2, 3] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
   mutate(common_name = "Coyote")
 
 coyote_uci <- x.hf[3, , 1:2, 4] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
   mutate(common_name = "Coyote")
 
@@ -407,21 +407,21 @@ coyote <- coyote_mean |>
 fisher_mean <- x.hf[4, , 1:2, 2] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
   mutate(common_name = "Fisher")
 
 fisher_lci <- x.hf[4, , 1:2, 3] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
   mutate(common_name = "Fisher")
 
 fisher_uci <- x.hf[4, , 1:2, 4] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
   mutate(common_name = "Fisher")
 
@@ -433,21 +433,21 @@ fisher <- fisher_mean |>
 graywold_mean <- x.hf[5, , 1:2, 2] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
   mutate(common_name = "Gray Wolf")
 
 graywold_lci <- x.hf[5, , 1:2, 3] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
   mutate(common_name = "Gray Wolf")
 
 graywold_uci <- x.hf[5, , 1:2, 4] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
   mutate(common_name = "Gray Wolf")
 
@@ -459,21 +459,21 @@ graywold <- graywold_mean |>
 Marten_mean <- x.hf[6, , 1:2, 2] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
   mutate(common_name = "Marten")
 
 Marten_lci <- x.hf[6, , 1:2, 3] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
   mutate(common_name = "Marten")
 
 Marten_uci <- x.hf[6, , 1:2, 4] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
   mutate(common_name = "Marten")
 
@@ -485,21 +485,21 @@ Marten <- Marten_mean |>
 Moose_mean <- x.hf[7, , 1:2, 2] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
   mutate(common_name = "Moose")
 
 Moose_lci <- x.hf[7, , 1:2, 3] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
   mutate(common_name = "Moose")
 
 Moose_uci <- x.hf[7, , 1:2, 4] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
   mutate(common_name = "Moose")
 
@@ -511,21 +511,21 @@ Moose <- Moose_mean |>
 snowshoehare_mean <- x.hf[8, , 1:2, 2] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
   mutate(common_name = "Snowshoe Hare")
 
 snowshoehare_lci <- x.hf[8, , 1:2, 3] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
   mutate(common_name = "Snowshoe Hare")
 
 snowshoehare_uci <- x.hf[8, , 1:2, 4] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
   mutate(common_name = "Snowshoe Hare")
 
@@ -537,21 +537,21 @@ snowshoehare <- snowshoehare_mean |>
 wtd_mean <- x.hf[9, , 1:2, 2] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
   mutate(common_name = "White-tailed Deer")
 
 wtd_lci <- x.hf[9, , 1:2, 3] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
   mutate(common_name = "White-tailed Deer")
 
 wtd_uci <- x.hf[9, , 1:2, 4] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
   mutate(common_name = "White-tailed Deer")
 
@@ -563,21 +563,21 @@ wtd <- wtd_mean |>
 caribou_mean <- x.hf[10, , 1:2, 2] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
   mutate(common_name = "Woodland Caribou")
 
 caribou_lci <- x.hf[10, , 1:2, 3] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
   mutate(common_name = "Woodland Caribou")
 
 caribou_uci <- x.hf[10, , 1:2, 4] |>
   as.data.frame() |>
   rownames_to_column(var = "treatment") |>
-  filter(!str_detect(treatment, "NA")) |>
+  filter(!str_detect(treatment, "situ NA|pads NA|features NA")) |>
   pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
   mutate(common_name = "Woodland Caribou")
 
@@ -588,7 +588,11 @@ caribou <- caribou_mean |>
 # Join all together
 all_on_off <- bind_rows(
   caribou, wtd, Marten, Moose, fisher, graywold, snowshoehare, blackbear, cl, coyote) |>
-  select(common_name, treatment, vegetation, mean_density, lci_density, uci_density)
+  select(common_name, treatment, vegetation, mean_density, lci_density, uci_density) |>
+  mutate(treatment = str_remove(treatment, " NA"))
+
+# Save csv
+write_csv(all_on_off, paste0(g_drive, "results/osm/2021_on-off_treatment_results.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -610,6 +614,8 @@ p.true<-seq(0.0005,0.9995,length.out=niter)  # Possible true p's for likelihood-
 z.dens<-qnorm(seq(0.025,0.975,length.out=niter),0,1)  # Standard normal deviates for density distribution - evenly distributed between 95% CI's
 x.dist<-array(NA,c(length(SpTable),length(treat.list),length(veg.list),4))  # To store the values for later use: Species, treatment, veg, {n replicate units, mean, lci, uci}
 dimnames(x.dist)<-list(SpTable,treat.list,veg.list,c("n","Mean","LCI","UCI"))
+
+
 for (sp in 1:length(SpTable)) {
   d1<-d[d$TreatType=="Buffer",c(1:10,which(names(d)==SpTable[sp]),which(names(d)==paste(SpTable[sp],"npres",sep=".")))]
   names(d1)[ncol(d1)-1]<-"Density"
@@ -684,14 +690,14 @@ for (sp in 1:length(SpTable)) {
     }  # Next veg type
   } # Next treatment
   # Then do figure(s)
-  fname<-paste("C:/Dave/ABMI/Cameras/2022 analysis/OSM 2022/Results with ABMI/Figure JEM x buffer distance x veg ",SpTable[sp],".png",sep="")
+  fname<-paste(g_drive, "results/osm/figures/Figure JEM x buffer distance x veg ",SpTable[sp],".png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
   x.point<-treat.x[i]+veg.x.offset[j]
   c1<-veg.col[j]
   dens.adj<-d1$Density/(1+(d1$n.lure/d1$n*(lure.factor$TA-1)))
-  dplot(jitter(x.point),dens.adj,pch=18,cex=1.3,col=c1,xlab="",ylab="Density",xaxt="n",ylim=c(0,max(c(uci,dens.adj),na.rm=TRUE)))
+  plot(jitter(x.point),dens.adj,pch=18,cex=1.3,col=c1,xlab="",ylab="Density",xaxt="n",ylim=c(0,max(c(uci,dens.adj),na.rm=TRUE)))
   axis(side=1,at=x.tick,lab=rep("",length(x.tick)),tck=0.015)
   mtext(side=1,at=x.tick,adj=0.5,line=0.6,x.label)
   mtext(side=1,at=x.jem,adj=0.5,line=1.8,cex=1.3,jem.label)
@@ -708,14 +714,14 @@ for (sp in 1:length(SpTable)) {
   }  # Next treat i
   graphics.off()
   # Version with sqrt-transformation on y-axis
-  fname<-paste("C:/Dave/ABMI/Cameras/2022 analysis/OSM 2022/Results with ABMI/Figure JEM x buffer distance x veg ",SpTable[sp]," SQRT version.png",sep="")
+  fname<-paste(g_drive, "results/osm/figures/Figure JEM x buffer distance x veg ",SpTable[sp]," SQRT version.png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
   x.point<-treat.x[i]+veg.x.offset[j]
   c1<-veg.col[j]
   dens.adj<-d1$Density/(1+(d1$n.lure/d1$n*(lure.factor$TA-1)))
-  dplot(jitter(x.point),sqrt(dens.adj),pch=18,cex=1.3,col=c1,xlab="",ylab="Density",xaxt="n",ylim=c(0,sqrt(max(c(uci,dens.adj),na.rm=TRUE))),yaxt="n")
+  plot(jitter(x.point),sqrt(dens.adj),pch=18,cex=1.3,col=c1,xlab="",ylab="Density",xaxt="n",ylim=c(0,sqrt(max(c(uci,dens.adj),na.rm=TRUE))),yaxt="n")
   y.pretty<-pretty(c(0,max(c(uci,dens.adj),na.rm=TRUE)),n=8)
   axis(side=2,at=sqrt(y.pretty),lab=rep("",length(y.pretty)),cex.axis=1.3,tck=1,col="grey85")
   axis(side=2,at=sqrt(y.pretty),lab=y.pretty,cex.axis=1.3,tck=0.015)
@@ -740,6 +746,290 @@ for (sp in 1:length(SpTable)) {
   x.dist[sp,,,3]<-lci
   x.dist[sp,,,4]<-uci
 }  # Next species
+
+str(x.dist)
+
+# Black Bear
+blackbear_mean <- x.dist[1, , 1:2, 2] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
+  mutate(common_name = "Black Bear")
+
+blackbear_lci <- x.dist[1, , 1:2, 3] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
+  mutate(common_name = "Black Bear")
+
+blackbear_uci <- x.dist[1, , 1:2, 4] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
+  mutate(common_name = "Black Bear")
+
+blackbear <- blackbear_mean |>
+  left_join(blackbear_lci) |>
+  left_join(blackbear_uci)
+
+# Canada Lynx
+cl_mean <- x.dist[2, , 1:2, 2] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
+  mutate(common_name = "Canada Lynx")
+
+cl_lci <- x.dist[2, , 1:2, 3] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
+  mutate(common_name = "Canada Lynx")
+
+cl_uci <- x.dist[2, , 1:2, 4] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
+  mutate(common_name = "Canada Lynx")
+
+cl <- cl_mean |>
+  left_join(cl_lci) |>
+  left_join(cl_uci)
+
+# Coyote
+coyote_mean <- x.dist[3, , 1:2, 2] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
+  mutate(common_name = "Coyote")
+
+coyote_lci <- x.dist[3, , 1:2, 3] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
+  mutate(common_name = "Coyote")
+
+coyote_uci <- x.dist[3, , 1:2, 4] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
+  mutate(common_name = "Coyote")
+
+coyote <- coyote_mean |>
+  left_join(coyote_lci) |>
+  left_join(coyote_uci)
+
+# Fisher
+fisher_mean <- x.dist[4, , 1:2, 2] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
+  mutate(common_name = "Fisher")
+
+fisher_lci <- x.dist[4, , 1:2, 3] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
+  mutate(common_name = "Fisher")
+
+fisher_uci <- x.dist[4, , 1:2, 4] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
+  mutate(common_name = "Fisher")
+
+fisher <- fisher_mean |>
+  left_join(fisher_lci) |>
+  left_join(fisher_uci)
+
+# GrayWolf
+graywold_mean <- x.dist[5, , 1:2, 2] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
+  mutate(common_name = "Gray Wolf")
+
+graywold_lci <- x.dist[5, , 1:2, 3] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
+  mutate(common_name = "Gray Wolf")
+
+graywold_uci <- x.dist[5, , 1:2, 4] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
+  mutate(common_name = "Gray Wolf")
+
+graywold <- graywold_mean |>
+  left_join(graywold_lci) |>
+  left_join(graywold_uci)
+
+# Marten
+Marten_mean <- x.dist[6, , 1:2, 2] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
+  mutate(common_name = "Marten")
+
+Marten_lci <- x.dist[6, , 1:2, 3] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
+  mutate(common_name = "Marten")
+
+Marten_uci <- x.dist[6, , 1:2, 4] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
+  mutate(common_name = "Marten")
+
+Marten <- Marten_mean |>
+  left_join(Marten_lci) |>
+  left_join(Marten_uci)
+
+# Moose
+Moose_mean <- x.dist[7, , 1:2, 2] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
+  mutate(common_name = "Moose")
+
+Moose_lci <- x.dist[7, , 1:2, 3] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
+  mutate(common_name = "Moose")
+
+Moose_uci <- x.dist[7, , 1:2, 4] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
+  mutate(common_name = "Moose")
+
+Moose <- Moose_mean |>
+  left_join(Moose_lci) |>
+  left_join(Moose_uci)
+
+# SnowshoeHare
+snowshoehare_mean <- x.dist[8, , 1:2, 2] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
+  mutate(common_name = "Snowshoe Hare")
+
+snowshoehare_lci <- x.dist[8, , 1:2, 3] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
+  mutate(common_name = "Snowshoe Hare")
+
+snowshoehare_uci <- x.dist[8, , 1:2, 4] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
+  mutate(common_name = "Snowshoe Hare")
+
+snowshoehare <- snowshoehare_mean |>
+  left_join(snowshoehare_lci) |>
+  left_join(snowshoehare_uci)
+
+# WhitetailedDeer
+wtd_mean <- x.dist[9, , 1:2, 2] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
+  mutate(common_name = "White-tailed Deer")
+
+wtd_lci <- x.dist[9, , 1:2, 3] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
+  mutate(common_name = "White-tailed Deer")
+
+wtd_uci <- x.dist[9, , 1:2, 4] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
+  mutate(common_name = "White-tailed Deer")
+
+wtd <- wtd_mean |>
+  left_join(wtd_lci) |>
+  left_join(wtd_uci)
+
+# Woodland Caribou
+caribou_mean <- x.dist[10, , 1:2, 2] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "mean_density") |>
+  mutate(common_name = "Woodland Caribou")
+
+caribou_lci <- x.dist[10, , 1:2, 3] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "lci_density") |>
+  mutate(common_name = "Woodland Caribou")
+
+caribou_uci <- x.dist[10, , 1:2, 4] |>
+  as.data.frame() |>
+  rownames_to_column(var = "treatment") |>
+  filter(!str_detect(treatment, "NA")) |>
+  pivot_longer(cols = c(decidmix40, treedlow20), names_to = "vegetation", values_to = "uci_density") |>
+  mutate(common_name = "Woodland Caribou")
+
+caribou <- caribou_mean |>
+  left_join(caribou_lci) |>
+  left_join(caribou_uci)
+
+# Join all together
+all_buffer <- bind_rows(
+  caribou, wtd, Marten, Moose, fisher, graywold, snowshoehare, blackbear, cl, coyote) |>
+  select(common_name, treatment, vegetation, mean_density, lci_density, uci_density)
+
+# Save csv
+write_csv(all_buffer, paste0(g_drive, "results/osm/2021_buffer_treatment_results.csv"))
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Individual points for plotting
+
+dens.adj<-d1$Density/(1+(d1$n.lure/d1$n*(lure.factor$TA-1)))
+
+jem_density <- d |>
+  pivot_longer(cols = c(BlackBear:WoodlandCaribou), names_to = "common_name", values_to = "density") |>
+  left_join(lure, by = c("common_name" = "Species")) |>
+  mutate(density_adj = density / (1 + ((n.lure / n) * (TA - 1)))) |>
+  select(jem, vegetation, treatment, fine_scale, type = TreatType, common_name, density, density_adj)
+
+write_csv(jem_density, paste0(g_drive, "data/processed/osm/2021_mean_jem_density_values.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
