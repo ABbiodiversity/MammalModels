@@ -44,7 +44,6 @@ sf_jem <- read_csv(paste0(g_drive, "osm-badr-site-selection/jems_2023_v2.csv")) 
 sf_sites_2023 <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/camaru_osm_sites_2023_v3.shp")) |>
   st_transform(4326)
 
-# High Activity In Situ
 high_insitu <- sf_sites_2023 |>
   filter(tretmnt == "High Activity Insitu Well Pads")
 dense_linear <- sf_sites_2023 |>
@@ -60,6 +59,10 @@ plant_mine <- sf_sites_2023 |>
 pre_insitu <- sf_sites_2023 |>
   filter(tretmnt == "Pre Insitu")
 
+# Proposed vascular plant transect layer
+sf_vp <- st_read(paste0(g_drive, "osm-badr-site-selection/vascular-plants/VPTransects_2023_V2/doc.kml")) |>
+  st_transform(4326)
+
 # All treatment and habitat areas
 sf_all <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/treat-hab-all-2023-lus.shp")) |>
   clean_names() |>
@@ -73,7 +76,8 @@ treedlow <- sf_all |>
 
 # DecidMix40 layer
 decidmix <- sf_all |>
-  filter(type == "DecidMix40")
+  filter(type == "DecidMix40") |>
+  rename(Treatment = treatment)
 
 # Change project of JEMs
 sf_jem <- st_transform(sf_jem, crs = 4326)
@@ -81,7 +85,7 @@ sf_jem <- st_transform(sf_jem, crs = 4326)
 # Palettes
 pal_decid <- colorFactor(
   palette = "Dark2",
-  domain = decidmix$treatment
+  domain = decidmix$Treatment
 )
 
 pal_treedlow <-colorFactor(
@@ -95,6 +99,13 @@ cam <- makeAwesomeIcon(
   iconColor = "black",
   library = "ion",
   markerColor = "white"
+)
+
+vp <- makeAwesomeIcon(
+  icon = "leaf",
+  iconColor = "white",
+  library = "ion",
+  markerColor = "green"
 )
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -174,10 +185,10 @@ map <- sf_osr |>
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
 
   # Decidmix40 + HF treatments layer
-  addPolygons(data = decidmix, color = "grey50", fillColor = ~ pal_decid(treatment),
+  addPolygons(data = decidmix, color = "grey50", fillColor = ~ pal_decid(Treatment),
               weight = 1, smoothFactor = 0.2, opacity = 1, fillOpacity = 0.5, group = "Habitat: DecidMix40+",
               options = leafletOptions(pane = "Habitat Treatment Data"),
-              popup = paste("Treatment: ", "<b>", decidmix$treatment, "</b>"),
+              popup = paste("Treatment: ", "<b>", decidmix$Treatment, "</b>"),
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
 
   # Treedlow + HF treatments layer
@@ -251,10 +262,17 @@ map <- sf_osr |>
                                   "Notes:", "<br>",
                                   pre_insitu$cmr_nts)) |>
 
+  addAwesomeMarkers(data = sf_vp,
+                    icon = vp,
+                    group = "Vascular Plant Transects",
+                    options = leafletOptions(pane = "2023 Camera Sites"),
+                    popup = paste("Location: ", "<b>", sf_vp$Name)) |>
+
   # Layers control
   addLayersControl(overlayGroups = c("Satellite Imagery",
                                      "Landscape Units",
                                      "JEM Sites",
+                                     "Vascular Plant Transects",
                                      "Cam/ARU (Dense Linear Features)",
                                      "Cam/ARU (High Activity Insitu Well Pads)",
                                      "Cam/ARU (Low Activity Well Pads)",
@@ -268,7 +286,7 @@ map <- sf_osr |>
 
   # Legend
   addLegend(data = decidmix, position = "topright", pal = pal_decid,
-            values = ~ treatment,
+            values = ~ Treatment,
             opacity = 1)
 
 # View map
@@ -277,6 +295,6 @@ map
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Save map
-htmlwidgets::saveWidget(map, file = "./docs/osm_cam-aru_site_map.html", selfcontained = FALSE)
+htmlwidgets::saveWidget(map, file = "./docs/osm_cam-aru-vp_site_map.html", selfcontained = FALSE)
 
 #-----------------------------------------------------------------------------------------------------------------------
