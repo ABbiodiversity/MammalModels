@@ -81,6 +81,13 @@ d2 |>
   tally() |>
   arrange(treatment, fine_scale, vegetation)
 
+# Species-specific
+d2 |>
+  select(landscape_unit, `Gray WolfSummer`, `Gray WolfWinter`) |>
+  mutate(present = ifelse(`Gray WolfSummer` > 0 | `Gray WolfWinter` > 0, 1, 0)) |>
+  group_by(present) |>
+  tally()
+
 # Add non-BADR data (ABMI EH and OG)
 s <- bind_rows(s1, s2) |>
   # Add a "-1" to the end of OG 2018 in order to join properly
