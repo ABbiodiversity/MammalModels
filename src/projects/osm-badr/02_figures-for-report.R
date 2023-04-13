@@ -84,14 +84,17 @@ buffer_jem <- jem_means |>
 # White-tailed Deer
 
 plot_on_off <- on_off |>
-  filter(common_name == "White-tailed Deer") |>
+  filter(common_name == "White-tailed Deer",
+         Habitat == "Deciduous Mixedwood") |>
   ggplot(aes(x = fine_scale, y = mean_density)) +
   geom_point(aes(color = treatment),
              size = 3.5,
              position = position_dodge(width = 0.75)) +
   geom_linerange(aes(ymin = lci_density, ymax = uci_density, color = treatment),
                   linewidth = 0.5, position = position_dodge(width = 0.75)) +
-  geom_point(data = (on_off_jem |> filter(common_name == "WhitetailedDeer")),
+  geom_point(data = (on_off_jem |>
+                       filter(common_name == "WhitetailedDeer",
+                              Habitat == "Deciduous Mixedwood")),
              aes(x = fine_scale, y = mean_density, color = treatment),
              size = 2,
              alpha = 0.15,
@@ -104,8 +107,8 @@ plot_on_off <- on_off |>
   labs(x = "Placement",
        y = expression(Density~(individuals~per~km^2))) +
   theme(axis.text.x = element_text(angle = 0, hjust = 0.5),
-        #axis.title.x = element_text(size = 14, margin = margin(0.4, 0, 0, 0, unit = "cm")),
-        axis.title.x = element_blank(),
+        axis.title.x = element_text(size = 14, margin = margin(0.4, 0, 0, 0, unit = "cm")),
+        #axis.title.x = element_blank(),
         axis.title.y = element_text(size = 10, margin = margin(0, 0.4, 0, 0, unit = "cm")),
         strip.text = element_text(size = 13),
         legend.position = "top",
@@ -115,8 +118,11 @@ plot_on_off <- on_off |>
         legend.text = element_text(size = 12),
         axis.ticks = element_blank(),
         panel.grid.major.y = element_line(linewidth = 0.5, color = "grey80"),
-        panel.grid.major.x = element_blank()) +
-  facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+        panel.grid.major.x = element_blank())
+  #facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/wtd_dm.png"),
+       plot_on_off, height = 5, width = 7.5, dpi = 500, bg = "white")
 
 # Now the 2 buffer treatments:
 
@@ -254,7 +260,8 @@ ggsave(paste0(g_drive, "results/osm/figures/moose_full_sqrt.png"), full_plot, he
 # Canada Lynx
 
 plot_on_off <- on_off |>
-  filter(common_name == "Canada Lynx") |>
+  filter(common_name == "Canada Lynx",
+         Habitat == "Treed Lowland") |>
   mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
          uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
   ggplot(aes(x = fine_scale, y = mean_density)) +
@@ -263,7 +270,9 @@ plot_on_off <- on_off |>
              position = position_dodge(width = 0.75)) +
   geom_linerange(aes(ymin = lci_density, ymax = uci_density, color = treatment),
                  linewidth = 0.5, position = position_dodge(width = 0.75)) +
-  geom_point(data = (on_off_jem |> filter(common_name == "CanadaLynx")),
+  geom_point(data = (on_off_jem |>
+                       filter(common_name == "CanadaLynx",
+                              Habitat == "Treed Lowland")),
              aes(x = fine_scale, y = mean_density, color = treatment),
              size = 2,
              alpha = 0.15,
@@ -272,12 +281,12 @@ plot_on_off <- on_off |>
   #scale_color_brewer(palette = "Set1") +
   scale_y_sqrt() +
   theme_minimal() +
-  coord_cartesian(ylim = c(0, 0.4)) +
+  coord_cartesian(ylim = c(0, 0.3)) +
   labs(x = "Placement",
        y = expression(Density~(individuals~per~km^2))) +
   theme(axis.text.x = element_text(angle = 0, hjust = 0.5),
-        #axis.title.x = element_text(size = 14, margin = margin(0.4, 0, 0, 0, unit = "cm")),
-        axis.title.x = element_blank(),
+        axis.title.x = element_text(size = 14, margin = margin(0.4, 0, 0, 0, unit = "cm")),
+        #axis.title.x = element_blank(),
         axis.title.y = element_text(size = 10, margin = margin(0, 0.4, 0, 0, unit = "cm")),
         strip.text = element_text(size = 13),
         legend.position = "top",
@@ -287,8 +296,11 @@ plot_on_off <- on_off |>
         legend.text = element_text(size = 12),
         axis.ticks = element_blank(),
         panel.grid.major.y = element_line(linewidth = 0.5, color = "grey80"),
-        panel.grid.major.x = element_blank()) +
-  facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+        panel.grid.major.x = element_blank())
+  #facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/lynx_tl_02.png"),
+       plot_on_off, height = 5, width = 7.5, dpi = 500, bg = "white")
 
 # Now the 2 buffer treatments:
 

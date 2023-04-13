@@ -45,7 +45,8 @@ on_off <- read_csv(paste0(g_drive, "results/osm/2021_on-off_treatment_results.cs
   mutate(Habitat = case_when(
     vegetation == "decidmix40" ~ "Deciduous Mixedwood",
     vegetation == "treedlow20" ~ "Treed Lowland"
-  ))
+  )) |>
+  filter(Habitat == "Deciduous Mixedwood")
 
 # JEM means
 
@@ -118,12 +119,15 @@ plot1 <- on_off |>
         legend.text = element_text(size = 12),
         axis.ticks = element_blank(),
         panel.grid.major.y = element_line(linewidth = 0.5, color = "grey80"),
-        panel.grid.major.x = element_blank()) +
-  facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+        panel.grid.major.x = element_blank())
+  #facet_grid(. ~ Habitat, scales = "free_x", space = "free")
 
 # Save
 ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_01.png"), plot1,
        height = 5, width = 8, dpi = 500, bg = "white")
+
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_01_v2.png"), plot1,
+       height = 5, width = 7.5, dpi = 500, bg = "white")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -144,7 +148,8 @@ plot2 <- plot1 +
   # Add JEM values for reference
   geom_point(data = (on_off_jem |>
                        filter(common_name == "Moose",
-                              treatment == "Reference")),
+                              treatment == "Reference",
+                              Habitat == "Deciduous Mixedwood")),
              aes(x = fine_scale, y = mean_density, color = treatment),
              size = 2,
              alpha = 0.1,
@@ -161,8 +166,8 @@ plot2 +
              arrow = arrow(length = unit(2.5, "mm")))
 
 # Save
-ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_02.png"),
-       height = 5, width = 8, dpi = 500, bg = "white")
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_02_v2.png"),
+       height = 5, width = 7.5, dpi = 500, bg = "white")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -180,7 +185,8 @@ text3 <- tibble(
 
 # Mean density data for reference
 d3 <- on_off |>
-  filter(common_name == "Moose") |>
+  filter(common_name == "Moose",
+         Habitat == "Deciduous Mixedwood") |>
   mutate(lci_density = ifelse(treatment == "Reference", lci_density, NA),
          uci_density = ifelse(treatment == "Reference", uci_density, NA),
          mean_density = ifelse(treatment == "Reference", mean_density, NA))
@@ -206,8 +212,8 @@ plot3 +
              curvature = -0.15,
              arrow = arrow(length = unit(2.5, "mm")))
 
-ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_03.png"),
-       height = 5, width = 8, dpi = 500, bg = "white")
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_03_v2.png"),
+       height = 5, width = 7.5, dpi = 500, bg = "white")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -225,7 +231,8 @@ text4 <- tibble(
 
 plot4 <- plot3 +
   geom_point(data = (on_off_jem |>
-                       filter(common_name == "Moose") |>
+                       filter(common_name == "Moose",
+                              Habitat == "Deciduous Mixedwood") |>
                        mutate(mean_density = ifelse(treatment == "Dense Linear Features", mean_density, NA))),
              aes(x = fine_scale, y = mean_density, color = treatment),
              size = 2,
@@ -244,8 +251,8 @@ plot4_1 <- plot4 +
              arrow = arrow(length = unit(2.5, "mm")))
 
 # Save
-ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_04.png"),
-       plot4_1, height = 5, width = 8, dpi = 500, bg = "white")
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_04_v2.png"),
+       plot4_1, height = 5, width = 7.5, dpi = 500, bg = "white")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -277,8 +284,8 @@ plot4_1 +
              arrow = arrow(length = unit(2.5, "mm")))
 
 # Save
-ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_05.png"),
-       height = 5, width = 8, dpi = 500, bg = "white")
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_05_v2.png"),
+       height = 5, width = 7.5, dpi = 500, bg = "white")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -295,7 +302,8 @@ text6 <- tibble(
 
 # Mean density data for dense linear features
 d6 <- on_off |>
-  filter(common_name == "Moose") |>
+  filter(common_name == "Moose",
+         Habitat == "Deciduous Mixedwood") |>
   mutate(lci_density = ifelse(treatment == "Dense Linear Features", lci_density, NA),
          uci_density = ifelse(treatment == "Dense Linear Features", uci_density, NA),
          mean_density = ifelse(treatment == "Dense Linear Features", mean_density, NA))
@@ -316,8 +324,8 @@ plot6 +
             size = 4, colour = "#FFC300")
 
 # Save
-ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_06.png"),
-       height = 5, width = 8, dpi = 500, bg = "white")
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_06_v2.png"),
+       height = 5, width = 7.5, dpi = 500, bg = "white")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -334,14 +342,16 @@ text7 <- tibble(
 
 # Mean density data for low activity well pads
 d7 <- on_off |>
-  filter(common_name == "Moose") |>
+  filter(common_name == "Moose",
+         Habitat == "Deciduous Mixedwood") |>
   mutate(lci_density = ifelse(treatment == "Low Activity Well Pads", lci_density, NA),
          uci_density = ifelse(treatment == "Low Activity Well Pads", uci_density, NA),
          mean_density = ifelse(treatment == "Low Activity Well Pads", mean_density, NA))
 
 plot7 <- plot6 +
   geom_point(data = (on_off_jem |>
-                       filter(common_name == "Moose") |>
+                       filter(common_name == "Moose",
+                              Habitat == "Deciduous Mixedwood") |>
                        mutate(mean_density = ifelse(treatment == "Low Activity Well Pads", mean_density, NA))),
              aes(x = fine_scale, y = mean_density, color = treatment),
              size = 2,
@@ -367,8 +377,8 @@ plot7 +
              arrow = arrow(length = unit(2.5, "mm")))
 
 # Save
-ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_07.png"),
-       height = 5, width = 8, dpi = 500, bg = "white")
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_07_v2.png"),
+       height = 5, width = 7.5, dpi = 500, bg = "white")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -386,14 +396,16 @@ text8 <- tibble(
 
 # Mean density data for high activity in situ
 d8 <- on_off |>
-  filter(common_name == "Moose") |>
+  filter(common_name == "Moose",
+         Habitat == "Deciduous Mixedwood") |>
   mutate(lci_density = ifelse(treatment == "High Activity In Situ", lci_density, NA),
          uci_density = ifelse(treatment == "High Activity In Situ", uci_density, NA),
          mean_density = ifelse(treatment == "High Activity In Situ", mean_density, NA))
 
 plot8 <- plot7 +
   geom_point(data = (on_off_jem |>
-                       filter(common_name == "Moose") |>
+                       filter(common_name == "Moose",
+                              Habitat == "Deciduous Mixedwood") |>
                        mutate(mean_density = ifelse(treatment == "High Activity In Situ", mean_density, NA))),
              aes(x = fine_scale, y = mean_density, color = treatment),
              size = 2,
@@ -419,8 +431,8 @@ plot8 +
              arrow = arrow(length = unit(2.5, "mm")))
 
 # Save
-ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_08.png"),
-       height = 5, width = 8, dpi = 500, bg = "white")
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_08_v2.png"),
+       height = 5, width = 7.5, dpi = 500, bg = "white")
 
 # Version without error bar on 0 values
 d8_1 <- on_off |>
@@ -469,8 +481,8 @@ ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_08-1.png"),
 # Plot 9 - the final product.
 
 # (Which was actually plot 8 minus the text and curve.)
-ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_09.png"),
-       plot8, height = 5, width = 8, dpi = 500, bg = "white")
+ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_09_v2.png"),
+       plot8, height = 5, width = 7.5, dpi = 500, bg = "white")
 
 # Now save the alternative
 ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_09-1.png"),
