@@ -124,6 +124,9 @@ plot_on_off <- on_off |>
 ggsave(paste0(g_drive, "results/osm/figures/Presentation/wtd_dm.png"),
        plot_on_off, height = 5, width = 7.5, dpi = 500, bg = "white")
 
+ggsave(paste0(g_drive, "results/osm/figures/wtd_on-ff_sqrt_new.png"), plot_on_off,
+       height = 5, width = 8, dpi = 500, bg = "white")
+
 # Now the 2 buffer treatments:
 
 plot_buffer <- buffer |>
@@ -153,7 +156,7 @@ plot_buffer <- buffer |>
   theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8),
         axis.title.x = element_text(size = 15, margin = margin(0.6, 0, 0, 0, unit = "cm")),
         axis.title.y = element_text(size = 10, margin = margin(0, 0.4, 0, 0, unit = "cm")),
-        strip.text = element_blank(),
+        strip.text = element_text(size = 13),
         legend.position = "top",
         legend.title = element_blank(),
         legend.margin = margin(0, 0, 0, 0),
@@ -163,6 +166,9 @@ plot_buffer <- buffer |>
         panel.grid.major.y = element_line(linewidth = 0.5, color = "grey80"),
         panel.grid.major.x = element_blank()) +
   facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+
+ggsave(paste0(g_drive, "results/osm/figures/wtd_buffer_sqrt_new.png"), plot_buffer,
+       height = 5, width = 8, dpi = 500, bg = "white")
 
 # Join together
 full_plot <- grid.arrange(plot_on_off, plot_buffer)
@@ -214,8 +220,8 @@ plot_on_off <- on_off |>
 
 plot_buffer <- buffer |>
   filter(common_name == "Moose") |>
-  mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
-         uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
+  #mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
+  #       uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
   #mutate(fine_scale = paste0(treatment, " ", fine_scale)) |>
   ggplot(aes(x = fine_scale, y = mean_density)) +
   geom_point(aes(color = treatment, group = treatment),
@@ -239,7 +245,7 @@ plot_buffer <- buffer |>
   theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8),
         axis.title.x = element_text(size = 15, margin = margin(0.6, 0, 0, 0, unit = "cm")),
         axis.title.y = element_text(size = 10, margin = margin(0, 0.4, 0, 0, unit = "cm")),
-        strip.text = element_blank(),
+        strip.text = element_text(size = 13),
         legend.position = "top",
         legend.title = element_blank(),
         legend.margin = margin(0, 0, 0, 0),
@@ -249,6 +255,9 @@ plot_buffer <- buffer |>
         panel.grid.major.y = element_line(linewidth = 0.5, color = "grey80"),
         panel.grid.major.x = element_blank()) +
   facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+
+ggsave(paste0(g_drive, "results/osm/figures/moose_buffer_sqrt_new.png"), plot_buffer,
+       height = 5, width = 8, dpi = 500, bg = "white")
 
 # Join together
 full_plot <- grid.arrange(plot_on_off, plot_buffer)
@@ -264,6 +273,9 @@ plot_on_off <- on_off |>
          Habitat == "Treed Lowland") |>
   mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
          uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
+  filter(common_name == "Canada Lynx") |>
+  #mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
+  #       uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
   ggplot(aes(x = fine_scale, y = mean_density)) +
   geom_point(aes(color = treatment),
              size = 3.5,
@@ -302,12 +314,15 @@ plot_on_off <- on_off |>
 ggsave(paste0(g_drive, "results/osm/figures/Presentation/lynx_tl_02.png"),
        plot_on_off, height = 5, width = 7.5, dpi = 500, bg = "white")
 
+ggsave(paste0(g_drive, "results/osm/figures/lynx_on_off_sqrt_new.png"), plot_on_off,
+       height = 5, width = 8, dpi = 500, bg = "white")
+
 # Now the 2 buffer treatments:
 
 plot_buffer <- buffer |>
   filter(common_name == "Canada Lynx") |>
-  mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
-         uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
+  #mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
+  #       uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
   #mutate(fine_scale = paste0(treatment, " ", fine_scale)) |>
   ggplot(aes(x = fine_scale, y = mean_density)) +
   geom_point(aes(color = treatment, group = treatment),
@@ -331,7 +346,7 @@ plot_buffer <- buffer |>
   theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8),
         axis.title.x = element_text(size = 15, margin = margin(0.6, 0, 0, 0, unit = "cm")),
         axis.title.y = element_text(size = 10, margin = margin(0, 0.4, 0, 0, unit = "cm")),
-        strip.text = element_blank(),
+        strip.text = element_text(size = 13),
         legend.position = "top",
         legend.title = element_blank(),
         legend.margin = margin(0, 0, 0, 0),
@@ -341,6 +356,9 @@ plot_buffer <- buffer |>
         panel.grid.major.y = element_line(linewidth = 0.5, color = "grey80"),
         panel.grid.major.x = element_blank()) +
   facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+
+ggsave(paste0(g_drive, "results/osm/figures/lynx_buffer_sqrt_new.png"), plot_buffer,
+       height = 5, width = 8, dpi = 500, bg = "white")
 
 # Join together
 full_plot <- grid.arrange(plot_on_off, plot_buffer)
@@ -353,8 +371,8 @@ ggsave(paste0(g_drive, "results/osm/figures/lynx_full_sqrt.png"), full_plot, hei
 
 plot_on_off <- on_off |>
   filter(common_name == "Black Bear") |>
-  mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
-         uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
+  #mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
+  #       uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
   ggplot(aes(x = fine_scale, y = mean_density)) +
   geom_point(aes(color = treatment),
              size = 3.5,
@@ -374,8 +392,8 @@ plot_on_off <- on_off |>
   labs(x = "Placement",
        y = expression(Density~(individuals~per~km^2))) +
   theme(axis.text.x = element_text(angle = 0, hjust = 0.5),
-        #axis.title.x = element_text(size = 14, margin = margin(0.4, 0, 0, 0, unit = "cm")),
-        axis.title.x = element_blank(),
+        axis.title.x = element_text(size = 14, margin = margin(0.4, 0, 0, 0, unit = "cm")),
+        #axis.title.x = element_blank(),
         axis.title.y = element_text(size = 10, margin = margin(0, 0.4, 0, 0, unit = "cm")),
         strip.text = element_text(size = 13),
         legend.position = "top",
@@ -388,12 +406,15 @@ plot_on_off <- on_off |>
         panel.grid.major.x = element_blank()) +
   facet_grid(. ~ Habitat, scales = "free_x", space = "free")
 
+ggsave(paste0(g_drive, "results/osm/figures/blackbear_on_off_sqrt_new.png"), plot_on_off,
+       height = 5, width = 8, dpi = 500, bg = "white")
+
 # Now the 2 buffer treatments:
 
 plot_buffer <- buffer |>
   filter(common_name == "Black Bear") |>
-  mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
-         uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
+  #mutate(lci_density = ifelse(mean_density > 0, lci_density, 0),
+  #       uci_density = ifelse(mean_density > 0, uci_density, 0)) |>
   #mutate(fine_scale = paste0(treatment, " ", fine_scale)) |>
   ggplot(aes(x = fine_scale, y = mean_density)) +
   geom_point(aes(color = treatment, group = treatment),
@@ -417,7 +438,7 @@ plot_buffer <- buffer |>
   theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8),
         axis.title.x = element_text(size = 15, margin = margin(0.6, 0, 0, 0, unit = "cm")),
         axis.title.y = element_text(size = 10, margin = margin(0, 0.4, 0, 0, unit = "cm")),
-        strip.text = element_blank(),
+        strip.text = element_text(size = 13),
         legend.position = "top",
         legend.title = element_blank(),
         legend.margin = margin(0, 0, 0, 0),
@@ -427,6 +448,9 @@ plot_buffer <- buffer |>
         panel.grid.major.y = element_line(linewidth = 0.5, color = "grey80"),
         panel.grid.major.x = element_blank()) +
   facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+
+ggsave(paste0(g_drive, "results/osm/figures/blackbear_buffer_sqrt_new.png"), plot_buffer,
+       height = 5, width = 8, dpi = 500, bg = "white")
 
 # Join together
 full_plot <- grid.arrange(plot_on_off, plot_buffer)

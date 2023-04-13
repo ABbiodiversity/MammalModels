@@ -488,6 +488,10 @@ ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_09_v2.png"),
 ggsave(paste0(g_drive, "results/osm/figures/Presentation/moose_09-1.png"),
        plot8_1, height = 5, width = 8, dpi = 500, bg = "white")
 
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Other species
+
 
 
 
