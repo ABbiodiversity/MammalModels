@@ -35,13 +35,13 @@ sf_lu <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/LU_3Yr_Aug2022
   select(lu, lu_treatment = lu_treatmnt, label, year, deciles, shape_area)
 
 # New JEMs
-sf_jem <- read_csv(paste0(g_drive, "osm-badr-site-selection/jems_2023_v2.csv")) |>
+sf_jem <- read_csv(paste0(g_drive, "osm-badr-site-selection/jems_2023_v4.csv")) |>
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
   st_transform(3400) |>
   st_buffer(dist = 1500, nQuadSegs = 100)
 
 # Proposed 2023 Camera/ARU sites:
-sf_sites_2023 <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/camaru_osm_sites_2023_v3.shp")) |>
+sf_sites_2023 <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/camaru_osm_sites_2023_v4.shp")) |>
   st_transform(4326)
 
 high_insitu <- sf_sites_2023 |>
