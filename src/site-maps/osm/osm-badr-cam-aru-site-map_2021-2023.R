@@ -41,7 +41,7 @@ sf_jem <- read_csv(paste0(g_drive, "osm-badr-site-selection/jems_2023_v2.csv")) 
   st_buffer(dist = 1500, nQuadSegs = 100)
 
 # Proposed 2023 Camera/ARU sites:
-sf_sites_2023 <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/camaru_osm_sites_2023_v3.shp")) |>
+sf_sites_2023 <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/camaru_osm_sites_2023_v4.shp")) |>
   st_transform(4326)
 
 high_insitu <- sf_sites_2023 |>
@@ -60,8 +60,8 @@ pre_insitu <- sf_sites_2023 |>
   filter(tretmnt == "Pre Insitu")
 
 # Proposed vascular plant transect layer
-sf_vp <- st_read(paste0(g_drive, "osm-badr-site-selection/vascular-plants/VPTransects_2023_V2/doc.kml")) |>
-  st_transform(4326)
+#sf_vp <- st_read(paste0(g_drive, "osm-badr-site-selection/vascular-plants/VPTransects_2023_V2/doc.kml")) |>
+#  st_transform(4326)
 
 # All treatment and habitat areas
 sf_all <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/treat-hab-all-2023-lus.shp")) |>
@@ -79,7 +79,7 @@ decidmix <- sf_all |>
   filter(type == "DecidMix40") |>
   rename(Treatment = treatment)
 
-# Change project of JEMs
+# Change projection of JEMs
 sf_jem <- st_transform(sf_jem, crs = 4326)
 
 # Palettes
@@ -262,11 +262,11 @@ map <- sf_osr |>
                                   "Notes:", "<br>",
                                   pre_insitu$cmr_nts)) |>
 
-  addAwesomeMarkers(data = sf_vp,
-                    icon = vp,
-                    group = "Vascular Plant Transects",
-                    options = leafletOptions(pane = "2023 Camera Sites"),
-                    popup = paste("Location: ", "<b>", sf_vp$Name)) |>
+  #addAwesomeMarkers(data = sf_vp,
+  #                  icon = vp,
+  #                  group = "Vascular Plant Transects",
+  #                  options = leafletOptions(pane = "2023 Camera Sites"),
+  #                  popup = paste("Location: ", "<b>", sf_vp$Name)) |>
 
   # Layers control
   addLayersControl(overlayGroups = c("Satellite Imagery",
