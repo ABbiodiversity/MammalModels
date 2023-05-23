@@ -19,29 +19,29 @@ library(stringr)
 library(tidyr)
 library(janitor)
 
-# Shared Google Drive path
-g_drive <- "G:/Shared drives/ABMI Camera Mammals/projects/"
+# Shared Google Drive path to relevant spatial data
+g_drive <- "G:/Shared drives/ABMI Camera Mammals/projects/osm-badr-site-selection/"
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # OSR
-sf_osr <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/AB_OSR.shp")) |>
+sf_osr <- st_read(paste0(g_drive, "spatial/AB_OSR.shp")) |>
   st_transform(4326)
 
 # Landscape Units (LUs) for all 3 years.
-sf_lu <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/LU_3Yr_Aug2022/LU3YR_Aug22.shp")) |>
+sf_lu <- st_read(paste0(g_drive, "spatial/LU_3Yr_Aug2022/LU3YR_Aug22.shp")) |>
   st_transform(4326) |>
   clean_names() |>
   select(lu, lu_treatment = lu_treatmnt, label, year, deciles, shape_area)
 
 # New JEMs
-sf_jem <- read_csv(paste0(g_drive, "osm-badr-site-selection/jems_2023_v4.csv")) |>
+sf_jem <- read_csv(paste0(g_drive, "jems_2023_v4.csv")) |>
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
   st_transform(3400) |>
   st_buffer(dist = 1500, nQuadSegs = 100)
 
 # Proposed 2023 Camera/ARU sites:
-sf_sites_2023 <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/camaru_osm_sites_2023_v4.shp")) |>
+sf_sites_2023 <- st_read(paste0(g_drive, "spatial/camaru_osm_sites_2023_v4.shp")) |>
   st_transform(4326)
 
 high_insitu <- sf_sites_2023 |>
@@ -67,7 +67,7 @@ pre_insitu <- sf_sites_2023 |>
 sf_all <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/treat-hab-all-2023-lus.shp")) |>
   clean_names() |>
   select(type, treatment) |>
-  st_intersection(sf_jem) |>
+  #st_intersection(sf_jem) |>
   st_transform(4326)
 
 # TreedLow20 layer
@@ -99,13 +99,6 @@ cam <- makeAwesomeIcon(
   iconColor = "black",
   library = "ion",
   markerColor = "white"
-)
-
-vp <- makeAwesomeIcon(
-  icon = "leaf",
-  iconColor = "white",
-  library = "ion",
-  markerColor = "green"
 )
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -262,17 +255,10 @@ map <- sf_osr |>
                                   "Notes:", "<br>",
                                   pre_insitu$cmr_nts)) |>
 
-  #addAwesomeMarkers(data = sf_vp,
-  #                  icon = vp,
-  #                  group = "Vascular Plant Transects",
-  #                  options = leafletOptions(pane = "2023 Camera Sites"),
-  #                  popup = paste("Location: ", "<b>", sf_vp$Name)) |>
-
   # Layers control
   addLayersControl(overlayGroups = c("Satellite Imagery",
                                      "Landscape Units",
                                      "JEM Sites",
-                                     "Vascular Plant Transects",
                                      "Cam/ARU (Dense Linear Features)",
                                      "Cam/ARU (High Activity Insitu Well Pads)",
                                      "Cam/ARU (Low Activity Well Pads)",

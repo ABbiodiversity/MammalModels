@@ -41,6 +41,7 @@ years <- "_14-15-16-17-18"
 Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
            WT_PASSWORD = key_get("WT_PASSWORD", keyring = "wildtrax"))
 
+
 # Authenticate into WildTrax
 wt_auth()
 
@@ -58,7 +59,7 @@ tag_reports <- map_df(.x = eh_proj_ids,
                         report = "tag",
                         weather_cols = FALSE))
 
-image_reports <- map_df(.x = id,
+image_reports <- map_df(.x = eh_proj_ids,
                         .f = ~ wt_download_report(
                           project_id = .x,
                           sensor_id = "CAM",
@@ -67,7 +68,7 @@ image_reports <- map_df(.x = id,
 
 # Strip it down to include only relevant information (trigger, field of view)
 image_fov_trigger <- image_reports |>
-  select(project, location, date_detected, trigger, field_of_view)
+  select(-c(latitude, longitude, image_sequence, is_human_blurred))
 
 # Clean up tags - i.e., consolidate tags, remove tags that are not within the fov, strip down number of columns
 tags_clean <- tag_reports |>
@@ -83,47 +84,38 @@ tags_clean <- tag_reports |>
 # Save cleaned and binded data to Shared Google Drive
 # (so we don't have to re-download from WildTrax each time)
 
-# Last done: NEEDS TO BE DONE
+# Last done: May 23, 2023
 
 # Simple image reports
 image_fov_trigger |>
-  write_csv(paste0(g_drive, "data/lookup/images/", proj, "_image-report_simple.csv"))
+  write_csv(paste0(g_drive, "data/lookup/images/", proj, years, "_image-report_simple.csv"))
 
 # Only tags of species
 tags_clean |>
   # Remove all non-native mammal images
   filter(common_name %in% native_sp) |>
-  write_csv(paste0(g_drive, "data/base/clean/", proj, "_native-sp_clean_", Sys.Date(), ".csv"))
+  write_csv(paste0(g_drive, "data/base/clean/", proj, years, "_native-sp_clean_", Sys.Date(), ".csv"))
 
 # Save (all) cleaned data
 tags_clean |>
-  write_csv(paste0(g_drive, "data/base/clean/", proj, "_all-data_clean_", Sys.Date(), ".csv"))
+  write_csv(paste0(g_drive, "data/base/clean/", proj, years, "_all-data_clean_", Sys.Date(), ".csv"))
 
-# This is the temporary solution - use data processed previously.
-tags_clean <- read_csv(paste0(g_drive, "data/base/clean/archive/abmi-cmu_all-years_all-data_clean_2021-10-07.csv")) |>
-  # Filter for appropriate projects
-  filter(str_detect(project, "Health 2014|Health 2015|Health 2016|Health 2017|Health 2018")) |>
-  # Remove OG deployments
-  filter(!str_detect(location, "OG")) |>
-  select(project, location, date_detected, common_name, age_class, sex, number_individuals)
+#-----------------------------------------------------------------------------------------------------------------------
 
-# Issue with the tag names
-sp <- tags_clean |> select(common_name) |> distinct() |> filter(!common_name %in% native_sp)
+# If needed (not re-downloading from WildTrax), import data:
 
-tags_clean <- tags_clean |>
-  mutate(common_name = case_when(
-    common_name == "Grizzly bear" ~ "Grizzly Bear",
-    common_name == "Mule deer" ~ "Mule Deer",
-    common_name == "Red fox" ~ "Red Fox",
-    common_name == "Mountain goat" ~ "Mountain Goat",
-    TRUE ~ common_name
-  ))
+image_fov_trigger <- read_csv(paste0(g_drive, "data/lookup/images/", proj, years, "_image-report_simple.csv"))
+
+# Find appropriate tag data file
+file <- list.files(path = paste0(g_drive, "data/base/clean"), full.names = TRUE) |>
+  str_subset(pattern = paste0(proj, years, "_all-data_clean"))
+# Import
+tags_clean <- read_csv(file)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Summarise time-by-day for each camera deployment in the five EH projects (14, 15, 16, 17, 18).
 
-# HAS NOT BEEN DONE
 df_tbd_summary <- get_operating_days(
   image_report = image_fov_trigger,
   # Keep project
@@ -134,16 +126,13 @@ df_tbd_summary <- get_operating_days(
   .abmi_seasons = TRUE
 )
 
-# Write results - HAS NOT BEEN DONE
-write_csv(df_tbd_summary, paste0(g_drive, "data/processed/time-by-day/", proj, "_tbd-summary_", Sys.Date(), ".csv"))
-
-# This is the temporary solution - use data processed previously.
-df_tbd_summary <- read_csv(paste0(g_drive, "data/processed/time-by-day/abmi-cmu_all-years_tbd-summary_2021-10-07.csv")) |>
-  # Filter for appropriate projects
-  filter(str_detect(project, "Health 2014|Health 2015|Health 2016|Health 2017|Health 2018")) |>
-  # Remove OG deployments
-  filter(!str_detect(location, "OG")) |>
-  unite("project_location", project, location, sep = "_")
+# Write new results and archive old results
+write_and_archive(
+  data = df_tbd_summary,
+  type = "tbd",
+  project = proj,
+  years = years
+)
 
 #-----------------------------------------------------------------------------------------------------------------------
 

@@ -58,7 +58,7 @@ tag_reports <- map_df(.x = eh_proj_ids,
                         report = "tag",
                         weather_cols = FALSE))
 
-image_reports <- map_df(.x = eh_proj_ids,
+image_reports <- map(.x = eh_proj_ids,
                         .f = ~ wt_download_report(
                           project_id = .x,
                           sensor_id = "CAM",
