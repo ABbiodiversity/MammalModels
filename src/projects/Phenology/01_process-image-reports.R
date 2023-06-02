@@ -16,66 +16,74 @@ library(stringr)
 library(hms)
 library(tidyr)
 library(lubridate)
+library(purrr)
 
 # Root directory (Shared Google Drive)
-g_drive <- "G:/Shared drives/ABMI Camera Mammals/data/base/raw/from_WildTrax/ABMI/"
+g_drive <- "G:/Shared drives/ABMI Camera Mammals/data/"
 
-# Download image report(s) for projects of interest:
+# Path to files of interest — only EH, CMU, and OG for now
+files <- list.files(paste0(g_drive, "lookup/image-reports"),
+                    pattern = "*.csv",
+                    full.names = TRUE) |>
+  str_subset(pattern = "og|cmu|eh")
 
-# CMU 2019 & 2020
-cmu_2019 <- read_csv(paste0(g_drive, "image_reports/CMU_CMU_Ecosystem_Monitoring_Camera_Program_2019_image_report.csv"))
-cmu_2020 <- read_csv(paste0(g_drive, "image_reports/CMU_CMU_Ecosystem_Monitoring_Camera_Program_2020_image_report.csv"))
+# Load image reports, only saving columns of interest
+image_reports <- map_df(
+  .x = files, .f = ~ read_csv(
+    .x, col_select = c(project, location, date_detected, trigger,
+                       field_of_view, url = `image_url.admin.only.`)))
 
-# ABMI EH 2020 and 2021
-abmi_2020 <- read_csv(paste0(g_drive, "image_reports/ABMI_ABMI_Ecosystem_Health_2020_image_report.csv"))
-abmi_2021 <- read_csv(paste0(g_drive, "image_reports/ABMI_ABMI_Ecosystem_Health_2021_image_report.csv"))
+# Tag reports, in order to obtain STAFF/SETUP images
+files <- list.files(paste0(g_drive, "base/clean"),
+                    pattern = "*.csv",
+                    full.names = TRUE) |>
+  str_subset(pattern = "all-data") |>
+  str_subset(pattern = "og|cmu|eh")
 
+staff_setup <- map_df(
+  .x = files, .f = ~ read_csv(
+    .x, col_select = c(project, location, date_detected, common_name))) |>
+  filter(common_name == "STAFF/SETUP")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Clean data - this could probably be a function of some sort?
-
-cmu_2019_test <- cmu_2019 |>
-  select(project, location, date_detected, trigger, url = `image_url(admin only)`) |>
-  # Only interested in Time Lapse images
-  filter(trigger == "Time Lapse") |>
+# Obtain dataframe of relevant Timelapse images
+df_tl <- image_reports |>
+  filter(trigger == "Timed") |>
   mutate(hour = as.character(as_hms(date_detected))) |>
-  # Depending on the location, sometimes TL images are 12h or 13h (or both)
+  # Depending on the location, sometimes Timelapse images are 12h or 13h (or both)
   filter(hour == "13:00:00" | hour == "12:00:00") |>
+  # Just take one per day if multiple are present (i.e., both a 12h and a 13h image)
   mutate(date = date(date_detected)) |>
   arrange(location, desc(date_detected)) |>
   group_by(location, date) |>
-  # Just take one per day if multiple are present (i.e., a 12h and a 13h image)
   filter(row_number() == 1) |>
   ungroup() |>
-  select(-c(trigger, hour, date)) |>
-  # Quick rename of project to make file size smaller
-  mutate(project = "CMU 2019")
+  # Remove unnecessary columns
+  select(-c(trigger, hour, date, field_of_view))
 
-# Both CMU 2019 and CMU 2020
-cmu <- bind_rows(cmu_2019_test, cmu_2020_test)
-
-# Write csv
-write_csv(cmu, paste0(g_drive, "image_reports/CMU_2019-2020_timelapse_12h-13h.csv"))
-
-# Clean data - Ecosystem Health
-# * To do for the future - just do this for all of the ABMI data (EH and OG)
-abmi <- bind_rows(abmi_2020, abmi_2021) |>
-  select(project, location, date_detected, trigger, url = `image_url(admin only)`) |>
-  filter(trigger == "Time Lapse") |>
-  mutate(hour = as.character(as_hms(date_detected))) |>
-  filter(hour == "13:00:00" | hour == "12:00:00") |>
+# Dates when field of view was out of range
+df_fov <- image_reports |>
+  filter(field_of_view != "WITHIN",
+         trigger == "Timed") |>
   mutate(date = date(date_detected)) |>
-  arrange(location, desc(date_detected)) |>
-  group_by(location, date) |>
-  # Just take one per day if multiple are present (i.e., a 12h and a 13h image)
-  filter(row_number() == 1) |>
-  ungroup() |>
-  select(-c(trigger, hour, date))
+  select(location, field_of_view, date) |>
+  distinct()
 
-g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
+# STAFF/SETUP dates
+staff_setup_days <- staff_setup |>
+  mutate(date = date(date_detected)) |>
+  select(-c(date_detected, project)) |>
+  distinct() |>
+  arrange(location)
 
-# Write csv
-write_csv(abmi, paste0(g_drive, "data/processed/timelapse/abmi_2020-2021_timelapse_12h-13h.csv")
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Write to csv(s)
+
+write_csv(df_tl, paste0(g_drive, "processed/timelapse/eh-cmu-og_all-years_timelapse_12h-13h.csv"))
+write_csv(df_fov, paste0(g_drive, "processed/timelapse/eh-cmu-og_all-years_out-of-range.csv"))
+
+write_csv(staff_setup_days, paste0(g_drive, "lookup/staffsetup/eh-cmu-og_all-years_staffsetup-dates.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------

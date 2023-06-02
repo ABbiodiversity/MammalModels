@@ -64,11 +64,12 @@ image_reports <- map_df(.x = og_proj_ids,
                           project_id = .x,
                           sensor_id = "CAM",
                           report = "image",
-                          weather_cols = FALSE))
+                          weather_cols = FALSE) |>
+                          mutate_if(is.numeric, as.character))
 
 # Strip it down to include only relevant information (trigger, field of view)
 image_fov_trigger <- image_reports |>
-  select(project, location, date_detected, trigger, field_of_view)
+  select(-c(latitude, longitude, image_sequence, is_human_blurred))
 
 # Clean up tags - i.e., consolidate tags, remove tags that are not within the fov, strip down number of columns
 tags_clean <- tag_reports |>

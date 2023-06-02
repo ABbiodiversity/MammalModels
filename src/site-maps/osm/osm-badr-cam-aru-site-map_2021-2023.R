@@ -64,10 +64,10 @@ pre_insitu <- sf_sites_2023 |>
 #  st_transform(4326)
 
 # All treatment and habitat areas
-sf_all <- st_read(paste0(g_drive, "osm-badr-site-selection/spatial/treat-hab-all-2023-lus.shp")) |>
+sf_all <- st_read(paste0(g_drive, "spatial/treat-hab-all-2023-lus.shp")) |>
   clean_names() |>
   select(type, treatment) |>
-  #st_intersection(sf_jem) |>
+  st_intersection(sf_jem) |>
   st_transform(4326)
 
 # TreedLow20 layer
@@ -101,6 +101,22 @@ cam <- makeAwesomeIcon(
   markerColor = "white"
 )
 
+cam_new <- makeAwesomeIcon(
+  icon = "camera",
+  iconColor = "white",
+  library = "ion",
+  markerColor = "blue"
+)
+
+# New: Add some boundary layer for mine sites?
+
+msl <- st_read(paste0(g_drive, "spatial/MSL973220_20230201/MSL973220_20230201.shp")) |>
+  st_transform(4326)
+
+fh_msl <- st_read(paste0(g_drive, "spatial/FH_MSL_20230529_UTM12/FH_MSL_20230529_UTM12.shp")) |>
+  st_transform(4326) |>
+  st_zm()
+
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Create interactive map for viewing
@@ -127,7 +143,7 @@ map <- sf_osr |>
                  circleOptions = FALSE,
                  rectangleOptions = FALSE,
                  circleMarkerOptions = FALSE,
-                 markerOptions = drawMarkerOptions(repeatMode = TRUE, markerIcon = cam),
+                 markerOptions = drawMarkerOptions(repeatMode = TRUE, markerIcon = cam_new),
                  editOptions = editToolbarOptions(edit = TRUE, remove = TRUE)) |>
   addMapPane(name = "Boundaries LU", zIndex = 410) |>
   addMapPane(name = "Boundaries JEM", zIndex = 415) |>
@@ -190,6 +206,23 @@ map <- sf_osr |>
               options = leafletOptions(pane = "Habitat Treatment Data"),
               popup = paste("Treatment: ", "<b>", treedlow$treatment, "</b>"),
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
+
+  # Aurora North
+  addPolygons(data = fh_msl,
+              color = "red",
+              weight = 1.5,
+              smoothFactor = 0.2,
+              opacity = 2,
+              fill = FALSE,
+              group = "None") |>
+
+  addPolygons(data = msl,
+              color = "red",
+              weight = 1.5,
+              smoothFactor = 0.2,
+              opacity = 2,
+              fill = FALSE,
+              group = "None") |>
 
   # 2023 Camera Sites
   addAwesomeMarkers(data = dense_linear,
