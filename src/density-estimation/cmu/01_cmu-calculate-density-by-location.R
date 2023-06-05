@@ -52,8 +52,6 @@ cmu_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
   pull(project_id) |>
   unlist()
 
-cmu_proj_ids <- 904
-
 # Download tag and image reports using IDs
 tag_reports <- map_df(.x = cmu_proj_ids,
                       .f = ~ wt_download_report(
@@ -68,11 +66,12 @@ image_reports <- map_df(.x = cmu_proj_ids,
                           project_id = .x,
                           sensor_id = "CAM",
                           report = "image",
-                          weather_cols = FALSE))
+                          weather_cols = FALSE) |>
+                          mutate_if(is.numeric, as.character))
 
 # Strip it down to include only relevant information (trigger, field of view)
 image_fov_trigger <- image_reports |>
-  select(project, location, date_detected, trigger, field_of_view)
+  select(-c(latitude, longitude, image_sequence, is_human_blurred))
 
 # Clean up tags - i.e., consolidate tags, remove tags that are not within the fov, strip down number of columns
 tags_clean <- tag_reports |>
@@ -89,11 +88,11 @@ tags_clean <- tag_reports |>
 # Save cleaned and binded data to Shared Google Drive
 # (so we don't have to re-download from WildTrax each time)
 
-# Last done:
+# Last done: May 24, 2023 (image report)
 
 # Simple image reports
 image_fov_trigger |>
-  write_csv(paste0(g_drive, "data/lookup/images/", proj, "_all-years_image-report_simple.csv"))
+  write_csv(paste0(g_drive, "data/lookup/images/", proj, years, "_image-report_simple.csv"))
 
 # Only tags of species
 tags_clean |>
