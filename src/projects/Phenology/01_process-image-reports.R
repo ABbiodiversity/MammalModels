@@ -26,10 +26,9 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/data/base/raw/from_WildTrax/ABM
 cmu_2019 <- read_csv(paste0(g_drive, "image_reports/CMU_CMU_Ecosystem_Monitoring_Camera_Program_2019_image_report.csv"))
 cmu_2020 <- read_csv(paste0(g_drive, "image_reports/CMU_CMU_Ecosystem_Monitoring_Camera_Program_2020_image_report.csv"))
 
-# ABMI EH 2020 and 2021
-abmi_2020 <- read_csv(paste0(g_drive, "image_reports/ABMI_ABMI_Ecosystem_Health_2020_image_report.csv"))
-abmi_2021 <- read_csv(paste0(g_drive, "image_reports/ABMI_ABMI_Ecosystem_Health_2021_image_report.csv"))
-
+# ABMI EH 2019 and 2022
+abmi_2019 <- read_csv(paste0(g_drive, "image_reports/ABMI_ABMI_Ecosystem_Health_2019_image_report.csv"))
+abmi_2022 <- read_csv(paste0(g_drive, "image_reports/ABMI_ABMI_Ecosystem_Health_2022_image_report.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -60,7 +59,7 @@ write_csv(cmu, paste0(g_drive, "image_reports/CMU_2019-2020_timelapse_12h-13h.cs
 
 # Clean data - Ecosystem Health
 # * To do for the future - just do this for all of the ABMI data (EH and OG)
-abmi <- bind_rows(abmi_2020, abmi_2021) |>
+abmi <- bind_rows(abmi_2019, abmi_2022) |>
   select(project, location, date_detected, trigger, url = `image_url(admin only)`) |>
   filter(trigger == "Time Lapse") |>
   mutate(hour = as.character(as_hms(date_detected))) |>
@@ -76,6 +75,6 @@ abmi <- bind_rows(abmi_2020, abmi_2021) |>
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Write csv
-write_csv(abmi, paste0(g_drive, "data/processed/timelapse/abmi_2020-2021_timelapse_12h-13h.csv")
+write_csv(abmi, paste0(g_drive, "data/processed/timelapse/abmi_2019-2022_timelapse_12h-13h.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------

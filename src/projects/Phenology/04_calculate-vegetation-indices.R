@@ -41,6 +41,19 @@ for (site in sites) {
 
 }
 
+l <- list()
+
+for (site in sites) {
+
+  name <- paste0(site, "_VI.data")
+  load(paste0(g_drive, "projects/Phenology/Outputs/VI/", name, ".RData"))
+  d <- VI.data[[1]]
+  l[[site]] <- d
+
+}
+
+save(l, file = paste0(g_drive, "projects/Phenology/Outputs/VI/VI.data.RData"))
+
 # Make plots of each individual location
 load(paste0(g_drive, "projects/Phenology/Outputs/VI/1400-NE_VI.data.Rdata"))
 
