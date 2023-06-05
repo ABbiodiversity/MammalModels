@@ -74,6 +74,8 @@ for (site in sites) {
 
 }
 
+# If you want to combine the VI data together into one RData object
+
 l <- list()
 
 for (site in sites) {
@@ -133,11 +135,7 @@ for (site in sites) {
 
   }
 
-
-
 }
-
-
 
 #-----------------------------------------------------------------------------------------------------------------------
 

@@ -17,19 +17,14 @@ library(stringr)
 library(dplyr)
 library(tidyr)
 library(lubridate)
+library(readr)
 
-#-----------------------------------------------------------------------------------------------------------------------
-
-# Create a folder with a reference image of each location
-# Let's just do 5 for now
-# Reference image ... how about June 1?
-
+# All Timelapse image files
 files <- list.files(paste0(g_drive, "projects/Phenology/Timelapse Images/"),
                     recursive = TRUE,
                     full.names = TRUE)
 
-df_files <- data.frame(
-  "path" = files) |>
+df_files <- data.frame("path" = files) |>
   mutate(file = str_extract(path, "(?<=/)[^/]*(?=.jpg$)")) |>
   separate(file, into = c("location", "date"), sep = "_") |>
   mutate(date = ymd(date))
@@ -39,11 +34,14 @@ df_ss <- read_csv(paste0(g_drive, "data/lookup/staffsetup/eh-cmu-og_all-years_st
 
 # DJH list of suggested sites (May 2023)
 sites <- read.csv(paste0(g_drive, "projects/Phenology/Cameras for phenology RGB analysis May 18 2023.csv"))
+
+# Have only looked at a subset so far
 locations <- sites$Row.Labels[1:38]
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# We want to choose the day after a staff/setup event occurred
+# We want to choose the day after a staff/setup event occurred as the Reference image
+# This is due to the field of view potentially changing
 target_ref <- df_ss |>
   filter(location %in% locations) |>
   # Note: for the retrieval STAFF/SETUP, there is no timelapse after that day (except CMU ...)
@@ -55,6 +53,7 @@ target_ref <- df_ss |>
 ref_img_files <- df_files |>
   left_join(target_ref, by = c("location", "date")) |>
   filter(reference == TRUE) |>
+  # Add a count so we know if there was more than one monitoring period
   group_by(location) |>
   add_count()
 
@@ -89,7 +88,7 @@ for (ref in ref_img_paths) {
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Now, we need to set up folders for different monitoring periods ...
+# Now, we need to set up folders for different monitoring periods, where applicable
 
 loc_mp <- ref_img_files |>
   select(location, n) |>
@@ -121,6 +120,7 @@ ref_img_files <- df_files |>
   filter(location %in% loc_mp) |>
   mutate(date = as.character(date))
 
+# Move images to appropriate folders
 for (loc in loc_mp) {
 
   d <- ref_img_files |>
@@ -139,7 +139,5 @@ for (loc in loc_mp) {
 
 }
 
-
-
-
+#-----------------------------------------------------------------------------------------------------------------------
 
