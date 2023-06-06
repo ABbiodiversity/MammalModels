@@ -14,25 +14,29 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 # Read Timelapse url data — currently only EH, CMU, and OG projects
 df_tl <- read.csv(paste0(g_drive, "data/processed/timelapse/eh-cmu-og_all-years_timelapse_12h-13h.csv"))
 
+# Staff/setup dates
+df_ss <- read_csv(paste0(g_drive, "data/lookup/staffsetup/eh-cmu-og_all-years_staffsetup-dates.csv"))
+
+
 # DJH list of suggested sites (May 2023)
 sites <- read.csv(paste0(g_drive, "projects/Phenology/Cameras for phenology RGB analysis May 18 2023.csv"))
-
-#-----------------------------------------------------------------------------------------------------------------------
-
 # Vector of site locations (54 in total)
 locations <- sites$Row.Labels
 
-locations <- locations[1:38]
+# Now we're doing the remainder
+locations <- locations[39:54]
 
 # Subset Timelapse url data
 df_tl_subset <- df_tl[df_tl$location %in% locations, ]
 
+#-----------------------------------------------------------------------------------------------------------------------
+
 # Folder location for images
 tl_folder <- "G:/Shared drives/ABMI Camera Mammals/projects/Phenology/Timelapse Images/"
 
-# **** TO DO — Set up subfolders for monitoring periods.
-
 for (i in locations) {
+
+  print("Working on location ", i)
 
   # Create directory for each location
   # Does it already exist?
@@ -56,7 +60,7 @@ for (i in locations) {
     date_time <- d[u, 3]
     location <- d[u, 2]
     date <- strptime(date_time, format = "%Y-%m-%d")
-    download.file(url, destfile = paste0(dir, location, "_", date, ".jpg"), mode = 'wb')
+    try(download.file(url, destfile = paste0(dir, location, "_", date, ".jpg"), mode = 'wb'))
 
   }
 

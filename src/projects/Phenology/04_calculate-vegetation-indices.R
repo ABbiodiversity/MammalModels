@@ -92,18 +92,15 @@ save(l, file = paste0(g_drive, "projects/Phenology/Outputs/VI/VI.data.RData"))
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Let's do those remaining locations (CMU)
-sites <- c("ADE-16", "AUB-7", "AUB-10", "AUB-12", "AUB-16", "AUB-21")
+sites <- "ADE-16"
+sites <- c("AUB-7", "AUB-10", "AUB-12", "AUB-16", "AUB-21")
 
-site <- "ADE-16"
-
-# First, we need to separate Timelapse images in one location by deployment period
-
-
+tic()
 for (site in sites) {
 
   print(paste0("Working on location ", site))
 
-  # Grab the appropriate folders for the location - now there are
+  # Grab the appropriate folders for the location - now there are multiple
   roi_site_folders <- list.dirs(paste0(g_drive, "projects/Phenology/Outputs/ROI"),
                                full.names = FALSE) |>
     str_subset(pattern = site)
@@ -111,42 +108,64 @@ for (site in sites) {
   for (folder in roi_site_folders) {
 
     # Extract Vegetation Indices
-    extractVIs(# Path to Timelapse images stays the same (just one folder per location)
-               img.path = paste0(g_drive, "projects/Phenology/Timelapse Images/", site, "/"),
+    extractVIs(# Now there are multiple folders for a location
+               img.path = paste0(g_drive,
+                                 "projects/Phenology/Timelapse Images/",
+                                 site,
+                                 "/",
+                                 folder,
+                                 "/"),
                # Path to folder with ROI defined for location
                roi.path = paste0(g_drive,
                                  "projects/Phenology/Outputs/ROI/",
-                                 roi_site_folder),
+                                 folder),
                # Path to folder where VIs will be saved
                vi.path = paste0(g_drive, "projects/Phenology/Outputs/VI/"),
-               roi.name = paste0(roi_site_folder, "_roi1"),
+               roi.name = paste0(folder, "_roi1"),
                plot = TRUE,
                begin = NULL,
                spatial = FALSE,
                date.code = 'yyyy-mm-dd',
                npixels = 1,
                file.type = "jpg",
-               bind = FALSE)
+               bind = FALSE,
+               ncores = "all")
 
     # Rename the Rdata from generic VI.data.RData to a site-specific name
     file.rename(from = paste0(g_drive, "projects/Phenology/Outputs/VI/VI.data.RData"),
-                to = paste0(g_drive, "projects/Phenology/Outputs/VI/", site, "_VI.data.RData"))
+                to = paste0(g_drive, "projects/Phenology/Outputs/VI/", folder, "_VI.data.RData"))
 
 
   }
 
 }
+toc()
+
+# Combine the VI data from each location into one object
+
+sites <- c("ADE-16", "AUB-7", "AUB-10", "AUB-12", "AUB-16", "AUB-21")
+
+for (site in sites) {
+
+  VI <- list()
+
+  files <- list.files(paste0(g_drive, "projects/Phenology/Outputs/VI"),
+                      pattern = "*.RData",
+                      full.names = TRUE) |>
+    str_subset(pattern = site)
+
+  for (file in files) {
+
+    name <- str_extract(file, "(?<=/)[^/]*$")
+    name <- str_remove(name, "_VI.data.RData$")
+    load(file)
+    vi <- VI.data[[1]]
+    VI[[name]] <- vi
+
+  }
+
+  save(VI, file = paste0(g_drive, "projects/Phenology/Outputs/VI/", site, "_VI.data.RData"))
+
+}
 
 #-----------------------------------------------------------------------------------------------------------------------
-
-# Make plots of each individual location
-load(paste0(g_drive, "projects/Phenology/Outputs/VI/1400-NE_VI.data.Rdata"))
-
-with(VI.data$`1400-NE_2020-06-01_roi1`, plot(date, ri.av, pch=20, cex = 1.5, col='red', ylim=c(0.1,0.6),
-                                             ylab='Relative indexes', main = "1400-NE"))
-with(VI.data$`1400-NE_2020-06-01_roi1`, points(date, gi.av, col='green', pch=20, cex = 1.5))
-with(VI.data$`1400-NE_2020-06-01_roi1`, points(date, bi.av, col='blue', pch=20, cex = 1.5))
-
-
-
-

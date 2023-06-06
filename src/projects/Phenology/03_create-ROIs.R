@@ -102,7 +102,7 @@ for (loc in 1:nrow(loc_mp)) {
   periods <- seq(1:pull(loc_mp[loc, 2]))
 
   for (i in periods) {
-
+    # Note: We want to name the folders something more descriptive: the date of the ROI.
     dir.create(paste0(path, i))
 
   }
@@ -116,6 +116,7 @@ ref_img_files <- df_files |>
   mutate(reference = if_else(is.na(reference), 0, 1)) |>
   group_by(location) |>
   mutate(folder = cumsum(reference)) |>
+  # Note: Want to name the folder something more descriptive (see above)
   filter(!folder < 1) |>
   filter(location %in% loc_mp) |>
   mutate(date = as.character(date))
@@ -139,5 +140,18 @@ for (loc in loc_mp) {
 
 }
 
+# So, this worked but we still have a lot of work to do to clean up the workflow process.
+
 #-----------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
 
