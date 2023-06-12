@@ -17,24 +17,8 @@ library(stringr)
 
 # DJH list of suggested sites (May 2023)
 sites <- read.csv(paste0(g_drive, "projects/Phenology/Cameras for phenology RGB analysis May 18 2023.csv"))
-locations <- sites$Row.Labels[1:32]
+locations <- sites$Row.Labels[39:54]
 locations <- locations[locations != "1393-NE"]
-
-#-----------------------------------------------------------------------------------------------------------------------
-
-# Move (Copy) ROI RData objects to appropriate folders
-roi_rdata <- list.files(path = paste0(g_drive, "projects/Phenology/Outputs/ROI"),
-                        pattern = "*Rdata",
-                        full.names = TRUE)
-
-# Just copying for now ... don't want anything bad to happen and to lose this information
-for (roi in roi_rdata) {
-
-  folder <- str_extract(roi, "(?<=/)[^/]*(?=roi.data.Rdata$)")
-  file.copy(from = roi,
-            to = paste0(g_drive, "projects/Phenology/Outputs/ROI/", folder, "/roi.data.Rdata"))
-
-}
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -94,6 +78,8 @@ save(l, file = paste0(g_drive, "projects/Phenology/Outputs/VI/VI.data.RData"))
 # Let's do those remaining locations (CMU)
 sites <- "ADE-16"
 sites <- c("AUB-7", "AUB-10", "AUB-12", "AUB-16", "AUB-21")
+
+sites <- locations
 
 tic()
 for (site in sites) {

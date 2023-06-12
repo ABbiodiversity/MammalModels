@@ -36,7 +36,7 @@ tl_folder <- "G:/Shared drives/ABMI Camera Mammals/projects/Phenology/Timelapse 
 
 for (i in locations) {
 
-  print("Working on location ", i)
+  print(paste0("Working on location ", i))
 
   # Create directory for each location
   # Does it already exist?
