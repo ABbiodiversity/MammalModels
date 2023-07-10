@@ -4,7 +4,7 @@
 # Description: Estimate ABMI camera site locations (2013-2021) from site centers provided by the Geospatial Centre.
 #              Clean up other layers, and compile for interactive map.
 
-# Date:        January, 2022
+# Date:        June 2023
 # Author:      Marcus Becker
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -19,12 +19,12 @@ library(stringr)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Read in actual locations for surveyed sites (2013-2021) - From Cris, Jan 2022.
-# Stored in personal Drive.
-sf_site_actual <- st_read("G:/My Drive/ABMI/data/spatial/sites/ABMI_Actual_CameraSites_2013_2021.shp")
+# Stored in personal hard drive.
+sf_site_actual <- st_read("F:/Science Centre/Spatial/ABMI_Actual_CameraSites_2013_2021.shp")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Represent camera locations
+# Represent individual camera locations
 
 st_crs(sf_site_actual) # Should be EPSG 3400 (NAD83 / Alberta 10-TM (Forest))
 

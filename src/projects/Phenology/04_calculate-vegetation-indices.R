@@ -76,10 +76,8 @@ save(l, file = paste0(g_drive, "projects/Phenology/Outputs/VI/VI.data.RData"))
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Let's do those remaining locations (CMU)
-sites <- "ADE-16"
-sites <- c("AUB-7", "AUB-10", "AUB-12", "AUB-16", "AUB-21")
-
 sites <- locations
+sites <- sites[5:16]
 
 tic()
 for (site in sites) {
@@ -89,12 +87,13 @@ for (site in sites) {
   # Grab the appropriate folders for the location - now there are multiple
   roi_site_folders <- list.dirs(paste0(g_drive, "projects/Phenology/Outputs/ROI"),
                                full.names = FALSE) |>
+    # Note: This effs up in cases where there are multiple matches: e.g., FMM-1 and FMM-14
     str_subset(pattern = site)
 
   for (folder in roi_site_folders) {
 
     # Extract Vegetation Indices
-    extractVIs(# Now there are multiple folders for a location
+    try(extractVIs(# Now there are multiple folders for a location
                img.path = paste0(g_drive,
                                  "projects/Phenology/Timelapse Images/",
                                  site,
@@ -115,11 +114,11 @@ for (site in sites) {
                npixels = 1,
                file.type = "jpg",
                bind = FALSE,
-               ncores = "all")
+               ncores = "all"))
 
     # Rename the Rdata from generic VI.data.RData to a site-specific name
-    file.rename(from = paste0(g_drive, "projects/Phenology/Outputs/VI/VI.data.RData"),
-                to = paste0(g_drive, "projects/Phenology/Outputs/VI/", folder, "_VI.data.RData"))
+    try(file.rename(from = paste0(g_drive, "projects/Phenology/Outputs/VI/VI.data.RData"),
+                to = paste0(g_drive, "projects/Phenology/Outputs/VI/", folder, "_VI.data.RData")))
 
 
   }

@@ -29,14 +29,16 @@ df_files <- data.frame("path" = files) |>
   separate(file, into = c("location", "date"), sep = "_") |>
   mutate(date = ymd(date))
 
+# All locations that have had timelapse images downloaded
+locations <- unique(df_files$location)
+
 # Staff/setup dates
 df_ss <- read_csv(paste0(g_drive, "data/lookup/staffsetup/eh-cmu-og_all-years_staffsetup-dates.csv"))
 
-# DJH list of suggested sites (May 2023)
-sites <- read.csv(paste0(g_drive, "projects/Phenology/Cameras for phenology RGB analysis May 18 2023.csv"))
-
-# Have only looked at a subset so far
-locations <- sites$Row.Labels[39:54]
+# Locations (reference images) done so far
+ref_done <- list.files(paste0(g_drive, "projects/Phenology/Reference Images/"),
+                       recursive = TRUE, full.names = FALSE) |>
+  str_remove_all("^Batch1/|^Batch2/|.jpg$")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -51,7 +53,9 @@ target_ref <- df_ss |>
   # Based on manual inspection from WildTrax (ugh), a few of these staff/setups are bogus.
   filter(!(location == "CHR-102" & date == "2018-09-23"),
          !(location == "MCC-28" & date == "2018-10-07"),
-         !(location == "MCC-43" & date > "2021-07-16"))
+         !(location == "MCC-43" & date > "2021-07-16")) |>
+  mutate(file = paste0(location, "_", date)) |>
+  filter(!file %in% ref_done)
 
 # Pull the target reference image file paths
 ref_img_files <- df_files |>
@@ -70,15 +74,20 @@ for (file in 1:nrow(ref_img_files)) {
   date <- pull(ref_img_files[file, 3])
 
   file.copy(from = path,
-            to = paste0(g_drive, "projects/Phenology/Reference Images/Batch2/", loc, "_", date, ".jpg"))
+            to = paste0(g_drive, "projects/Phenology/Reference Images/", loc, "_", date, ".jpg"))
 
 }
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# New file paths for reference images (Batch 2)
-ref_img_paths <- list.files(paste0(g_drive, "projects/Phenology/Reference Images/Batch2"),
-                            full.names = FALSE)
+# List all the images that already have ROIs done
+roi_dirs <- list.dirs(paste0(g_drive, "projects/Phenology/Outputs/ROI"), full.names = FALSE)
+
+# File paths for reference images
+ref_img_paths <- list.files(paste0(g_drive, "projects/Phenology/Reference Images"), full.names = FALSE) |>
+  str_remove(pattern = ".jpg") |>
+  # Reference images without an ROI drawn
+  setdiff(roi_dirs)
 
 # Output folder
 output_roi <- paste0(g_drive, "projects/Phenology/Outputs/ROI/")
@@ -86,15 +95,14 @@ output_roi <- paste0(g_drive, "projects/Phenology/Outputs/ROI/")
 # Draw ROIs for each camera deployment
 for (ref in ref_img_paths) {
 
-  path <- paste0(g_drive, "projects/Phenology/Reference Images/Batch2/", ref)
-  name <- str_remove(ref, pattern = ".jpg")
-  dir.create(paste0(output_roi, name))
+  path <- paste0(g_drive, "projects/Phenology/Reference Images/", ref, ".jpg")
+  dir.create(paste0(output_roi, ref))
 
   DrawMULTIROI(path_img_ref = path,
-               path_ROIs = paste0(output_roi, name, "/"),
+               path_ROIs = paste0(output_roi, ref, "/"),
                nroi = 1,
                file.type = ".JPG",
-               roi.names = paste0(name, "_roi1"))
+               roi.names = paste0(ref, "_roi1"))
 }
 
 #-----------------------------------------------------------------------------------------------------------------------

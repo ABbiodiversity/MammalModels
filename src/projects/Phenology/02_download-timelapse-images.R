@@ -8,26 +8,43 @@
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(purrr)
+
 # Root directory (Google)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Read Timelapse url data — currently only EH, CMU, and OG projects
 df_tl <- read.csv(paste0(g_drive, "data/processed/timelapse/eh-cmu-og_all-years_timelapse_12h-13h.csv"))
 
-# Staff/setup dates
-df_ss <- read_csv(paste0(g_drive, "data/lookup/staffsetup/eh-cmu-og_all-years_staffsetup-dates.csv"))
+#-----------------------------------------------------------------------------------------------------------------------
 
+# June 27, 2023 - Starting with a sample of the CMU data
+set.seed(12345)
 
-# DJH list of suggested sites (May 2023)
-sites <- read.csv(paste0(g_drive, "projects/Phenology/Cameras for phenology RGB analysis May 18 2023.csv"))
-# Vector of site locations (54 in total)
-locations <- sites$Row.Labels
+df_tl_subset <- df_tl |>
+  filter(str_detect(project, "CMU"),
+         # Remove trail deployments
+         !str_detect(location, "T$")) |>
+  group_by(location) |>
+  nest() |>
+  mutate(obs = map_dbl(data, nrow)) |>
+  ungroup() |>
+  # Great than one year is optimal
+  filter(obs > 400) |>
+  separate(location, into = c("grid", "station"), sep = "-", remove = TRUE) |>
+  group_by(grid) |>
+  sample_n(5) |>
+  select(-obs) |>
+  unnest(cols = c(data)) |>
+  unite("location", grid, station, sep = "-") |>
+  select(project, location, date_detected, url) |>
+  # Change to dataframe for tibble reasons
+  data.frame()
 
-# Now we're doing the remainder
-locations <- locations[39:54]
-
-# Subset Timelapse url data
-df_tl_subset <- df_tl[df_tl$location %in% locations, ]
+locations <- unique(df_tl_subset$location)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
