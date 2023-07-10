@@ -128,7 +128,7 @@ toc()
 
 # Combine the VI data from each location into one object
 
-sites <- c("ADE-16", "AUB-7", "AUB-10", "AUB-12", "AUB-16", "AUB-21")
+sites <- locations
 
 for (site in sites) {
 
@@ -137,7 +137,7 @@ for (site in sites) {
   files <- list.files(paste0(g_drive, "projects/Phenology/Outputs/VI"),
                       pattern = "*.RData",
                       full.names = TRUE) |>
-    str_subset(pattern = site)
+    str_subset(pattern = paste0(site, "_"))
 
   for (file in files) {
 
