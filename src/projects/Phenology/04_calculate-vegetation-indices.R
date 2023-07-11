@@ -14,81 +14,33 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 # Attach packages
 library(phenopix)
 library(stringr)
+library(tictoc)
 
-# DJH list of suggested sites (May 2023)
-sites <- read.csv(paste0(g_drive, "projects/Phenology/Cameras for phenology RGB analysis May 18 2023.csv"))
-locations <- sites$Row.Labels[39:54]
-locations <- locations[locations != "1393-NE"]
+# Locations that have already been done
+loc_done <- list.files(paste0(g_drive, "projects/Phenology/Outputs/VI"), pattern = "*.RData") |>
+  str_extract("^[^_]+") |>
+  unique()
 
-#-----------------------------------------------------------------------------------------------------------------------
-
-# Locations - focus on the ones with one deployment period for now.
-sites <- locations
-sites <- sites[3:31]
-
-for (site in sites) {
-
-  print(paste0("Working on location ", site))
-
-  # Grab the appropriate folder for the location
-  roi_site_folder <- list.dirs(paste0(g_drive, "projects/Phenology/Outputs/ROI"),
-                        full.names = FALSE) |>
-    str_subset(pattern = site)
-
-  # Extract Vegetation Indices
-  extractVIs(img.path = paste0(g_drive, "projects/Phenology/Timelapse Images/", site, "/"),
-             # Path to folder with ROI defined for location
-             roi.path = paste0(g_drive,
-                               "projects/Phenology/Outputs/ROI/",
-                               roi_site_folder),
-             # Path to folder where VIs will be saved
-             vi.path = paste0(g_drive, "projects/Phenology/Outputs/VI/"),
-             roi.name = paste0(roi_site_folder, "_roi1"),
-             plot = TRUE,
-             begin = NULL,
-             spatial = FALSE,
-             date.code = 'yyyy-mm-dd',
-             npixels = 1,
-             file.type = "jpg",
-             bind = FALSE)
-
-  # Rename the Rdata from generic VI.data.RData to a site-specific name
-  file.rename(from = paste0(g_drive, "projects/Phenology/Outputs/VI/VI.data.RData"),
-              to = paste0(g_drive, "projects/Phenology/Outputs/VI/", site, "_VI.data.RData"))
-
-}
-
-# If you want to combine the VI data together into one RData object
-
-l <- list()
-
-for (site in sites) {
-
-  name <- paste0(site, "_VI.data")
-  load(paste0(g_drive, "projects/Phenology/Outputs/VI/", name, ".RData"))
-  d <- VI.data[[1]]
-  l[[site]] <- d
-
-}
-
-save(l, file = paste0(g_drive, "projects/Phenology/Outputs/VI/VI.data.RData"))
+# Locations to do
+loc_todo <- list.dirs(paste0(g_drive, "projects/Phenology/Outputs/ROI"), full.names = FALSE) |>
+  str_extract("^[^_]+") |>
+  unique() |>
+  na.omit() |>
+  setdiff(loc_done)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Let's do those remaining locations (CMU)
-sites <- locations
-sites <- sites[5:16]
+# Extract Vegetation Indices for all locations left to do
 
-tic()
-for (site in sites) {
+for (site in loc_todo) {
 
+  tic()
   print(paste0("Working on location ", site))
 
   # Grab the appropriate folders for the location - now there are multiple
   roi_site_folders <- list.dirs(paste0(g_drive, "projects/Phenology/Outputs/ROI"),
                                full.names = FALSE) |>
-    # Note: This effs up in cases where there are multiple matches: e.g., FMM-1 and FMM-14
-    str_subset(pattern = site)
+    str_subset(pattern = paste0(site, "_"))
 
   for (folder in roi_site_folders) {
 
@@ -120,11 +72,13 @@ for (site in sites) {
     try(file.rename(from = paste0(g_drive, "projects/Phenology/Outputs/VI/VI.data.RData"),
                 to = paste0(g_drive, "projects/Phenology/Outputs/VI/", folder, "_VI.data.RData")))
 
-
   }
 
+  toc()
+
 }
-toc()
+
+#-----------------------------------------------------------------------------------------------------------------------
 
 # Combine the VI data from each location into one object
 
