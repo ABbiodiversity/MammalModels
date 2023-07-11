@@ -19,11 +19,12 @@ library(tidyr)
 library(lubridate)
 library(readr)
 
-# All Timelapse image files
+# List all Timelapse image files that have been downloaded so far
 files <- list.files(paste0(g_drive, "projects/Phenology/Timelapse Images/"),
                     recursive = TRUE,
                     full.names = TRUE)
 
+# Turn into dataframe
 df_files <- data.frame("path" = files) |>
   mutate(file = str_extract(path, "(?<=/)[^/]*(?=.jpg$)")) |>
   separate(file, into = c("location", "date"), sep = "_") |>
@@ -35,10 +36,10 @@ locations <- unique(df_files$location)
 # Staff/setup dates
 df_ss <- read_csv(paste0(g_drive, "data/lookup/staffsetup/eh-cmu-og_all-years_staffsetup-dates.csv"))
 
-# Locations (reference images) done so far
+# Reference images / locations that have already had an ROI drawn
 ref_done <- list.files(paste0(g_drive, "projects/Phenology/Reference Images/"),
                        recursive = TRUE, full.names = FALSE) |>
-  str_remove_all("^Batch1/|^Batch2/|.jpg$")
+  str_remove_all(".jpg$")
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -68,7 +69,6 @@ ref_img_files <- df_files |>
 # Copy images to Reference folder
 for (file in 1:nrow(ref_img_files)) {
 
-  # Note that this is the second 'batch' - will have to figure out a better way to do this in the future.
   path <- pull(ref_img_files[file, 1])
   loc <- pull(ref_img_files[file, 2])
   date <- pull(ref_img_files[file, 3])
@@ -109,40 +109,66 @@ for (ref in ref_img_paths) {
 
 # Now, we need to set up folders for different monitoring periods, where applicable
 
-loc_mp <- ref_img_files |>
-  select(location, n) |>
-  distinct() |>
-  filter(n > 1)
+upd_roi_dirs <- list.dirs(paste0(g_drive, "projects/Phenology/Outputs/ROI"), full.names = FALSE)
+
+loc_mp <- data.frame("folder" = upd_roi_dirs) |>
+  filter(!folder == "") |>
+  separate(folder, into = c("location", "date"), sep = "_", remove = FALSE) |>
+  group_by(location) |>
+  add_count()
 
 for (loc in 1:nrow(loc_mp)) {
 
-  path <- paste0(g_drive, "projects/Phenology/Timelapse Images/", loc_mp[loc, 1], "/")
+  path <- paste0(g_drive, "projects/Phenology/Timelapse Images/", loc_mp[loc, 2], "/")
 
-  periods <- seq(1:pull(loc_mp[loc, 2]))
-
-  for (i in periods) {
-    # Note: We want to name the folders something more descriptive: the date of the ROI.
-    dir.create(paste0(path, i))
-
+  # Create new directories
+  # Does it already exist?
+  already.exist <- dir.exists(paste0(path, loc_mp[loc, 1]))
+  if(already.exist) {
+    print(paste0("The required directories already exist for location ", loc, ". Moving on."))
+  } else {
+    dir.create(paste0(path, loc_mp[loc, 1]))
+    print(paste0("Create a directory for location ", loc, " and period ", loc_mp[loc, 1]))
   }
 
 }
 
-# Locations
-loc <- loc_mp$location
+loc <- unique(df_files$location)
+
+#
+new_target_ref <- df_ss |>
+  filter(location %in% loc) |>
+  # Note: for the retrieval STAFF/SETUP, there is no timelapse after that day (except CMU ...)
+  mutate(date = date + 1,
+         reference = TRUE) |>
+  select(location, date, reference) |>
+  # Based on manual inspection from WildTrax (ugh), a few of these staff/setups are bogus.
+  filter(!(location == "CHR-102" & date == "2018-09-23"),
+         !(location == "MCC-28" & date == "2018-10-07"),
+         !(location == "MCC-43" & date > "2021-07-16")) |>
+  mutate(folder_name = paste0(location, "_", date))
 
 # Timelapse images to move to different folders
 tl_img_to_move <- df_files |>
-  left_join(target_ref, by = c("location", "date")) |>
+  left_join(new_target_ref, by = c("location", "date")) |>
   mutate(reference = if_else(is.na(reference), 0, 1)) |>
   group_by(location) |>
   mutate(folder = cumsum(reference)) |>
-  # Note: Want to name the folder something more descriptive (see above)
+  ungroup() |>
   filter(!folder < 1) |>
-  filter(location %in% loc) |>
-  mutate(date = as.character(date))
+  # Fill folder_name down
+  fill(folder_name) |>
+  mutate(date = as.character(date)) |>
+  select(path, location, date, folder_name) |>
+  # Remove images (rows) that are already in a sub-folder
+  mutate(done = ifelse(str_detect(path, paste0(folder_name, "/")), "yes", "no")) |>
+  filter(done == "no")
+
+# Locations to move into subfolders
+loc <- unique(tl_img_to_move$location)
 
 # Move images to appropriate folders
+tic()
 for (l in loc) {
 
   print(paste0("Working on ", l))
@@ -155,14 +181,13 @@ for (l in loc) {
     file_name <- paste0(d[i, 2], "_", d[i, 3])
     curr_path <- pull(d[i, 1])
     dest_path <- paste0(g_drive, "projects/Phenology/Timelapse Images/", l, "/",
-                        d[i, 5], "/", file_name, ".jpg")
+                        d[i, 4], "/", file_name, ".jpg")
 
-    file.copy(from = curr_path, to = dest_path)
+    file.rename(from = curr_path, to = dest_path)
 
   }
 
 }
-
-# So, this worked but we still have a lot of work to do to clean up the workflow process.
+toc()
 
 #-----------------------------------------------------------------------------------------------------------------------
