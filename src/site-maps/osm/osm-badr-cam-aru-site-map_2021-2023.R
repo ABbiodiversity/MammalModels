@@ -108,15 +108,6 @@ cam_new <- makeAwesomeIcon(
   markerColor = "blue"
 )
 
-# New: Add some boundary layer for mine sites?
-
-msl <- st_read(paste0(g_drive, "spatial/MSL973220_20230201/MSL973220_20230201.shp")) |>
-  st_transform(4326)
-
-fh_msl <- st_read(paste0(g_drive, "spatial/FH_MSL_20230529_UTM12/FH_MSL_20230529_UTM12.shp")) |>
-  st_transform(4326) |>
-  st_zm()
-
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Create interactive map for viewing
@@ -152,7 +143,7 @@ map <- sf_osr |>
 
   # Add polygon layers:
 
-  # Alberta provincial polygon (note: Let's grab an OSR layer instead)
+  # Alberta provincial polygon
   addPolygons(color = "#070707",
               weight = 1,
               smoothFactor = 0.2,
