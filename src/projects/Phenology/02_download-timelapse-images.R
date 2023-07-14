@@ -21,6 +21,17 @@ df_tl <- read.csv(paste0(g_drive, "data/processed/timelapse/eh-cmu-og_all-years_
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+# Locations that have already been done:
+loc_done <- list.dirs(paste0(g_drive, "projects/Phenology/Timelapse Images"),
+                      recursive = FALSE, full.names = FALSE)
+
+# Available locations (CMU)
+df_tl_avail <- df_tl |>
+  filter(str_detect(project, "CMU"),
+         # Remove trail deployments
+         !str_detect(location, "T$"),
+         !location %in% loc_done)
+
 # June 27, 2023 - Starting with a sample of the CMU data
 set.seed(12345)
 
@@ -37,6 +48,30 @@ df_tl_subset <- df_tl |>
   separate(location, into = c("grid", "station"), sep = "-", remove = TRUE) |>
   group_by(grid) |>
   sample_n(5) |>
+  select(-obs) |>
+  unnest(cols = c(data)) |>
+  unite("location", grid, station, sep = "-") |>
+  select(project, location, date_detected, url) |>
+  # Change to dataframe for tibble reasons
+  data.frame()
+
+locations <- unique(df_tl_subset$location)
+
+# July 14, 2023
+# Let's pull another random sample
+
+set.seed(54321)
+
+df_tl_subset <- df_tl_avail |>
+  group_by(location) |>
+  nest() |>
+  mutate(obs = map_dbl(data, nrow)) |>
+  ungroup() |>
+  # Great than one year is optimal
+  filter(obs > 400) |>
+  separate(location, into = c("grid", "station"), sep = "-", remove = TRUE) |>
+  group_by(grid) |>
+  slice_sample(n = 5) |>
   select(-obs) |>
   unnest(cols = c(data)) |>
   unite("location", grid, station, sep = "-") |>
