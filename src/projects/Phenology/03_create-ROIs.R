@@ -191,3 +191,70 @@ for (l in loc) {
 toc()
 
 #-----------------------------------------------------------------------------------------------------------------------
+
+# Retrieve a mid-July timelapse image and write ROI on it for reference
+
+print_roi <- function (path_img_ref, path_ROIs, which = "all", col, file.type = ".jpg") {
+
+  file <- list.files(path = path_img_ref, pattern = file.type)
+  img <- brick(paste(path_img_ref, file, sep = ""))
+  rois <- paste(path_ROIs, "roi.data.Rdata", sep = "")
+  roi.data <- NULL
+  load(rois)
+  nrois <- length(roi.data)
+  roi.names <- names(roi.data)
+  plotRGB(img)
+  if (which == "all") {
+    if (missing(col))
+      col <- palette()[1:nrois]
+    for (a in 1:nrois) {
+      act.polygons <- roi.data[[a]]$polygon
+      raster::lines(act.polygons, col = col[a], lwd = 2)
+    }
+  }
+  else {
+    pos.roi <- which(roi.names %in% which == TRUE)
+    raster::lines(roi.data[[pos.roi]]$polygon, lwd = 2)
+  }
+}
+
+# Mid-month images
+df_midmonth <- df_files |>
+  filter(str_detect(date, "-15$"),
+         str_detect(location, "^[A-Z]")) |>
+  mutate(folder = str_extract(path, "(?<=/)[^/]+(?=/[^/]+$)")) |>
+  filter(str_detect(folder, "_"))
+
+upd_roi_dirs <- list.dirs(paste0(g_drive, "projects/Phenology/Outputs/ROI"), full.names = FALSE) |>
+  str_subset("^[A-Z]")
+
+for (session in upd_roi_dirs) {
+
+  print(paste0("Working on session ", session))
+
+  # Subset the data for only images only from this location
+  d <- df_midmonth[df_midmonth$folder == session, ]
+
+  for (i in 1:nrow(d)) {
+
+    pir <- d[i, 1]
+    t <- d[i, 4]
+    proi <- paste0(g_drive, "projects/Phenology/Outputs/ROI/", t, "/")
+
+    try(print_roi(path_img_ref = pir,
+              path_ROIs = proi,
+              col = "red"))
+
+    date <- d[i, 3]
+
+    dev.print(jpeg, file = paste0(proi, "ROI-check_", date, ".jpg"), width = 1024, height = 1024)
+    dev.off()
+
+  }
+
+}
+
+
+
+
+
