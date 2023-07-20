@@ -80,15 +80,33 @@ for (site in loc_todo) {
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+# Move all the plots to a separate folder
+
+plots <- list.files(paste0(g_drive, "projects/Phenology/Outputs/VI"),
+                    pattern = "*.png",
+                    full.names = TRUE)
+
+for (plot in plots) {
+
+  file.rename(from = paste0(g_drive, "projects/Phenology/Outputs/VI/", plot),
+              to = paste0(g_drive, "projects/Phenology/Outputs/VI/Plots/", plot))
+
+}
+
+#-----------------------------------------------------------------------------------------------------------------------
+
 # Combine the VI data from each location into one object
 
-sites <- locations
+# Locations that have been done
+loc_done <- list.files(paste0(g_drive, "projects/Phenology/Outputs/VI/Individual Objects"), pattern = "*.RData") |>
+  str_extract("^[^_]+") |>
+  unique()
 
-for (site in sites) {
+for (site in loc_done) {
 
   VI <- list()
 
-  files <- list.files(paste0(g_drive, "projects/Phenology/Outputs/VI"),
+  files <- list.files(paste0(g_drive, "projects/Phenology/Outputs/VI/Individual Objects"),
                       pattern = "*.RData",
                       full.names = TRUE) |>
     str_subset(pattern = paste0(site, "_"))
@@ -103,8 +121,32 @@ for (site in sites) {
 
   }
 
-  save(VI, file = paste0(g_drive, "projects/Phenology/Outputs/VI/", site, "_VI.data.RData"))
+  save(VI, file = paste0(g_drive, "projects/Phenology/Outputs/VI/Full Objects/", site, "_VI.data.RData"))
 
 }
 
 #-----------------------------------------------------------------------------------------------------------------------
+
+# Create one single object (how big is this going to be ...?)
+
+cmu_files <- list.files(paste0(g_drive, "projects/Phenology/Outputs/VI/Full Objects"),
+                        full.names = FALSE) |>
+  str_subset(pattern = "^[A-Z]")
+
+VI.full <- list()
+
+for (file in cmu_files) {
+
+  path <- paste0(g_drive, "projects/Phenology/Outputs/VI/Full Objects/", file)
+  name <- str_remove(file, "_VI.data.RData$")
+
+  load(path)
+
+  VI.full[[name]] <- VI
+
+}
+
+save(VI.full, file = paste0(g_drive, "projects/Phenology/Outputs/VI/Full Objects/CMU-all_2023-07-12_VI.data.RData"))
+
+
+
