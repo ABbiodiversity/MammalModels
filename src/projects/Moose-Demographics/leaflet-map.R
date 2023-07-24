@@ -94,7 +94,8 @@ map <- sf_caribou |>
                           "Subunit: ", "<b>", sf_caribou$SUBUNIT, "</b>"),
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
 
-  addCircles(data = cmu_loc_det, color = ~ cat_pal(category))
+  addCircles(data = cmu_loc_det, color = ~ cat_pal(category),
+             popup = cmu_loc_det$location)
 
 map
 
