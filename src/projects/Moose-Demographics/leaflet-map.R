@@ -112,8 +112,6 @@ map <- sf_caribou |>
             values = ~ category,
             opacity = 1)
 
-
-
 map
 
 

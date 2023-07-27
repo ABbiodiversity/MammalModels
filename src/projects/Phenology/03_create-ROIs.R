@@ -228,6 +228,8 @@ df_midmonth <- df_files |>
 upd_roi_dirs <- list.dirs(paste0(g_drive, "projects/Phenology/Outputs/ROI"), full.names = FALSE) |>
   str_subset("^[A-Z]")
 
+upd_roi_dirs <- upd_roi_dirs[124:353]
+
 for (session in upd_roi_dirs) {
 
   print(paste0("Working on session ", session))
@@ -247,8 +249,12 @@ for (session in upd_roi_dirs) {
 
     date <- d[i, 3]
 
-    dev.print(jpeg, file = paste0(proi, "ROI-check_", date, ".jpg"), width = 1024, height = 1024)
-    dev.off()
+    if (nrow(d) > 0) {
+      dev.print(jpeg, file = paste0(proi, "ROI-check_", date, ".jpg"), width = 1024, height = 1024)
+      dev.off()
+    } else {
+      next
+    }
 
   }
 
