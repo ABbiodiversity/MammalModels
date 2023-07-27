@@ -59,18 +59,6 @@ summary <- moose |>
   group_by(age_class, sex) |>
   tally()
 
-# All cow and calf detections
-df_cowcalf <- moose |>
-  # Easier to just remove all Adult Males?
-  filter(!sex == "Male")
-
-# Images
-images <- moose |>
-  group_by(location) |>
-  tally() |>
-  full_join(cmu_dep) |>
-  mutate(n = replace_na(n, 0))
-
 moose <- tags_clean |>
   filter(common_name == "Moose") |>
   # We could restrict our analysis to only grids with the longest track record of monitoring
