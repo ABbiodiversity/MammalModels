@@ -20,10 +20,10 @@ library(keyring)   # For storing credentials safely
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Source functions for TIFC workflow
-source("./src/functions/estimate-density-tifc.R")
+source("./src/Functions/estimate-density-tifc.R")
 
 # Write and archive function
-source("./src/functions/write-and-archive.R")
+source("./src/Functions/write-and-archive.R")
 
 # Species character strings
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
@@ -32,7 +32,7 @@ load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 proj <- "osm"
 
 # Years
-years <- "_all-years"
+years <- "_2021-2022"
 
 # Date
 date <- Sys.Date()
@@ -47,66 +47,60 @@ Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
 # Authenticate into WildTrax
 wt_auth()
 
-# Pull OSM project IDs (both ABMI & ACME)
-osm_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
-  filter(str_detect(project, "OSM")) |>
-  pull(project_id) |>
-  unlist()
+# Pull OSM project IDs (just ABMI for now)
+osm_proj <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(str_detect(project, "ABMI OSM")) |>
+  mutate(across(everything(), unlist))
 
-# Download tag and image reports using IDs
-tag_reports <- map_df(.x = osm_proj_ids,
-                      .f = ~ wt_download_report(
-                        project_id = .x,
-                        sensor_id = "CAM",
-                        report = "tag",
-                        weather_cols = FALSE))
+# Project IDs as vector
+osm_proj_ids <- proj$project_id
 
-image_reports <- map_df(.x = osm_proj_ids,
-                        .f = ~ wt_download_report(
-                          project_id = .x,
-                          sensor_id = "CAM",
-                          report = "image",
-                          weather_cols = FALSE))
+# Download main reports using IDs
+main_reports <- map_df(.x = osm_proj_ids,
+                       .f = ~ wt_download_report(
+                         project_id = .x,
+                         sensor_id = "CAM",
+                         report = "main",
+                         weather_cols = FALSE))
 
-# Strip it down to include only relevant information (trigger, field of view)
-image_fov_trigger <- image_reports |>
-  select(project, location, date_detected, trigger, field_of_view)
-
-# Clean up tags - i.e., consolidate tags, remove tags that are not within the fov, strip down number of columns
-tags_clean <- tag_reports |>
+# Strip it down to only include relevant information
+main_reports_clean <- main_reports |>
+  left_join(proj, by = "project_id") |>
   # Consolidate tags of same species in same image into one row
   consolidate_tags() |>
-  left_join(image_fov_trigger, by = c("project", "location", "date_detected")) |>
-  mutate(date_detected = ymd_hms(date_detected)) |>
-  filter(field_of_view == "WITHIN") |>
-  select(project, location, date_detected, common_name, age_class, sex, number_individuals)
+  mutate(image_date_time = ymd_hms(image_date_time)) |>
+  filter(image_fov == "WITHIN") |>
+  select(project, location, image_date_time, image_fov, species_common_name, individual_count, age_class, sex_class)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Save cleaned and binded data to Shared Google Drive
 # (so we don't have to re-download from WildTrax each time)
 
-# Last done: December 6, 2022
+# Last done: December 6, 2022 (Image reports - haven't figured out the image reports code yet)
 
 # Simple image reports
 image_fov_trigger |>
   write_csv(paste0(g_drive, "data/lookup/images/", proj, "_all-years_image-report_simple.csv"))
 
+# Last done: August 31, 2023
+
 # Only tags of species
-tags_clean |>
-  # Remove all non-native mammal images
-  filter(common_name %in% native_sp) |>
-  write_csv(paste0(g_drive, "data/base/clean/", proj, "_all-years_native-sp_clean_", Sys.Date(), ".csv"))
+main_reports_clean |>
+  # Keep only species tags
+  filter(species_common_name %in% native_sp) |>
+  write_csv(paste0(g_drive, "data/base/clean/", proj, years, "_native-sp_clean_", Sys.Date(), ".csv"))
 
 # Save (all) cleaned data
-tags_clean |>
-  write_csv(paste0(g_drive, "data/base/clean/", proj, "_all-years_all-data_clean_", Sys.Date(), ".csv"))
+main_reports_clean |>
+  write_csv(paste0(g_drive, "data/base/clean/", proj, years, "_all-data_clean_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # If needed (not re-downloading from WildTrax), import data:
 
-image_fov_trigger <- read_csv(paste0(g_drive, "data/lookup/images/", proj, years, "_image-report_simple.csv"))
+# Note: Downloaded and cleaned manually until wildRtrax function is fixed.
+image_fov_trigger <- read_csv(paste0(g_drive, "data/lookup/image-reports/", proj, years, "_image-report_simple.csv"))
 
 # Find appropriate tag data file
 file <- list.files(path = paste0(g_drive, "data/base/clean"), full.names = TRUE) |>
