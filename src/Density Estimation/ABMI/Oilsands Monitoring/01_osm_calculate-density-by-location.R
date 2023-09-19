@@ -1,13 +1,16 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Project:          ABMI (OSM)
+# Project:          ABMI (Oilsands Monitoring)
 
 # Title:            Calculate density of species by project/location
 # Description:      Process raw ABMI (OSM) camera tag data from WildTrax and estimate density using the time in front of
 #                   method. Includes the ACME camera deployments.
+
 # Author:           Marcus Becker
 
 # Previous scripts: None
+
+# Last updated:     August 28 2023
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -20,10 +23,10 @@ library(keyring)   # For storing credentials safely
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Source functions for TIFC workflow
-source("./src/functions/estimate-density-tifc.R")
+source("./src/Functions/estimate-density-tifc.R")
 
 # Write and archive function
-source("./src/functions/write-and-archive.R")
+source("./src/Functions/write-and-archive.R")
 
 # Species character strings
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
@@ -48,19 +51,28 @@ Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
 wt_auth()
 
 # Pull OSM project IDs (both ABMI & ACME)
-osm_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
-  filter(str_detect(project, "OSM")) |>
-  pull(project_id) |>
-  unlist()
+osm_proj <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(str_detect(project, "ABMI OSM")) |>
+  mutate(across(everything(), unlist)) |>
+  select(project, project_id)
+
+osm_proj_ids <- osm_proj$project_id
 
 # Download tag and image reports using IDs
-tag_reports <- map_df(.x = osm_proj_ids,
+main_reports <- map_df(.x = osm_proj_ids,
                       .f = ~ wt_download_report(
                         project_id = .x,
                         sensor_id = "CAM",
-                        report = "tag",
+                        report = "main",
                         weather_cols = FALSE))
 
+main_reports_simp <- main_reports |>
+  left_join(osm_proj, by = "project_id") |>
+  filter(species_common_name != "NONE")
+  filter(field_of_view == "WITHIN")
+  select(project, location, image_date_time, )
+
+# Don't think I need to download image reports here anymore.
 image_reports <- map_df(.x = osm_proj_ids,
                         .f = ~ wt_download_report(
                           project_id = .x,
