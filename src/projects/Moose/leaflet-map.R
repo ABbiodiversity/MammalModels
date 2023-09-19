@@ -39,11 +39,11 @@ mapview(cmu_loc)
 cmu_loc_det <- cmu_loc |>
   left_join(detections, by = "location") |>
   mutate(category = case_when(
-    n_fem > 0 & n_juv > 0 ~ "2",
-    n_fem > 0 & n_juv < 1 ~ "1",
-    TRUE ~ "0"
+    n_fem > 0 & n_juv > 0 ~ "Calf/Cow",
+    n_fem > 0 & n_juv < 1 ~ "Cow Only",
+    TRUE ~ "None"
   )) |>
-  mutate(category = factor(category, levels = c("0", "1", "2")))
+  mutate(category = factor(category, levels = c("None", "Cow Only", "Calf/Cow")))
 
 # Let's load the caribou ranges (which may become relevant)
 sf_caribou <- st_read(paste0(g_drive, "data/spatial/ab_caribou_ranges.shp")) |>
@@ -80,6 +80,8 @@ map <- sf_caribou |>
                  circleMarkerOptions = FALSE,
                  markerOptions = FALSE,
                  editOptions = editToolbarOptions(edit = TRUE, remove = TRUE)) |>
+  addMapPane(name = "Caribou Ranges", zIndex = 410) |>
+  addMapPane(name = "CMU Deployments", zIndex = 420) |>
 
   # Add Polygon Layers
 
@@ -92,10 +94,23 @@ map <- sf_caribou |>
               group = "Caribou Ranges",
               popup = paste("Local Range: ", "<b>", sf_caribou$LOCALRANGE, "</b>", "<br>",
                           "Subunit: ", "<b>", sf_caribou$SUBUNIT, "</b>"),
-              highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
+              highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE),
+              options = leafletOptions(pane = "Caribou Ranges")) |>
 
-  addCircles(data = cmu_loc_det, color = ~ cat_pal(category),
-             popup = cmu_loc_det$location)
+  addCircles(data = cmu_loc_det,
+             color = ~ cat_pal(category),
+             radius = 15,
+             weight = 15,
+             popup = paste("Location: ", cmu_loc_det$location, "<br>",
+                           "Number of Cow Detections: ", cmu_loc_det$n_fem, "<br>",
+                           "Number of Calf Detections: ", cmu_loc_det$n_juv),
+             options = leafletOptions(pane = "CMU Deployments")) |>
+
+  addLegend(data = cmu_loc_det,
+            position = "topright",
+            pal = cat_pal,
+            values = ~ category,
+            opacity = 1)
 
 map
 

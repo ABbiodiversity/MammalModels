@@ -8,6 +8,27 @@
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+# Install required packages if needed
+if (!requireNamespace("dplyr"))
+  install.packages("dplyr")
+if (!requireNamespace("sf"))
+  install.packages("sf")
+if (!requireNamespace("rlang"))
+  install.packages("rlang")
+if (!requireNamespace("purrr"))
+  install.packages("purrr")
+if (!requireNamespace("tidyr"))
+  install.packages("tidyr")
+
+# Attach required packages
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(rlang)
+library(sf)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
 # Simulation function.
 simul_ci_new <- function(prob, trials, adj, agp, logagp.sd) {
 

@@ -35,10 +35,10 @@ library(lubridate)
 #' Run this function of the tag report to consolidate tags from the same image into the same row.
 #' Note: There is an issue with respect to multiple images with the same timestamp.
 #'
-#' @param tag_report Directly from WildTrax
+#' @param main_report Directly from WildTrax
 #'
 
-consolidate_tags <- function(tag_report) {
+consolidate_tags <- function(main_report) {
 
   g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
@@ -46,29 +46,29 @@ consolidate_tags <- function(tag_report) {
   load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
   # The normies
-  y <- tag_report |>
-    filter(common_name %in% native_sp,
-           !number_individuals == "VNA") |>
-    mutate(number_individuals = as.numeric(number_individuals)) |>
+  y <- main_report |>
+    filter(species_common_name %in% native_sp,
+           !individual_count == "VNA") |>
+    mutate(individual_count = as.numeric(individual_count)) |>
     # Run distinct to get rid of multiple images of the same thing at the exact same time
     distinct() |>
-    # Include number_individuals in case there are back-to-back images with different number of individuals
-    group_by(project, location, date_detected, common_name, number_individuals) |>
-    mutate(number_individuals = sum(number_individuals),
+    # Include individual_count in case there are back-to-back images with different number of individuals
+    group_by(project, location, image_date_time, species_common_name, individual_count) |>
+    mutate(individual_count = sum(individual_count),
            age_class = paste0(age_class, collapse = ", "),
-           sex = paste0(sex, collapse = ", ")) |>
-    distinct(project, location, date_detected, common_name, number_individuals, .keep_all = TRUE) |>
+           sex_class = paste0(sex_class, collapse = ", ")) |>
+    distinct(project, location, image_date_time, species_common_name, individual_count, .keep_all = TRUE) |>
     ungroup() |>
-    mutate(number_individuals = as.character(number_individuals))
+    mutate(individual_count = as.character(individual_count))
 
   # Tags of species that have VNA - usually we don't care about these, but don't want to lose info.
-  z <- tag_report |>
-    filter(common_name %in% native_sp,
-           number_individuals == "VNA")
+  z <- main_report |>
+    filter(species_common_name %in% native_sp,
+           individual_count == "VNA")
 
   # All the STAFF/SETUP, etc, then bound back together.
-  x <- tag_report |>
-    filter(!common_name %in% native_sp) |>
+  x <- main_report |>
+    filter(!species_common_name %in% native_sp) |>
     bind_rows(y, z)
 
   return(x)
@@ -152,7 +152,7 @@ get_operating_days <- function(image_report, include_project = TRUE, summarise =
 
   # Locations which started operation again after an intermediate pause
   inter <- x |>
-    filter(field_of_view == "START - First Good Image in FOV" | field_of_view == "END - Last Good Image in FOV") |>
+    filter(image_fov == "START - First Good Image in FOV" | image_fov == "END - Last Good Image in FOV") |>
     group_by(project_location) |>
     tally() |>
     # Locations that have n = 1 will only have an 'END' (they did not re-start operation)
@@ -162,27 +162,27 @@ get_operating_days <- function(image_report, include_project = TRUE, summarise =
   if(nrow(inter) > 0) {
 
     inter_pairs <- x |>
-      filter(field_of_view == "START - First Good Image in FOV" | field_of_view == "END - Last Good Image in FOV") |>
+      filter(image_fov == "START - First Good Image in FOV" | image_fov == "END - Last Good Image in FOV") |>
       # Return all rows with a match in inter
       semi_join(inter, by = c("project_location")) |>
-      arrange(project_location, date_detected) |>
-      select(project_location, date_detected, field_of_view) |>
+      arrange(project_location, image_date_time) |>
+      select(project_location, image_date_time, image_fov) |>
       group_by(project_location) |>
       # This code is gross. Do we still need to do this for camera data pre-2019?
-      mutate(starts_again = ifelse(lead(field_of_view) == "START - First Good Image in FOV" & field_of_view == "END - Last Good Image in FOV", 1, NA),
-            restart = ifelse(lag(starts_again) == "1" & lag(field_of_view) == "END - Last Good Image in FOV", 1, NA)) |>
+      mutate(starts_again = ifelse(lead(image_fov) == "START - First Good Image in FOV" & image_fov == "END - Last Good Image in FOV", 1, NA),
+            restart = ifelse(lag(starts_again) == "1" & lag(image_fov) == "END - Last Good Image in FOV", 1, NA)) |>
       filter(starts_again == "1" | restart == "1") |>
       select(-c(starts_again, restart)) |>
       ungroup() |>
-      group_split(field_of_view) |>
+      group_split(image_fov) |>
       bind_cols(.name_repair = "unique") |>
-      mutate(time_diff = difftime(`date_detected...5`, `date_detected...2`, units = "hours")) |>
+      mutate(time_diff = difftime(`image_date_time...5`, `image_date_time...2`, units = "hours")) |>
       filter(time_diff > 12) |>
       select(1:3, 5, 6)
 
     to_remove <- inter_pairs |>
-      mutate(end_date = as.Date(`date_detected...2`),
-            start_date = as.Date(`date_detected...5`)) |>
+      mutate(end_date = as.Date(`image_date_time...2`),
+            start_date = as.Date(`image_date_time...5`)) |>
       select(project_location = 1, end_date, start_date) |>
       rowwise() |>
       mutate(date = list(seq(from = end_date, to = start_date, by = "day"))) |>
@@ -191,10 +191,10 @@ get_operating_days <- function(image_report, include_project = TRUE, summarise =
 
     range <- x |>
       # Remove Out of Range images
-      filter(field_of_view == "WITHIN") |>
+      filter(image_fov == "WITHIN") |>
       group_by(project_location) |>
-      summarise(start_date = as.Date(min(date_detected)),
-                end_date = as.Date(max(date_detected))) |>
+      summarise(start_date = as.Date(min(image_date_time)),
+                end_date = as.Date(max(image_date_time))) |>
       filter(!is.na(end_date)) |>
       group_by(project_location) |>
       mutate(date = list(seq(from = start_date, to = end_date, by = "day"))) |>
@@ -208,10 +208,10 @@ get_operating_days <- function(image_report, include_project = TRUE, summarise =
 
     range <- x |>
       # Remove Out of Range images
-      filter(field_of_view == "WITHIN") |>
+      filter(image_fov == "WITHIN") |>
       group_by(project_location) |>
-      summarise(start_date = as.Date(min(date_detected)),
-                end_date = as.Date(max(date_detected))) |>
+      summarise(start_date = as.Date(min(image_date_time)),
+                end_date = as.Date(max(image_date_time))) |>
       filter(!is.na(end_date)) |>
       group_by(project_location) |>
       mutate(date = list(seq(from = start_date, to = end_date, by = "day"))) |>

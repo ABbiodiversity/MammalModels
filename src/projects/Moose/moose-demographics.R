@@ -16,6 +16,8 @@ library(readr)
 library(dplyr)
 library(stringr)
 library(tidyr)
+library(lubridate)
+library(ggplot2)
 library(wildRtrax)
 
 # Google drive
@@ -55,26 +57,10 @@ cmu_dep <- tags_clean |>
   select(location) |>
   distinct()
 
-summary <- moose |>
-  group_by(age_class, sex) |>
-  tally()
-
-# All cow and calf detections
-df_cowcalf <- moose |>
-  # Easier to just remove all Adult Males?
-  filter(!sex == "Male")
-
-# Images
-images <- moose |>
-  group_by(location) |>
-  tally() |>
-  full_join(cmu_dep) |>
-  mutate(n = replace_na(n, 0))
-
 moose <- tags_clean |>
   filter(common_name == "Moose") |>
   # We could restrict our analysis to only grids with the longest track record of monitoring
-  #filter(str_detect(location, "^CHR|FMM|LLB|LID|LRN|MAC|MCC|WAB")) |>
+  filter(str_detect(location, "^CHR|FMM|LLB|LID|LRN|MAC|MCC|WAB|PEL|CAL")) |>
   mutate(number_individuals = ifelse(str_detect(age_class, ","), 1, number_individuals)) |>
   separate_rows(c(age_class, sex), sep = ", ") |>
   filter(!str_detect(location, "T$")) |>
@@ -98,7 +84,7 @@ moose_juv_loc <- moose_juv |>
   select(location) |>
   distinct()
 
-# Juvenile independent detections
+# Juvenile independent detections - 10 minutes threshold?
 juv_ind_det <- wt_ind_detect(moose_juv, threshold = 10, units = "minutes", datetime_col = date_detected)
 
 # Number of juvenile detections by location
@@ -127,6 +113,21 @@ detections <- cmu_dep |>
   full_join(juv_det_loc, by = "location") |>
   mutate(n_juv = replace_na(n_juv, 0))
 
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Plot Juvenile detections over time (across all grids)
+
+d <- juv_ind_det |>
+  ungroup() |>
+  select(detection, location, common_name, start_time, total_duration_seconds, n_images) |>
+  mutate(year = year(start_time),
+         week = isoweek(start_time)) |>
+  filter(year < 2022) |>
+  group_by(year, week) |>
+  tally()
+
+ggplot(data = d) +
+  geom_col(aes(x = week, y = n))
 
 
 
