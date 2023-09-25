@@ -49,11 +49,10 @@ wt_auth()
 
 # Pull OSM project IDs (just ABMI for now)
 osm_proj <- wt_get_download_summary(sensor_id = "CAM") |>
-  filter(str_detect(project, "ABMI OSM")) |>
-  mutate(across(everything(), unlist))
+  filter(str_detect(project, "ABMI OSM"))
 
 # Project IDs as vector
-osm_proj_ids <- proj$project_id
+osm_proj_ids <- osm_proj$project_id
 
 # Download main reports using IDs
 main_reports <- map_df(.x = osm_proj_ids,
@@ -65,7 +64,7 @@ main_reports <- map_df(.x = osm_proj_ids,
 
 # Strip it down to only include relevant information
 main_reports_clean <- main_reports |>
-  left_join(proj, by = "project_id") |>
+  left_join(osm_proj, by = "project_id") |>
   # Consolidate tags of same species in same image into one row
   consolidate_tags() |>
   mutate(image_date_time = ymd_hms(image_date_time)) |>
@@ -77,7 +76,7 @@ main_reports_clean <- main_reports |>
 # Save cleaned and binded data to Shared Google Drive
 # (so we don't have to re-download from WildTrax each time)
 
-# Last done: December 6, 2022 (Image reports - haven't figured out the image reports code yet)
+# Last done:
 
 # Simple image reports
 image_fov_trigger |>
@@ -134,10 +133,10 @@ write_and_archive(
 
 # Calculate time in front of camera (TIFC)
 
-df_tt <- tags_clean |>
+df_tt <- main_reports_clean |>
   # First calculate time by series
   calculate_time_by_series() |>
-  # Next calculate tifc by location, deployment, species
+  # Next calculate TIFC by location, deployment, species
   sum_total_time(tbd = df_tbd_summary)
 
 # Write new results and archive old results
@@ -154,18 +153,24 @@ write_and_archive(
 
 # VegHF information for OSM deployments
 # Note: This is just the GIS output - probably worth going through and fixing manually.
-df_vegdetdist <- read_csv(paste0(g_drive, "data/lookup/veghf/osm_2021_veghf-point_2022-04-26.csv")) |>
+df_vegdetdist_21 <- read_csv(paste0(g_drive, "data/lookup/veghf/osm_2021_veghf-point_2022-04-26.csv")) |>
   make_vegfordetdist() |>
-  unite("project_location", project, location, sep = "_", remove = TRUE)
+  unite("project_location", project, location, sep = "_", remove = TRUE) |>
+  select(project_location, VegForDetectionDistance)
+
+df_vdd <- read.csv(paste0(g_drive, "data/lookup/veghf/VegForDetectionDistance/osm2022.csv")) |>
+  select(project, location, VegForDetectionDistance) |>
+  unite("project_location", project, location, sep = "_", remove = TRUE) |>
+  bind_rows(df_vegdetdist_21)
 
 # Calculate density (long and wide)
 df_density_long <- calc_density_by_loc(tt = df_tt,
-                                       veg = df_vegdetdist,
+                                       veg = df_vdd,
                                        cam_fov_angle = 40,
                                        format = "long")
 
 df_density_wide <- calc_density_by_loc(tt = df_tt,
-                                       veg = df_vegdetdist,
+                                       veg = df_vdd,
                                        cam_fov_angle = 40,
                                        format = "wide")
 
