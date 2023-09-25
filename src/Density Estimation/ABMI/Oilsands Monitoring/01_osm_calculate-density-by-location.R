@@ -1,13 +1,16 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Project:          ABMI (OSM)
+# Project:          ABMI (Oilsands Monitoring)
 
 # Title:            Calculate density of species by project/location
 # Description:      Process raw ABMI (OSM) camera tag data from WildTrax and estimate density using the time in front of
 #                   method. Includes the ACME camera deployments.
+
 # Author:           Marcus Becker
 
 # Previous scripts: None
+
+# Last updated:     August 28 2023
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -47,6 +50,42 @@ Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
 # Authenticate into WildTrax
 wt_auth()
 
+# Pull OSM project IDs (both ABMI & ACME)
+osm_proj <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(str_detect(project, "ABMI OSM")) |>
+  mutate(across(everything(), unlist)) |>
+  select(project, project_id)
+
+osm_proj_ids <- osm_proj$project_id
+
+# Download tag and image reports using IDs
+main_reports <- map_df(.x = osm_proj_ids,
+                      .f = ~ wt_download_report(
+                        project_id = .x,
+                        sensor_id = "CAM",
+                        report = "main",
+                        weather_cols = FALSE))
+
+main_reports_simp <- main_reports |>
+  left_join(osm_proj, by = "project_id") |>
+  filter(species_common_name != "NONE")
+  filter(field_of_view == "WITHIN")
+  select(project, location, image_date_time, )
+
+# Don't think I need to download image reports here anymore.
+image_reports <- map_df(.x = osm_proj_ids,
+                        .f = ~ wt_download_report(
+                          project_id = .x,
+                          sensor_id = "CAM",
+                          report = "image",
+                          weather_cols = FALSE))
+
+# Strip it down to include only relevant information (trigger, field of view)
+image_fov_trigger <- image_reports |>
+  select(project, location, date_detected, trigger, field_of_view)
+
+# Clean up tags - i.e., consolidate tags, remove tags that are not within the fov, strip down number of columns
+tags_clean <- tag_reports |>
 # Pull OSM project IDs (just ABMI for now)
 osm_proj <- wt_get_download_summary(sensor_id = "CAM") |>
   filter(str_detect(project, "ABMI OSM"))

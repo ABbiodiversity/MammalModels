@@ -5,7 +5,7 @@
 #               ARU sites, JEMs, and Landscape Units from 2021-2023.
 
 # Author:       Marcus Becker
-# Last Updated: December 2022
+# Last Updated: September 2023
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -20,55 +20,64 @@ library(tidyr)
 library(janitor)
 
 # Shared Google Drive path to relevant spatial data
-g_drive <- "G:/Shared drives/ABMI Camera Mammals/projects/osm-badr-site-selection/"
+g_drive <- "G:/Shared drives/ABMI Camera Mammals/Projects/OSM BADR/"
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # OSR
-sf_osr <- st_read(paste0(g_drive, "spatial/AB_OSR.shp")) |>
+sf_osr <- st_read(paste0(g_drive, "Data/Spatial/AB_OSR.shp")) |>
   st_transform(4326)
 
 # Landscape Units (LUs) for all 3 years.
-sf_lu <- st_read(paste0(g_drive, "spatial/LU_3Yr_Aug2022/LU3YR_Aug22.shp")) |>
+sf_lu <- st_read(paste0(g_drive, "Data/Spatial/LU3YR_Aug22.shp")) |>
   st_transform(4326) |>
   clean_names() |>
+  mutate(year = as.numeric(paste0("20", str_sub(year, 1, 2)))) |>
   select(lu, lu_treatment = lu_treatmnt, label, year, deciles, shape_area)
 
-# New JEMs
-sf_jem <- read_csv(paste0(g_drive, "jems_2023_v4.csv")) |>
+# 2023 JEMS (Joint Environmental Monitoring Sites)
+sf_jem_2023 <- read_csv(paste0(g_drive, "Data/jems_2023_v4.csv")) |>
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
   st_transform(3400) |>
-  st_buffer(dist = 1500, nQuadSegs = 100)
+  st_buffer(dist = 1500, nQuadSegs = 100) |>
+  select(lu, year, veg_type = type, hf_treatment = treatment, site_name)
 
-# Proposed 2023 Camera/ARU sites:
-sf_sites_2023 <- st_read(paste0(g_drive, "spatial/camaru_osm_sites_2023_v4.shp")) |>
+sf_jem <- st_read(paste0(g_drive, "Data/Spatial/JEMs_2021_2022_1000m_buffer.shp")) |>
+  st_transform(3400) |>
+  # Clean
+  clean_names() %>%
+  mutate(site_name = ifelse(is.na(site_name), site_name_3, site_name),
+         lu = as.numeric(str_extract(site_name, "[^-]+")),
+         veg_type = case_when(
+           str_detect(site_name, "DM") ~ "DecidMix40",
+           str_detect(site_name, "TL") ~ "TreedLow20",
+           TRUE ~ type),
+         hf_treatment = case_when(
+           str_detect(site_name, "-C") ~ "Low Disturbance/Reference",
+           str_detect(site_name, "-Rd") ~ "Roads",
+           str_detect(site_name, "-SL") ~ "Dense Linear Features",
+           str_detect(site_name, "-HW") ~ "High Activity Insitu Well Pads",
+           str_detect(site_name, "-LW") ~ "Low Activity Well Pads",
+           str_detect(site_name, "-PM") ~ "Plant/Mine",
+           str_detect(site_name, "-PI") ~ "Pre-Insitu",
+           TRUE ~ treatment),
+         year = as.numeric(ifelse(lu == "2" | lu == "3" | lu == "4" | lu == "8", "2021", "2022"))) %>%
+  select(lu, year, veg_type, hf_treatment, site_name) |>
+  bind_rows(sf_jem_2023) |>
+  mutate(hf_treatment = ifelse(str_detect(hf_treatment, "Plant/Mine"), "Plant/Mine Buffer", hf_treatment))
+
+# Camera/ARU sites - from Cris, September 2023
+sf_camaru <- st_read(paste0(g_drive, "Data/Spatial/OSM_TBM_Cam_2021_23.shp")) |>
   st_transform(4326)
-
-high_insitu <- sf_sites_2023 |>
-  filter(tretmnt == "High Activity Insitu Well Pads")
-dense_linear <- sf_sites_2023 |>
-  filter(tretmnt == "Dense Linear Features")
-low_wellpads <- sf_sites_2023 |>
-  filter(tretmnt == "Low Activity Well Pads")
-reference <- sf_sites_2023 |>
-  filter(tretmnt == "Low Disturbance/Reference")
-roads <- sf_sites_2023 |>
-  filter(tretmnt == "Roads")
-plant_mine <- sf_sites_2023 |>
-  filter(tretmnt == "Plant/Mine")
-pre_insitu <- sf_sites_2023 |>
-  filter(tretmnt == "Pre Insitu")
-
-# Proposed vascular plant transect layer
-#sf_vp <- st_read(paste0(g_drive, "osm-badr-site-selection/vascular-plants/VPTransects_2023_V2/doc.kml")) |>
-#  st_transform(4326)
 
 # All treatment and habitat areas
-sf_all <- st_read(paste0(g_drive, "spatial/treat-hab-all-2023-lus.shp")) |>
+sf_all <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_LU.shp")) |>
   clean_names() |>
   select(type, treatment) |>
+  filter(!treatment == "Plant/Mine Buffer") |>
   st_intersection(sf_jem) |>
-  st_transform(4326)
+  st_transform(4326) |>
+  select(type, treatment, lu, year)
 
 # TreedLow20 layer
 treedlow <- sf_all |>
@@ -90,7 +99,7 @@ pal_decid <- colorFactor(
 
 pal_treedlow <-colorFactor(
   palette = "Dark2",
-  domain = treedlow$treatment
+  domain = treedlow$hf_treatment
 )
 
 # Icons
@@ -99,13 +108,6 @@ cam <- makeAwesomeIcon(
   iconColor = "black",
   library = "ion",
   markerColor = "white"
-)
-
-cam_new <- makeAwesomeIcon(
-  icon = "camera",
-  iconColor = "white",
-  library = "ion",
-  markerColor = "blue"
 )
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -134,7 +136,7 @@ map <- sf_osr |>
                  circleOptions = FALSE,
                  rectangleOptions = FALSE,
                  circleMarkerOptions = FALSE,
-                 markerOptions = drawMarkerOptions(repeatMode = TRUE, markerIcon = cam_new),
+                 markerOptions = drawMarkerOptions(repeatMode = TRUE, markerIcon = cam),
                  editOptions = editToolbarOptions(edit = TRUE, remove = TRUE)) |>
   addMapPane(name = "Boundaries LU", zIndex = 410) |>
   addMapPane(name = "Boundaries JEM", zIndex = 415) |>
@@ -177,9 +179,9 @@ map <- sf_osr |>
               fillOpacity = 0.1,
               group = "JEM Sites",
               options = leafletOptions(pane = "Boundaries JEM"),
-              popup = paste("Habitat Target: ", "<b>", sf_jem$type, "</b>", "<br>",
+              popup = paste("Habitat Target: ", "<b>", sf_jem$veg_type, "</b>", "<br>",
                             "<br>",
-                            "Treatment Target: ", "<b>", sf_jem$treatment, "</b>", "<br>",
+                            "Treatment Target: ", "<b>", sf_jem$hf_treatment, "</b>", "<br>",
                             "<br>",
                             "JEM Site Code: ", "<b>", sf_jem$site_name, "</b>"),
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
@@ -198,32 +200,48 @@ map <- sf_osr |>
               popup = paste("Treatment: ", "<b>", treedlow$treatment, "</b>"),
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
 
-  # Aurora North
-  addPolygons(data = fh_msl,
-              color = "red",
-              weight = 1.5,
-              smoothFactor = 0.2,
-              opacity = 2,
-              fill = FALSE,
-              group = "None") |>
-
-  addPolygons(data = msl,
-              color = "red",
-              weight = 1.5,
-              smoothFactor = 0.2,
-              opacity = 2,
-              fill = FALSE,
-              group = "None") |>
-
-  # 2023 Camera Sites
-  addAwesomeMarkers(data = dense_linear,
+  addAwesomeMarkers(data = sf_camaru,
                     icon = cam,
-                    group = "Cam/ARU (Dense Linear Features)",
+                    group = "Cam/ARU",
                     options = leafletOptions(pane = "2023 Camera Sites"),
-                    popup = paste("Location: ", "<b>", dense_linear$camera, "</b>",
+                    popup = paste("Location: ", "<b>", sf_camaru$Site_ID, "</b>",
                                   "<br>", "<br>",
-                                  "Notes:", "<br>",
-                                  dense_linear$cmr_nts)) |>
+                                  "Notes:", "<br>"
+                                  )) |>
+
+  # Layers control
+  addLayersControl(overlayGroups = c("Satellite Imagery",
+                                     "Landscape Units",
+                                     "JEM Sites",
+                                     "Cam/ARU"),
+                   baseGroups = c("None", "Habitat: DecidMix40+", "Habitat: TreedLow20+"),
+                   options = layersControlOptions(collapsed = FALSE),
+                   position = "topright") |>
+
+  # Legend
+  addLegend(data = decidmix, position = "topright", pal = pal_decid,
+            values = ~ Treatment,
+            opacity = 1)
+
+# View map
+map
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Save map
+htmlwidgets::saveWidget(map, file = "./docs/osm_cam-aru-vp_site_map.html", selfcontained = FALSE)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# 2023 Camera Sites
+addAwesomeMarkers(data = dense_linear,
+                  icon = cam,
+                  group = "Cam/ARU (Dense Linear Features)",
+                  options = leafletOptions(pane = "2023 Camera Sites"),
+                  popup = paste("Location: ", "<b>", dense_linear$camera, "</b>",
+                                "<br>", "<br>",
+                                "Notes:", "<br>",
+                                dense_linear$cmr_nts)) |>
 
   addAwesomeMarkers(data = high_insitu,
                     icon = cam,
@@ -278,33 +296,3 @@ map <- sf_osr |>
                                   "<br>", "<br>",
                                   "Notes:", "<br>",
                                   pre_insitu$cmr_nts)) |>
-
-  # Layers control
-  addLayersControl(overlayGroups = c("Satellite Imagery",
-                                     "Landscape Units",
-                                     "JEM Sites",
-                                     "Cam/ARU (Dense Linear Features)",
-                                     "Cam/ARU (High Activity Insitu Well Pads)",
-                                     "Cam/ARU (Low Activity Well Pads)",
-                                     "Cam/ARU (Low Disturbance/Reference)",
-                                     "Cam/ARU (Plant/Mine)",
-                                     "Cam/ARU (Roads)",
-                                     "Cam/ARU (Pre Insitu)"),
-                   baseGroups = c("None", "Habitat: DecidMix40+", "Habitat: TreedLow20+"),
-                   options = layersControlOptions(collapsed = FALSE),
-                   position = "topright") |>
-
-  # Legend
-  addLegend(data = decidmix, position = "topright", pal = pal_decid,
-            values = ~ Treatment,
-            opacity = 1)
-
-# View map
-map
-
-#-----------------------------------------------------------------------------------------------------------------------
-
-# Save map
-htmlwidgets::saveWidget(map, file = "./docs/osm_cam-aru-vp_site_map.html", selfcontained = FALSE)
-
-#-----------------------------------------------------------------------------------------------------------------------
