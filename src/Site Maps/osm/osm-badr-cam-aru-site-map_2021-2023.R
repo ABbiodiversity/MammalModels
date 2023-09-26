@@ -35,6 +35,11 @@ sf_lu <- st_read(paste0(g_drive, "Data/Spatial/LU3YR_Aug22.shp")) |>
   mutate(year = as.numeric(paste0("20", str_sub(year, 1, 2)))) |>
   select(lu, lu_treatment = lu_treatmnt, label, year, deciles, shape_area)
 
+# LUs from 2021
+sf_lu_2021 <- sf_lu |>
+  filter(year == "2021") |>
+  st_transform(3400)
+
 # 2023 JEMS (Joint Environmental Monitoring Sites)
 sf_jem_2023 <- read_csv(paste0(g_drive, "Data/jems_2023_v4.csv")) |>
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
@@ -75,9 +80,17 @@ sf_all <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_LU.shp")) 
   clean_names() |>
   select(type, treatment) |>
   filter(!treatment == "Plant/Mine Buffer") |>
-  st_intersection(sf_jem) |>
+  #st_intersection(sf_jem) |>
+  st_transform(4326)
+
+sf_all_2021 <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_LU.shp")) |>
+  clean_names() |>
+  select(type, treatment) |>
+  filter(!treatment == "Plant/Mine Buffer") |>
+  st_intersection(sf_lu_2021) |>
   st_transform(4326) |>
-  select(type, treatment, lu, year)
+  select(type, treatment, lu, year) |>
+  st_cast("POLYGON")
 
 # TreedLow20 layer
 treedlow <- sf_all |>
@@ -89,7 +102,7 @@ decidmix <- sf_all |>
   rename(Treatment = treatment)
 
 # Change projection of JEMs
-sf_jem <- st_transform(sf_jem, crs = 4326)
+sf_jem_map <- st_transform(sf_jem, crs = 4326)
 
 # Palettes
 pal_decid <- colorFactor(
@@ -170,7 +183,7 @@ map <- sf_osr |>
                             "LU Code: ", "<b>", sf_lu$lu, "</b>")) |>
 
   # JEM sites + 1500m buffer
-  addPolygons(data = sf_jem,
+  addPolygons(data = sf_jem_map,
               color = "#6baed6",
               fillColor = "black",
               weight = 1,
@@ -295,4 +308,22 @@ addAwesomeMarkers(data = dense_linear,
                     popup = paste("Location: ", "<b>", pre_insitu$camera, "</b>",
                                   "<br>", "<br>",
                                   "Notes:", "<br>",
-                                  pre_insitu$cmr_nts)) |>
+                                  pre_insitu$cmr_nts))
+
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+check <- sf_camaru |>
+  filter(Year == "2021") |>
+  filter(!Project == "OSM-TBM-Fisher") |>
+  mutate(LU = str_sub(Site_ID, 1, 1)) |>
+  select(Site_ID, LU, deployment, Year, Latitude, Longitude, Project, Comments) |>
+  st_set_geometry(NULL)
+
+write_csv(check, paste0(g_drive, "Projects/OSM BADR/osm_badr_2024_camaru.csv"))
+
+
+
+
+
+
