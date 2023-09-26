@@ -2,8 +2,27 @@
 
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
-d1<-read.csv(paste0(g_drive, "results/density/deployments/osm_all-years_density_wide_2023-03-07.csv"),stringsAsFactors=FALSE)  # From Marcus - summarized to densities by season
+d1<-read.csv(paste0(g_drive, "results/density/deployments/osm_2021-2022_density_wide_2023-09-25.csv"),stringsAsFactors=FALSE)  # From Marcus - summarized to densities by season
+# 2022 sites NOT to include
+df_2022_bad <- read_csv(paste0(g_drive, "data/lookup/veghf/VegForDetectionDistance/osm2022.csv")) |>
+  select(project, location, Useable)
+d1 <- d1 |>
+  left_join(df_2022_bad, by = c("project", "location")) |>
+  mutate(Useable = ifelse(is.na(Useable), TRUE, Useable)) |>
+  filter(!Useable == FALSE) |>
+  select(-Useable)
+
 s<-read.csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv"),stringsAsFactors=FALSE)  # From Marcus - treatment info for each deployment
+
+lure_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_lure.csv"))
+
+df_meta_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_deployment-metadata.csv")) |>
+  mutate(camera = str_sub(location, -3, -1)) |>
+  left_join(lure_22, by = "location") |>
+  select(-notes)
+
+s <- bind_rows(s, df_meta_22)
+
 lure<-read.csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv"),stringsAsFactors=FALSE)  # Modified from MS summary, to include expansion factor to adjust for greater than expected year (=habitat, weather, timing, etc.) effects
 lure$Species<-gsub("\\.","",lure$Species)  # To use same names as density file
 
@@ -74,7 +93,7 @@ d <- d |>
 # d<-rbind(d2,d[,colnames(d2)])
 
 # Summarize number of cameras (before these are combined into replicates below)
-write.table(table(paste(d$treatment,d$vegetation),ifelse(is.na(d$fine_scale),"NA",as.character(d$fine_scale))), file="C:/Dave/ABMI/Cameras/2022 analysis/OSM 2022/Table of fine scale treatment by jem treatmentXveg including extra ABMI - n cameras.csv",sep=",",col.names=NA)
+#write.table(table(paste(d$treatment,d$vegetation),ifelse(is.na(d$fine_scale),"NA",as.character(d$fine_scale))), file="C:/Dave/ABMI/Cameras/2022 analysis/OSM 2022/Table of fine scale treatment by jem treatmentXveg including extra ABMI - n cameras.csv",sep=",",col.names=NA)
 
 # Set densities with <20 operating days in season to NA
 i<-which(d$summer<20)
@@ -152,7 +171,7 @@ for (sp in 1:length(SpTable)) {
 
 # Summaries to figure out analyses
 # Number of replicates for fine scale treatments by treatment+vegetation type
-write.table(table(paste(d$treatment,d$vegetation),ifelse(is.na(d$fine_scale),"NA",as.character(d$fine_scale))), file="C:/Dave/ABMI/Cameras/2022 analysis/OSM 2022/Table of fine scale treatment by jem treatmentXveg including extra ABMI - n replicates.csv",sep=",",col.names=NA)
+write.table(table(paste(d$treatment,d$vegetation),ifelse(is.na(d$fine_scale),"NA",as.character(d$fine_scale))), file=paste0(g_drive, "Projects/OSM BADR/Table of fine scale treatment by jem treatmentXveg including extra ABMI - n replicates.csv"),sep=",",col.names=NA)
 
 # JEM treatment X fine scale treatment figures
 d$TreatType<-ifelse(regexpr("buffer",d$treatment)>0,"Buffer","HF")  # Separate graphs for buffer-distance treatments and on/off HF treatments
@@ -267,7 +286,7 @@ for (sp in 1:length(SpTable)) {
     }  # Next veg type
   } # Next treatment
   # Then do figure(s)
-  fname<-paste(g_drive, "results/osm/figures/Figure JEM x on off x veg ",SpTable[sp],".png",sep="")
+  fname<-paste(g_drive, "results/osm/figures/2022/Figure JEM x on off x veg ",SpTable[sp],".png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -291,7 +310,7 @@ for (sp in 1:length(SpTable)) {
   }  # Next treat i
   graphics.off()
   # Version with sqrt-transformation on y-axis
-  fname<-paste(g_drive, "results/osm/figures/Figure JEM x on off x veg ",SpTable[sp]," SQRT version.png",sep="")
+  fname<-paste(g_drive, "results/osm/figures/2022/Figure JEM x on off x veg ",SpTable[sp]," SQRT version.png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -592,7 +611,7 @@ all_on_off <- bind_rows(
   mutate(treatment = str_remove(treatment, " NA"))
 
 # Save csv
-write_csv(all_on_off, paste0(g_drive, "results/osm/2021_on-off_treatment_results.csv"))
+write_csv(all_on_off, paste0(g_drive, "results/osm/2021-2022_osm-on-off_treatment_results.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -683,14 +702,14 @@ for (sp in 1:length(SpTable)) {
         binom.mc<-pinterp(p.true,cump.binom,z2)
         # Adjust for geometric mean effect and calculate quantiles
         adj<-ifelse(n.pres==0,1,mean(x)/mean(binom.mc*exp(lognorm.mc)))  # NOTE: Can't do this for 0's - using
-        lci[i,j]<-ifelse(n.pres==0,0,quantile(adj*binom.mc*exp(lognorm.mc),0.05))
-        uci[i,j]<-quantile(adj*binom.mc*exp(lognorm.mc),0.95)
+        lci[i,j]<-ifelse(n.pres==0,0,quantile(adj*binom.mc*exp(lognorm.mc),0.05, na.rm = TRUE))
+        uci[i,j]<-quantile(adj*binom.mc*exp(lognorm.mc),0.95, na.rm = TRUE)
       } # End if for >1 point
       xmean[i,j]<-mean(x)  # Simple mean of (lure-corrected) densities
     }  # Next veg type
   } # Next treatment
   # Then do figure(s)
-  fname<-paste(g_drive, "results/osm/figures/Figure JEM x buffer distance x veg ",SpTable[sp],".png",sep="")
+  fname<-paste(g_drive, "results/osm/figures/2022/Figure JEM x buffer distance x veg ",SpTable[sp],".png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -714,7 +733,7 @@ for (sp in 1:length(SpTable)) {
   }  # Next treat i
   graphics.off()
   # Version with sqrt-transformation on y-axis
-  fname<-paste(g_drive, "results/osm/figures/Figure JEM x buffer distance x veg ",SpTable[sp]," SQRT version.png",sep="")
+  fname<-paste(g_drive, "results/osm/figures/2022/Figure JEM x buffer distance x veg ",SpTable[sp]," SQRT version.png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -1015,7 +1034,7 @@ all_buffer <- bind_rows(
   select(common_name, treatment, vegetation, mean_density, lci_density, uci_density)
 
 # Save csv
-write_csv(all_buffer, paste0(g_drive, "results/osm/2021_buffer_treatment_results.csv"))
+write_csv(all_buffer, paste0(g_drive, "results/osm/2021-2022_osm_buffer_treatment_results.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -1029,7 +1048,7 @@ jem_density <- d |>
   mutate(density_adj = density / (1 + ((n.lure / n) * (TA - 1)))) |>
   select(jem, vegetation, treatment, fine_scale, type = TreatType, common_name, density, density_adj)
 
-write_csv(jem_density, paste0(g_drive, "data/processed/osm/2021_mean_jem_density_values.csv"))
+write_csv(jem_density, paste0(g_drive, "data/processed/osm/2021-2022_osm_mean_jem_density_values.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 

@@ -105,25 +105,25 @@ make_vegfordetdist <- function(x) {
 #' Obtain N gap class
 #' a 'NONE' image is used to demarcate when a series should be truncated because an animal left the field of view.
 #'
-#' @param tag_report_clean A cleaned up tags report dataframe
+#' @param main_report_clean A cleaned up tags report dataframe
 #'
 
-obtain_n_gap_class <- function(tag_report_clean) {
+obtain_n_gap_class <- function(main_report_clean) {
 
   # Load native_sp tags
   g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
   load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
-  y <- tag_report_clean |>
-    select(project, location, date_detected, common_name) |>
-    arrange(project, location, date_detected) |>
+  y <- main_report_clean |>
+    select(project, location, image_date_time, species_common_name) |>
+    arrange(project, location, image_date_time) |>
     # Create gap class column
-    mutate(common_name_next = lead(common_name),
-           gap_class = ifelse(common_name != "NONE" & common_name_next == "NONE", "N", NA)) |>
+    mutate(species_common_name_next = lead(species_common_name),
+           gap_class = ifelse(species_common_name != "NONE" & species_common_name_next == "NONE", "N", NA)) |>
     # Include only N gap class for native mammals
     filter(gap_class == "N",
-           common_name %in% native_sp) |>
-    select(-c(common_name_next))
+           species_common_name %in% native_sp) |>
+    select(-c(species_common_name_next))
 
   return(y)
 
@@ -363,10 +363,10 @@ group_tags_into_series <- function(tag_report, threshold, summarise = FALSE) {
 #' Calculate time by series
 #' This is for internal purposes only - unless that lookup information could be included as data in the package?
 #'
-#' @param tag_report_clean
+#' @param main_report_clean
 #'
 
-calculate_time_by_series <- function(tag_report_clean) {
+calculate_time_by_series <- function(main_report_clean) {
 
   # Path to Google Drive
   g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
@@ -383,32 +383,32 @@ calculate_time_by_series <- function(tag_report_clean) {
   tbi <- read_csv(paste0(g_drive, "data/processed/time-btwn-images/abmi-cmu_all-years_tbp_2021-06-25.csv"))
 
   # Retrieve gap class NONES
-  nones <- obtain_n_gap_class(tag_report_clean)
+  nones <- obtain_n_gap_class(main_report_clean)
 
-  series <- tag_report_clean |>
-    # Remove records with VNA as number_individuals -> these are misc human & birds
-    filter(!number_individuals == "VNA",
-           common_name %in% native_sp) |>
-    # Convert number_individuals to numeric
-    mutate(number_individuals = as.numeric(number_individuals)) |>
+  series <- main_report_clean |>
+    # Remove records with VNA as individual_count -> these are misc human & birds
+    filter(!individual_count == "VNA",
+           species_common_name %in% native_sp) |>
+    # Convert individual_count to numeric
+    mutate(individual_count = as.numeric(individual_count)) |>
     # Join gap class
     # NOTE: Need to fix the N/tagged gap class issue. TO DO. <- What is this?!
-    left_join(nones, by = c("location", "project", "date_detected", "common_name")) |>
+    left_join(nones, by = c("location", "project", "image_date_time", "species_common_name")) |>
     # Order observations
-    arrange(project, location, date_detected, common_name) |>
+    arrange(project, location, image_date_time, species_common_name) |>
     # Identify series and gaps requiring probabilistic time assignment
     mutate(series_num = 0,
            # Lagged time stamp
-           date_detected_previous = lag(date_detected),
+           image_date_time_previous = lag(image_date_time),
            # Lead time stamp
-           date_detected_next = lead(date_detected),
+           image_date_time_next = lead(image_date_time),
            # Calculate difference in time between ordered images
-           diff_time_previous = as.numeric(date_detected - date_detected_previous),
-           diff_time_next = as.numeric(abs(date_detected - date_detected_next)),
+           diff_time_previous = as.numeric(image_date_time - image_date_time_previous),
+           diff_time_next = as.numeric(abs(image_date_time - image_date_time_next)),
            # Lagged species
-           common_name_previous = lag(common_name),
+           species_common_name_previous = lag(species_common_name),
            # Was is a different species?
-           diff_sp = ifelse(common_name != common_name_previous, TRUE, FALSE),
+           diff_sp = ifelse(species_common_name != species_common_name_previous, TRUE, FALSE),
            # Lagged deployment
            location_previous = lag(location),
            # Was is a different deployment?
@@ -428,7 +428,7 @@ calculate_time_by_series <- function(tag_report_clean) {
            diff_time_next = ifelse(row_number() == n(), 0, diff_time_next)) |>
     ungroup() |>
     # Join gap group lookup table
-    left_join(gap_groups, by = "common_name") |>
+    left_join(gap_groups, by = "species_common_name") |>
     # Join gap leaving predictions
     left_join(leave_prob_pred, by = c("gap_group", "diff_time_previous" = "diff_time")) |>
     # Adjust time difference between ordered images that require probabilistic time assignment
@@ -439,7 +439,7 @@ calculate_time_by_series <- function(tag_report_clean) {
 
   # Calculate total time in front of the camera, by series
   tts <- series %>%
-    left_join(tbi, by = "common_name") |>
+    left_join(tbi, by = "species_common_name") |>
     group_by(series_num) |>
     mutate(# Check whether the image was first or last in a series
       bookend = ifelse(row_number() == 1 | row_number() == n(), 1, 0),
@@ -448,18 +448,18 @@ calculate_time_by_series <- function(tag_report_clean) {
                           ((diff_time_previous_adj + diff_time_next_adj) / 2) + (tbp / 2),
                           (diff_time_previous_adj + diff_time_next_adj) / 2),
       # Multiply image time by the number of animals present
-      image_time_ni = image_time * number_individuals) |>
+      image_time_ni = image_time * individual_count) |>
     # Group by common name as well to add it as a variable to output
-    group_by(project, location, common_name, .add = TRUE) |>
+    group_by(project, location, species_common_name, .add = TRUE) |>
     # Calculate total time and number of images for each series
     summarise(n_images = n(),
               series_total_time = sum(image_time_ni),
-              series_start = min(date_detected),
-              series_end = max(date_detected)) |>
+              series_start = min(image_date_time),
+              series_end = max(image_date_time)) |>
     ungroup() |>
     # Double the series time of single-series images (halved in an earlier step when it shouldn't be)
     mutate(series_total_time = ifelse(n_images < 2, series_total_time * 2, series_total_time)) |>
-    select(project, location, series_num, common_name, series_start, series_end, series_total_time, n_images)
+    select(project, location, series_num, species_common_name, series_start, series_end, series_total_time, n_images)
 
   return(tts)
 
@@ -482,15 +482,15 @@ sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288
     unite("project_location", project, location, sep = "_", remove = TRUE) |>
     mutate(julian = as.numeric(format(series_start, "%j")),
            season = ifelse(julian >= summer.start.j & julian <= summer.end.j, "summer", "winter")) |>
-    mutate_at(c("project_location", "common_name", "season"), factor) |>
-    group_by(project_location, common_name, season, .drop = FALSE) |>
+    mutate_at(c("project_location", "species_common_name", "season"), factor) |>
+    group_by(project_location, species_common_name, season, .drop = FALSE) |>
     summarise(total_duration = sum(series_total_time)) |>
     ungroup() |>
     mutate_if(is.factor, as.character) |>
     left_join(tbd, by = c("project_location"))
 
   # Unique species seen
-  sp <- as.character(sort(unique(tt$common_name)))
+  sp <- as.character(sort(unique(tt$species_common_name)))
 
   tt_nn <- tbd |>
     # Retrieve only those that had no images of animals
@@ -501,10 +501,10 @@ sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288
 
   tt_full <- tt |>
     bind_rows(tt_nn) |>
-    arrange(project_location, common_name, season) |>
+    arrange(project_location, species_common_name, season) |>
     mutate(total_season_days = ifelse(season == "summer", total_summer_days, total_winter_days)) |>
     separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE, extra = "merge") |>
-    select(project, location, common_name, season, total_season_days, total_duration)
+    select(project, location, species_common_name, season, total_season_days, total_duration)
 
   return(tt_full)
 
@@ -530,7 +530,7 @@ calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long", in
   d <- tt |>
     unite("project_location", project, location, sep = "_", remove = TRUE) |>
     # Join species EDD groups
-    left_join(dist_groups, by = "common_name") |>
+    left_join(dist_groups, by = "species_common_name") |>
     # Join detection distance vegetation values
     left_join(veg, by = "project_location") |>
     # Join EDD predictions
@@ -545,7 +545,7 @@ calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long", in
            cpue_km2 = cpue / 60 / 60 / 24 * 10000) |>
     separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE, extra = "merge") |>
     # All the NaNs are just combinations where the total_seasons_days is 0.
-    select(project, location, common_name, season, total_season_days, total_duration, density_km2 = cpue_km2)
+    select(project, location, species_common_name, season, total_season_days, total_duration, density_km2 = cpue_km2)
 
   if(format == "long") {
     return(d)
@@ -555,7 +555,7 @@ calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long", in
       distinct() |>
       pivot_wider(id_cols = c(project, location), names_from = season, values_from = total_season_days)
     d <- d |>
-      pivot_wider(id_cols = c(project, location), names_from = c(common_name, season), values_from = density_km2) |>
+      pivot_wider(id_cols = c(project, location), names_from = c(species_common_name, season), values_from = density_km2) |>
       left_join(t, by = c("project", "location")) |>
       select(project, location, summer, winter, everything())
     return(d)

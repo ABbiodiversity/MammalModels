@@ -24,17 +24,28 @@ load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 # Import data
 
 # OSM species densities
-d1 <- read_csv(paste0(g_drive, "results/density/deployments/osm_all-years_density_wide_2023-03-07.csv")) |>
+d1 <- read_csv(paste0(g_drive, "results/density/deployments/osm_2021-2022_density_wide_2023-09-25.csv")) |>
   # Remove ACME locations
   filter(!str_detect(project, "ACME"))
 
 # OSM deployment treatment metadata
-df_meta <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv"))
+df_meta_21 <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv"))
+
+# OSM 2022 metadata
+
+lure_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_lure.csv"))
+
+df_meta_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_deployment-metadata.csv")) |>
+  mutate(camera = str_sub(location, -3, -1)) |>
+  left_join(lure_22, by = "location") |>
+  select(-notes)
+
+df_meta <- bind_rows(df_meta_21, df_meta_22)
 
 # Lure effects - processed by DJH
-lure <- read_csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv")) |>
+lure <- read.csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv")) |>
   # Remove periods and use spaces instead in species common names
-  mutate(Species = str_replace_all(Species, "\\.", " "))
+  # mutate(Species = str_replace_all(Species, "\\.", " "))
 
 # Processed main camera density file
 dataset.out<-paste0(g_drive, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData")
@@ -43,6 +54,16 @@ load(dataset.out)
 # Supplemental camera deployment treatment metadata: EH & OG
 s1 <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_EH_2022-06-16.csv"))
 s2 <- read.csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_OG_2022-06-16.csv"))
+
+# 2022 sites NOT to include
+df_2022_bad <- read_csv(paste0(g_drive, "data/lookup/veghf/VegForDetectionDistance/osm2022.csv")) |>
+  select(project, location, Useable)
+
+d1 <- d1 |>
+  left_join(df_2022_bad, by = c("project", "location")) |>
+  mutate(Useable = ifelse(is.na(Useable), TRUE, Useable)) |>
+  filter(!Useable == FALSE) |>
+  select(-Useable)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -138,7 +159,8 @@ d <- s |>
 d |>
   group_by(vegetation, treatment, fine_scale) |>
   tally() |>
-  arrange(treatment, fine_scale, vegetation)
+  arrange(treatment, fine_scale, vegetation) |>
+  write_csv(paste0(g_drive, "Projects/OSM BADR/Total Number of Camera Per OSM Treatment and Vegetation Type.csv"))
 
 # Analyzable species (with >15 occurrences, including some in the OSM cameras)
 SpTable<-c("BlackBear","CanadaLynx","Coyote","Fisher","GrayWolf","Marten","Moose","SnowshoeHare","WhitetailedDeer","WoodlandCaribou")
@@ -212,7 +234,7 @@ for (i in 1:length(LU.jem.fine.list)) {
 }
 
 d<-d2  # This is the basic file to use for analyses
-d<-d[!is.na(d$BlackBear),]  # Two edge distances in LU 3 JEM 1F1 have no info
+d<-d[!is.na(d$Black.Bear),]  # Two edge distances in LU 3 JEM 1F1 have no info
 
 # Figure out expected abundance-given-presence when there are no occurrences
 agp0<-NULL
