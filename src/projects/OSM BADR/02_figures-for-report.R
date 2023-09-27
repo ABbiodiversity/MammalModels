@@ -24,7 +24,7 @@ library(gridExtra)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Import data
-buffer <- read_csv(paste0(g_drive, "results/osm/2021_buffer_treatment_results.csv")) |>
+buffer <- read_csv(paste0(g_drive, "results/osm/2021-2022_osm_buffer_treatment_results.csv")) |>
   mutate(fine_scale = str_extract(treatment, "\\d+"),
          treatment = str_remove(treatment, "\\d+"),
          treatment = str_to_title(str_remove(treatment, " buffer $")),
@@ -36,7 +36,20 @@ buffer <- read_csv(paste0(g_drive, "results/osm/2021_buffer_treatment_results.cs
     vegetation == "treedlow20" ~ "Treed Lowland"
   ))
 
-on_off <- read_csv(paste0(g_drive, "results/osm/2021_on-off_treatment_results.csv")) |>
+on_off <- read_csv(paste0(g_drive, "results/osm/2021-2022_osm-on-off_treatment_results.csv")) |>
+  mutate(fine_scale = case_when(
+    str_detect(treatment, "On") ~ "On",
+    str_detect(treatment, "Off") ~ "Off",
+    TRUE ~ "")) |>
+  mutate(treatment = str_to_title(str_remove(treatment, " Off$| On$"))) |>
+  mutate(treatment = factor(treatment,
+                            levels = c("Reference", "Dense Linear Features", "Low Activity Well Pads",  "High Activity In Situ"))) |>
+  mutate(Habitat = case_when(
+    vegetation == "decidmix40" ~ "Deciduous Mixedwood",
+    vegetation == "treedlow20" ~ "Treed Lowland"
+  ))
+
+on_off_2021 <- read_csv(paste0(g_drive, "results/osm/2021_on-off_treatment_results.csv")) |>
   mutate(fine_scale = case_when(
     str_detect(treatment, "On") ~ "On",
     str_detect(treatment, "Off") ~ "Off",
@@ -51,7 +64,7 @@ on_off <- read_csv(paste0(g_drive, "results/osm/2021_on-off_treatment_results.cs
 
 # JEM means
 
-jem_means <- read_csv(paste0(g_drive, "data/processed/osm/2021_mean_jem_density_values.csv")) |>
+jem_means <- read_csv(paste0(g_drive, "data/processed/osm/2021-2022_osm_mean_jem_density_values.csv")) |>
   filter(!vegetation == "wetland") |>
   mutate(Habitat = case_when(
     vegetation == "decidmix40" ~ "Deciduous Mixedwood",
@@ -84,8 +97,8 @@ buffer_jem <- jem_means |>
 # White-tailed Deer
 
 plot_on_off <- on_off |>
-  filter(common_name == "White-tailed Deer",
-         Habitat == "Deciduous Mixedwood") |>
+  filter(common_name == "White-tailed Deer") |>
+         #Habitat == "Deciduous Mixedwood") |>
   ggplot(aes(x = fine_scale, y = mean_density)) +
   geom_point(aes(color = treatment),
              size = 3.5,
@@ -93,12 +106,20 @@ plot_on_off <- on_off |>
   geom_linerange(aes(ymin = lci_density, ymax = uci_density, color = treatment),
                   linewidth = 0.5, position = position_dodge(width = 0.75)) +
   geom_point(data = (on_off_jem |>
-                       filter(common_name == "WhitetailedDeer",
-                              Habitat == "Deciduous Mixedwood")),
+                       filter(common_name == "WhitetailedDeer")),
+                              #Habitat == "Deciduous Mixedwood")),
              aes(x = fine_scale, y = mean_density, color = treatment),
              size = 2,
              alpha = 0.15,
              position = position_jitterdodge(jitter.width = 0.2)) +
+  geom_point(data = (on_off_2021 |>
+                       filter(common_name == "White-tailed Deer")),
+             aes(color = treatment),
+             #color = "blue",
+             size = 4,
+             alpha = 0.4,
+             shape = 17,
+             position = position_dodge(width = 0.75)) +
   scale_color_manual(values = c("Dark Green", "#FFC300", "#FF5733", "#C70039")) +
   #scale_color_brewer(palette = "Set1") +
   scale_y_sqrt() +
@@ -118,14 +139,16 @@ plot_on_off <- on_off |>
         legend.text = element_text(size = 12),
         axis.ticks = element_blank(),
         panel.grid.major.y = element_line(linewidth = 0.5, color = "grey80"),
-        panel.grid.major.x = element_blank())
-  #facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+        panel.grid.major.x = element_blank()) +
+  facet_grid(. ~ Habitat, scales = "free_x", space = "free")
+
+plot_on_off
 
 ggsave(paste0(g_drive, "results/osm/figures/Presentation/wtd_dm.png"),
        plot_on_off, height = 5, width = 7.5, dpi = 500, bg = "white")
 
-ggsave(paste0(g_drive, "results/osm/figures/wtd_on-ff_sqrt_new.png"), plot_on_off,
-       height = 5, width = 8, dpi = 500, bg = "white")
+ggsave(paste0(g_drive, "results/osm/figures/2022/Presentation/wtd_on-ff_sqrt.png"),
+       plot_on_off, height = 5, width = 8, dpi = 500, bg = "white")
 
 # Now the 2 buffer treatments:
 

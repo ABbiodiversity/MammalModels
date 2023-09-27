@@ -43,7 +43,7 @@ df_meta_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_deployment-me
 df_meta <- bind_rows(df_meta_21, df_meta_22)
 
 # Lure effects - processed by DJH
-lure <- read.csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv")) |>
+lure <- read.csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv"))
   # Remove periods and use spaces instead in species common names
   # mutate(Species = str_replace_all(Species, "\\.", " "))
 
@@ -161,6 +161,32 @@ d |>
   tally() |>
   arrange(treatment, fine_scale, vegetation) |>
   write_csv(paste0(g_drive, "Projects/OSM BADR/Total Number of Camera Per OSM Treatment and Vegetation Type.csv"))
+
+check <- d |>
+  mutate(project = str_remove(project, "^ABMI ")) |>
+  mutate(source = ifelse(str_detect(project, "Ecosystem|Focal|Off-Grid"), "ABMI EH", project)) |>
+  group_by(source, treatment, fine_scale) |>
+  tally() |>
+  arrange(treatment, fine_scale, source) |>
+  pivot_wider(id_cols = c(treatment, fine_scale), names_from = source, values_from = n)
+
+write_csv(check, paste0(g_drive, "Projects/OSM BADR/Cameras Per OSM Treatment, Vegetation Type, and Source.csv"))
+
+# By species
+check1 <- d |>
+  mutate(across(10:19, ~ ifelse(. > 0, 1, 0))) |>
+  mutate(project = str_remove(project, "^ABMI ")) |>
+  mutate(source = ifelse(str_detect(project, "Ecosystem|Focal|Off-Grid"), "ABMI EH", project)) |>
+  select(source, 10:19) |>
+  pivot_longer(cols = 2:11, values_to = "present") |>
+  group_by(source, name) |>
+  summarise(total = sum(present)) |>
+  arrange(name, source)
+
+write_csv(check1, paste0(g_drive, "Projects/OSM BADR/Total Number of Deployments By Species.csv"))
+
+
+#-----------------------------------------------------------------------------------------------------------------------
 
 # Analyzable species (with >15 occurrences, including some in the OSM cameras)
 SpTable<-c("BlackBear","CanadaLynx","Coyote","Fisher","GrayWolf","Marten","Moose","SnowshoeHare","WhitetailedDeer","WoodlandCaribou")
