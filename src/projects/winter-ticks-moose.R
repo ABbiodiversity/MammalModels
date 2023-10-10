@@ -10,36 +10,65 @@
 
 #-----------------------------------------------------------------------------------------------------------------------
 
+library(tidyverse)
+library(wildRtrax)
+library(keyring)
+
+# Download data
+# Set environment variables (username/password)
+Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
+           WT_PASSWORD = key_get("WT_PASSWORD", keyring = "wildtrax"))
+
+# Authenticate into WildTrax
+wt_auth()
+
 # Set path to Shared Google Drive (G Drive)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
-library(tidyverse)
+# Pull ABMI EH 2015 Project ID
+proj <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(str_detect(project, "ABMI Ecosystem Health 2015")) |>
+  pull(project_id)
 
-projects <- "eh"
+# Load image report
+eh15_img_rep <- wt_download_report(project_id = proj,
+                                   sensor_id = "CAM",
+                                   reports = "image_report",
+                                   weather_cols = FALSE)
 
-# Load data
+subset_eh15_img_rep <- eh15_img_rep |>
+  filter(image_trigger_mode == "Motion Detection") |>
+  select(location, image_id, image_date_time, media_url)
 
-eh_image_report <- read_csv(paste0(g_drive, "data/lookup/image-reports/eh_19-20-21-22_image-report_simple.csv")) |>
-  filter(trigger == "Motion") |>
-  select(project, location, date_detected, last_col())
+rm(eh15_img_rep)
 
-# Tags
+subset_eh15_img_rep <- subset_eh15_img_rep |>
+  mutate(month = month(image_date_time)) |>
+  filter(month < 7) |>
+  select(-month)
 
-eh_tags_report <- read_csv(paste0(g_drive, "data/base/clean/eh_19-20-21-22_native-sp_clean_2023-01-05.csv")) |>
-  filter(common_name == "Moose") |>
-  mutate(month = month(date_detected)) |>
-  filter(month < 6)
+# Load tag report
+eh15_tag_rep <- wt_download_report(project_id = proj,
+                                   sensor_id = "CAM",
+                                   reports = "tag",
+                                   weather_cols = FALSE)
 
-# Join together
-tags_images <- eh_tags_report |>
-  left_join(eh_image_report, by = c("project", "location", "date_detected"))
+subset_eh15_tag_rep <- eh15_tag_rep |>
+  select(location, image_id, image_date_time, species_common_name, individual_count, age_class, sex_class) |>
+  filter(species_common_name == "Moose") |>
+  mutate(month = month(image_date_time)) |>
+  filter(month < 7) |>
+  select(-month)
+
+img_to_download <- subset_eh15_tag_rep |>
+  left_join(subset_eh15_img_rep, by = c("image_id", "image_date_time", "location")) |>
+  select(location, image_date_time, media_url) |>
+  distinct()
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Folder location for images
 folder <- "G:/Shared drives/ABMI Camera Mammals/projects/Winter Ticks/Moose Images/"
-
-tags_images_sample <- tags_images |> head(250)
 
 for (i in locations) {
 
