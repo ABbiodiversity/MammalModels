@@ -75,6 +75,28 @@ sf_jem <- st_read(paste0(g_drive, "Data/Spatial/JEMs_2021_2022_1000m_buffer.shp"
 sf_camaru <- st_read(paste0(g_drive, "Data/Spatial/OSM_TBM_Cam_2021_23.shp")) |>
   st_transform(4326)
 
+# NEW 2024 SITES
+sf_camaru <- st_read(paste0(g_drive, "Data/proposed_camaru_locations_osm_2024.shp")) |>
+  st_transform(4326)
+
+#st_write(sf_camaru, paste0(g_drive, "Data/proposed_camaru_locations_osm_2024.shp"))
+
+check <- sf_camaru |>
+  filter(Status_2024 == "Re-Visit" | Status_2024 == "New Location") |>
+  filter(!str_detect(Comments, "0.5m")) |>
+  group_by(Treatment) |>
+  tally()
+
+unique(check$geometry)
+
+sf_camaru <- read_csv(paste0(g_drive, "osm_badr_2024_camaru.csv")) |>
+  st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) |>
+  st_transform(3400)
+
+st_write(sf_camaru, paste0(g_drive, "Data/proposed_camaru_locations_osm_2024_v2.shp"))
+
+sf_camaru <- read_csv(paste0(g_drive, "osm_badr_2024_camaru.csv"))
+
 # All treatment and habitat areas
 sf_all <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_LU.shp")) |>
   clean_names() |>

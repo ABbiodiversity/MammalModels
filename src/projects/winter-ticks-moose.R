@@ -14,32 +14,54 @@
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 library(tidyverse)
+library(wildRtrax)
+library(keyring)
 
-projects <- "eh"
+# Download data
+# Set environment variables (username/password)
+Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
+           WT_PASSWORD = key_get("WT_PASSWORD", keyring = "wildtrax"))
+
+# Authenticate into WildTrax
+wt_auth()
 
 # Load data
+proj <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(str_detect(project, "ABMI Ecosystem Health 2015")) |>
+  pull(project_id)
 
-eh_image_report <- read_csv(paste0(g_drive, "data/lookup/image-reports/eh_19-20-21-22_image-report_simple.csv")) |>
-  filter(trigger == "Motion") |>
-  select(project, location, date_detected, last_col())
+image_report <- wt_download_report(project_id = proj,
+                                   sensor_id = "CAM",
+                                   reports = "image_report",
+                                   weather_cols = FALSE)
 
-# Tags
+tag_report <- wt_download_report(project_id = proj,
+                                 sensor_id = "CAM",
+                                 reports = "tag",
+                                 weather_cols = FALSE)
 
-eh_tags_report <- read_csv(paste0(g_drive, "data/base/clean/eh_19-20-21-22_native-sp_clean_2023-01-05.csv")) |>
-  filter(common_name == "Moose") |>
-  mutate(month = month(date_detected)) |>
-  filter(month < 6)
+image_report_subset <- image_report |>
+  #filter(image_trigger_mode == "Motion Detection") |>
+  mutate(month = month(image_date_time)) |>
+  filter(month < 7) |>
+  select(location, image_id, image_date_time, media_url)
 
-# Join together
-tags_images <- eh_tags_report |>
-  left_join(eh_image_report, by = c("project", "location", "date_detected"))
+tag_report_subset <- tag_report |>
+  filter(species_common_name == "Moose") |>
+  mutate(month = month(image_date_time)) |>
+  filter(month < 7) |>
+  select(location, image_id, image_date_time, species_common_name)
+
+images_to_download <- tag_report_subset |>
+  left_join(image_report_subset, by = c("location", "image_id", "image_date_time")) |>
+  distinct()
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Folder location for images
 folder <- "G:/Shared drives/ABMI Camera Mammals/projects/Winter Ticks/Moose Images/"
 
-tags_images_sample <- tags_images |> head(250)
+locations <- unique(images_to_download$location)
 
 for (i in locations) {
 
@@ -47,30 +69,32 @@ for (i in locations) {
 
   # Create directory for each location
   # Does it already exist?
-  already.exist <- dir.exists(paste0(tl_folder, i))
+  already.exist <- dir.exists(paste0(folder, i))
   if (already.exist) {
     print("Directory already exists, moving on to next locations")
     next
   } else {
-    dir.create(paste(tl_folder, i, sep = ""))
+    dir.create(paste(folder, i, sep = ""))
   }
 
   # Root directory for location
-  dir <- paste(tl_folder, i, "/", sep = "")
+  dir <- paste(folder, i, "/", sep = "")
 
   # Subset the data for only images only from this location
-  d <- df_tl_subset[df_tl_subset$location == i, ]
+  d <- images_to_download[images_to_download$location == i, ]
 
   for (u in 1:nrow(d)) {
 
-    url <- d[u, 4]
+    url <- d[u, 5]
     date_time <- d[u, 3]
-    location <- d[u, 2]
+    location <- d[u, 1]
+    id <- d[u, 2]
     date <- strptime(date_time, format = "%Y-%m-%d")
-    try(download.file(url, destfile = paste0(dir, location, "_", date, ".jpg"), mode = 'wb'))
+    try(download.file(url, destfile = paste0(dir, location, "_", date, "_", id, ".jpg"), mode = 'wb'))
 
   }
 
 }
+
 
 
