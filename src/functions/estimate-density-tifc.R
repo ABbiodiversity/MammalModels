@@ -89,10 +89,10 @@ make_vegfordetdist <- function(x) {
     mutate(VegForDetectionDistance = case_when(
       str_detect(VEGHFAGEclass, "Fen|Bog|Marsh|dSwamp") ~ "WetTreed",
       str_detect(VEGHFAGEclass, "Decid") ~ "Decid",
-      str_detect(VEGHFAGEclass, "Pine|Mixed") ~ "Conif",
+      str_detect(VEGHFAGEclass, "Spruce|Pine|Mixed") ~ "Conif",
       str_detect(VEGHFAGEclass, "Water") ~ "Water",
       str_detect(VEGHFAGEclass, "Grass") ~ "Grass",
-      str_detect(VEGHFAGEclass, "Shrubby") ~ "WetGrass",
+      str_detect(VEGHFAGEclass, "Shrub") ~ "WetGrass",
       TRUE ~ "HF"
     ))
 
