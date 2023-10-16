@@ -89,16 +89,22 @@ check <- sf_camaru |>
 
 unique(check$geometry)
 
-sf_camaru <- read_csv(paste0(g_drive, "osm_badr_2024_camaru.csv")) |>
+sf_camaru <- read_csv(paste0(g_drive, "OSM BADR 2024-25 CAMARU Sites_v2.csv")) |>
   st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) |>
-  st_transform(3400)
+  filter(Status_2024 == "New Location" | Status_2024 == "Re-Visit") |>
+  filter(!str_detect(Site_ID, "L$"))
 
-st_write(sf_camaru, paste0(g_drive, "Data/proposed_camaru_locations_osm_2024_v2.shp"))
-
-sf_camaru <- read_csv(paste0(g_drive, "osm_badr_2024_camaru.csv"))
+#st_write(sf_camaru, paste0(g_drive, "Data/proposed_camaru_locations_osm_2024_v2.shp"))
 
 # All treatment and habitat areas
 sf_all <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_LU.shp")) |>
+  clean_names() |>
+  select(type, treatment) |>
+  filter(!treatment == "Plant/Mine Buffer") |>
+  #st_intersection(sf_jem) |>
+  st_transform(4326)
+
+sf_2024 <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_new_LU.shp")) |>
   clean_names() |>
   select(type, treatment) |>
   filter(!treatment == "Plant/Mine Buffer") |>
@@ -114,12 +120,16 @@ sf_all_2021 <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_LU.sh
   select(type, treatment, lu, year) |>
   st_cast("POLYGON")
 
+
+
+
+
 # TreedLow20 layer
-treedlow <- sf_all |>
+treedlow <- sf_2024 |>
   filter(type == "TreedLow20")
 
 # DecidMix40 layer
-decidmix <- sf_all |>
+decidmix <- sf_2024 |>
   filter(type == "DecidMix40") |>
   rename(Treatment = treatment)
 

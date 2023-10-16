@@ -45,23 +45,23 @@ consolidate_tags <- function(main_report) {
   # Load native_sp tags
   load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
-  # The normies
+  # Species tags w/ full information.
   y <- main_report |>
     filter(species_common_name %in% native_sp,
            !individual_count == "VNA") |>
     mutate(individual_count = as.numeric(individual_count)) |>
-    # Run distinct to get rid of multiple images of the same thing at the exact same time
-    distinct() |>
-    # Include individual_count in case there are back-to-back images with different number of individuals
-    group_by(project, location, image_date_time, species_common_name, individual_count) |>
+    mutate(age_class = trimws(strrep(str_c(age_class, ", "), individual_count), whitespace = ", "),
+           sex_class = trimws(strrep(str_c(sex_class, ", "), individual_count), whitespace = ", ")) |>
+    # Now grouping my project_id, location_id, and image_id
+    group_by(project_id, location_id, image_id, species_common_name) |>
     mutate(individual_count = sum(individual_count),
            age_class = paste0(age_class, collapse = ", "),
            sex_class = paste0(sex_class, collapse = ", ")) |>
-    distinct(project, location, image_date_time, species_common_name, individual_count, .keep_all = TRUE) |>
+    distinct(project_id, location, image_id, species_common_name, .keep_all = TRUE) |>
     ungroup() |>
     mutate(individual_count = as.character(individual_count))
 
-  # Tags of species that have VNA - usually we don't care about these, but don't want to lose info.
+  # Tags of species that have VNA - usually we don't care about these, but don't want to lose info here.
   z <- main_report |>
     filter(species_common_name %in% native_sp,
            individual_count == "VNA")
@@ -204,6 +204,7 @@ get_operating_days <- function(image_report, include_project = TRUE, summarise =
       # Remove days where the camera was not working
       anti_join(to_remove, by = c("project_location", "date")) |>
       mutate(operating = 1)
+
   } else {
 
     range <- x |>
@@ -551,13 +552,15 @@ calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long", in
     return(d)
   } else {
     t <- d |>
+      mutate(season = ifelse(season == "winter", "Winter", "Summer")) |>
       select(project, location, season, total_season_days) |>
       distinct() |>
       pivot_wider(id_cols = c(project, location), names_from = season, values_from = total_season_days)
     d <- d |>
+      mutate(season = ifelse(season == "winter", "Winter", "Summer")) |>
       pivot_wider(id_cols = c(project, location), names_from = c(species_common_name, season), values_from = density_km2) |>
       left_join(t, by = c("project", "location")) |>
-      select(project, location, summer, winter, everything())
+      select(project, location, Summer_Days = Summer, Winter_Days = Winter, everything())
     return(d)
   }
 

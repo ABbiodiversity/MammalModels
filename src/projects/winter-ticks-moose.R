@@ -10,9 +10,6 @@
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Set path to Shared Google Drive (G Drive)
-g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
-
 library(tidyverse)
 library(wildRtrax)
 library(keyring)
@@ -26,11 +23,18 @@ Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
 wt_auth()
 
 # Load data
+
+# Set path to Shared Google Drive (G Drive)
+g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
+
+# Pull ABMI EH 2015 Project ID
+
 proj <- wt_get_download_summary(sensor_id = "CAM") |>
   filter(str_detect(project, "ABMI Ecosystem Health 2015")) |>
   pull(project_id)
 
-image_report <- wt_download_report(project_id = proj,
+# Load image report
+eh15_img_rep <- wt_download_report(project_id = proj,
                                    sensor_id = "CAM",
                                    reports = "image_report",
                                    weather_cols = FALSE)
@@ -54,7 +58,6 @@ tag_report_subset <- tag_report |>
 
 images_to_download <- tag_report_subset |>
   left_join(image_report_subset, by = c("location", "image_id", "image_date_time")) |>
-  distinct()
 
 #-----------------------------------------------------------------------------------------------------------------------
 
