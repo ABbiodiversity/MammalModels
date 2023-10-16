@@ -65,8 +65,6 @@ main_report <- wt_download_report(
 
 # Strip it down to only include relevant information
 main_reports_clean <- main_report |>
-  # Remove the 'lower' cameras deployed at 0.5m (analyzed elsewhere)
-  filter(!str_detect(location, "-M$")) |>
   left_join(bdt_proj, by = "project_id") |>
   # Consolidate tags of same species in same image into one row
   consolidate_tags() |>
@@ -91,7 +89,7 @@ image_fov_trigger <- image_report |>
 # Save cleaned and binded data to Shared Google Drive
 # (so we don't have to re-download from WildTrax each time)
 
-# Last done: October 10, 2023
+# Last done: October 13, 2023
 
 # Simple image reports
 image_fov_trigger |>
@@ -127,8 +125,6 @@ tags_clean <- read_csv(file)
 # Summarise time-by-day for each camera deployment in the ABMI & ACME OSM projects.
 
 df_tbd_summary <- image_fov_trigger |>
-  # Remove lower camera deployments
-  filter(!str_detect(location, "-M$")) |>
   get_operating_days(
   # Keep project
   include_project = TRUE,
@@ -210,6 +206,30 @@ manual_check <- d_long |>
 
 write_csv(manual_check, paste0(g_drive, "data/lookup/veghf/manual_checking/", "VegHF Checks for Biodiversity Trajectories 2023.csv"))
 
+# Load in manual checks
+library(googlesheets4)
+library(googledrive)
+
+veghf <- drive_find(type = "spreadsheet", shared_drive = "ABMI Camera Mammals") |>
+  filter(str_detect(name, "Biodiversity Trajectories")) |>
+  select(id) |>
+  pull()
+
+veghf_corr <- read_sheet(ss = veghf) |>
+  mutate(VEGHFAGEclass = ifelse(is.na(VegFromImage), VEGHFAGEclass, str_extract(VegFromImage, "^[^ ]+"))) |>
+  make_vegfordetdist() |>
+  select(location, VegForDetectionDistance)
+
+# Handle the "-M" deployments
+d_long <- df_tt |>
+  select(location) |>
+  distinct() |>
+  mutate(low = ifelse(str_detect(location, "-M$"), TRUE, FALSE)) |>
+  mutate(location = str_remove(location, "-M$")) |>
+  left_join(veghf_corr, by = "location") |>
+  mutate(location = ifelse(low == TRUE, paste0(location, "-M"), location)) |>
+  mutate(project_location = paste0("Biodiversity Trajectories 2023_", location)) |>
+  select(-c(low, location))
 
 # Calculate density (long and wide)
 df_density_long <- calc_density_by_loc(tt = df_tt,
