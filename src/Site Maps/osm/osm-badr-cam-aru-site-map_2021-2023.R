@@ -61,6 +61,10 @@ sf_camaru_24 <- read_csv(paste0(g_drive, "OSM BADR 2024-25 CAMARU Sites_v2.csv")
   filter(Status_2024 == "New Location" | Status_2024 == "Re-Visit") |>
   filter(!str_detect(Site_ID, "L$"))
 
+sf_camaru_24 |>
+  st_transform(3400) |>
+  st_write(paste0(g_drive, "Data/proposed_camaru_locations_osm_2024_v3.shp"))
+
 #st_write(sf_camaru, paste0(g_drive, "Data/proposed_camaru_locations_osm_2024_v2.shp"))
 
 sf_lu_2024 <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_new_LU.shp")) |>
@@ -120,7 +124,7 @@ cam24 <- makeAwesomeIcon(
   icon = "camera",
   iconColor = "white",
   library = "ion",
-  markerColor = "cadetblue"
+  markerColor = "lightblue"
 )
 
 # Proposed Pike 2 development
@@ -283,7 +287,7 @@ map
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Save map
-htmlwidgets::saveWidget(map, file = "./docs/osm_cam-aru-vp_site_map.html", selfcontained = FALSE)
+htmlwidgets::saveWidget(map, file = "./docs/osm_cam-aru_site_map.html", selfcontained = FALSE)
 
 #-----------------------------------------------------------------------------------------------------------------------
 

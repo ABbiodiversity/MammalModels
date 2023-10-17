@@ -168,6 +168,11 @@ write_and_archive(
 s_drive <- "S:/samba/abmisc/GC_eric/FromEric/To_Marcus/"
 
 library(veghfsoil)
+library(RSQLite)
+library(DBI)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), paste0(s_drive, "20231006_BDT_LandscapeSummary/summaries_20231011_rev00.sqlite"))
+DBI::dbListTables(con)
 
 # Read in landscape summary
 df <- read_summary(
@@ -259,3 +264,39 @@ write_and_archive(
 )
 
 #-----------------------------------------------------------------------------------------------------------------------
+
+# 150-m vegetation summary
+
+# Read in landscape summary
+df <- read_summary(
+  summary_path = paste0(s_drive, "20231006_BDT_LandscapeSummary/summaries_20231011_rev00.sqlite"),
+  table = "landscape_summary_camaru_2023_2023"
+)
+
+# Obtain long summary
+d_long <- make_veghf_long(
+  d = df,
+  col.label = "Site_ID",
+  col.veg = "Combined_ChgByCWCS",
+  col.baseyear = 2019,
+  col.hfyear = "YEAR",
+  col.soil = "Soil_Type_1",
+  unround = FALSE,
+  hf_fine = TRUE)
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+check <- d_long %>%
+  filter(deployment == "CAM" | deployment == "BOTH") %>%
+  mutate(location = str_remove(Site, "-CAM$"),
+         location = str_remove(location, "-BOTH$")) %>%
+  group_by(location, VEGHFAGEclass) %>%
+  summarise(area = sum(Shape_Area)) %>%
+  ungroup() %>%
+  mutate(VEGHFAGEclass = str_replace(VEGHFAGEclass, "0$", "9")) %>%
+  mutate(project = "ABMI Ecosystem Health 2020") %>%
+  pivot_wider(id_cols = c(location, project), names_from = VEGHFAGEclass, values_from = area, values_fill = 0)
+
+
