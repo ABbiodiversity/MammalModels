@@ -288,15 +288,16 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 
-check <- d_long %>%
-  filter(deployment == "CAM" | deployment == "BOTH") %>%
-  mutate(location = str_remove(Site, "-CAM$"),
-         location = str_remove(location, "-BOTH$")) %>%
-  group_by(location, VEGHFAGEclass) %>%
-  summarise(area = sum(Shape_Area)) %>%
-  ungroup() %>%
-  mutate(VEGHFAGEclass = str_replace(VEGHFAGEclass, "0$", "9")) %>%
-  mutate(project = "ABMI Ecosystem Health 2020") %>%
-  pivot_wider(id_cols = c(location, project), names_from = VEGHFAGEclass, values_from = area, values_fill = 0)
+veghf_150 <- d_long |>
+  filter(deployment == "CAM" | deployment == "BOTH") |>
+  mutate(location = Site_ID) |>
+  group_by(location, Section, VEGHFAGEclass) |>
+  summarise(area = sum(Shape_Area)) |>
+  ungroup() |>
+  mutate(VEGHFAGEclass = str_replace(VEGHFAGEclass, "0$", "9")) |>
+  mutate(project = "Biodiversity Trajectories 2023") |>
+  pivot_wider(id_cols = c(location, project, Section), names_from = VEGHFAGEclass, values_from = area, values_fill = 0)
+
+write_csv(veghf_150, paste0(g_drive, "data/lookup/veghf/bdt_2023_veghf-buffer-summary_2023-10-17.csv"))
 
 

@@ -10,7 +10,7 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Root directory (Shared Google Drive)
-root <- "G:/Shared drives/ABMI Camera Mammals/"
+g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Attach packages
 library(wildRtrax) # Just obtaining data
@@ -24,14 +24,14 @@ library(lubridate)
 library(readr)
 
 # Native species tags in WildTrax
-load(paste0(root, "data/lookup/wt_native_sp.RData"))
+load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
 # Probabilistic gaps probability of leaving predictions
-df_leave_prob_pred <- read_csv(paste0(root, "data/processed/probabilistic-gaps/gap-leave-prob_predictions_2021-10-05.csv"))
+df_leave_prob_pred <- read_csv(paste0(g_drive, "data/processed/probabilistic-gaps/gap-leave-prob_predictions_2021-10-05.csv"))
 # Gap groups
-df_gap_groups <- read_csv(paste0(root, "data/lookup/species-gap-groups.csv"))
+df_gap_groups <- read_csv(paste0(g_drive, "data/lookup/species-gap-groups.csv"))
 # Average time between images per species
-df_tbp <- read_csv(paste0(root, "data/processed/time-btwn-images/abmi-cmu_all-years_tbp_2021-06-25.csv"))
+df_tbp <- read_csv(paste0(g_drive, "data/processed/time-btwn-images/abmi-cmu_all-years_tbp_2021-06-25.csv"))
 
 # Seasonal start/end dates (julian day):
 summer.start.j <- 106 # April 16
@@ -49,33 +49,73 @@ Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
 wt_auth()
 
 # Obtain database project IDs
-proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
-  filter(str_detect(project, "Ecosystem Health 2022|Height")) |>
-  select(project_id) |>
-  pull() |>
-  unlist()
+proj <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(str_detect(project, "Ecosystem Health 2022|Height|ABMI OSM 2022|Trajectories")) |>
+  select(project, project_id)
 
-# Deployments of interest (to filter out from EH 2022)
-locations <- c("759-NE", "759-SW", "760-NE", "760-SW", "792-NE",
-               "792-SW", "793-NE", "793-SW", "794-NE", "794-SW")
+proj_ids <- proj$project_id
 
-# In Ecosystem Health 2022 (1m cameras):
-# - 793-NE failed August 6, 2021
-# - 793-SW failed May 18, 2022
-
-# In Heights (0.5m cameras):
-# - 792-SW failed July 1, 2022
-
-# Download data
 data <- map_df(.x = proj_ids,
                .f = ~ wt_download_report(
                  project_id = .x,
                  sensor_id = "CAM",
-                 cols_def = FALSE,
-                 weather_cols = FALSE
-               )) |>
-  mutate(date_detected = ymd_hms(date_detected)) |>
-  filter(location %in% locations,
+                 weather_cols = FALSE,
+                 reports = "main")) |>
+  left_join(proj, by = "project_id")
+
+# Locations of interest for pulling out of EH and OSM
+osm_eh_loc <- data |>
+  filter(str_detect(project, "Height")) |>
+  select(location) |>
+  distinct() |>
+  pull(location)
+
+bdt_loc <- data |>
+  filter(str_detect(project, "Trajectories"),
+         str_detect(location, "-M$")) |>
+  mutate(location = str_remove(location, "-M$")) |>
+  select(location) |>
+  distinct() |>
+  pull()
+
+bdt_data <- data |>
+  filter(str_detect(project, "Trajectories")) |>
+  mutate(lower = ifelse(str_detect(location, "-M$"), TRUE, FALSE),
+         location = str_remove(location, "-M$")) |>
+  filter(location %in% bdt_loc) |>
+  mutate(location = ifelse(lower == TRUE, paste0(location, "-M"), location)) |>
+  select(-lower)
+
+data_all <- data |>
+  filter(location %in% osm_eh_loc) |>
+  bind_rows(bdt_data) |>
+  filter(image_fov == "WITHIN",
+         species_common_name %in% native_sp) |>
+  select(project, location, image_date_time, species_common_name, individual_count)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Ecosystem Health 2022 (1m cameras):
+# - 793-NE failed August 6, 2021
+# - 793-SW failed May 18, 2022
+
+# Heights (0.5m cameras):
+# - 792-SW failed July 1, 2022
+
+# BDT 2023 (1m cameras):
+# - 724-3-NE failed April 8, 2023
+# - 761-1-SE -> Need to adjust time. Seems to be ahead by half a day?
+
+# BDT 2023 (0.5m cameras)
+# - 602-2-SW-M -> needs to have dates pushed ahead by 5 days
+# - 637-2-NE-M -> Actual start date is March 12, 2023
+# - 724-4-SE-M -> Actual start date is March 2, 2023
+# - 761-3-NE-M -> Actual start date is March 9, 2023
+
+
+
+
+
          # Truncate dates so that only data operating during a common period is used (only 3/10 locations impacted)
          !(date_detected > as.Date("2021-08-07 00:00:00") & location == "793-NE"),
          !(date_detected > as.Date("2022-05-19 00:00:00") & location == "793-SW"),
