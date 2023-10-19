@@ -24,7 +24,7 @@ library(lubridate)
 library(readr)
 
 # Native species tags in WildTrax
-load(paste0(root, "data/lookup/wt_native_sp.RData"))
+load(paste0(root, "data/lookup/wt_cam_sp_str.RData"))
 
 # Probabilistic gaps probability of leaving predictions
 df_leave_prob_pred <- read_csv(paste0(root, "data/processed/probabilistic-gaps/gap-leave-prob_predictions_2021-10-05.csv"))
@@ -49,15 +49,21 @@ Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
 wt_auth()
 
 # Obtain database project IDs
+
+# There are now 4 projects w/ heights comp data:
+
+
 proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
-  filter(str_detect(project, "Ecosystem Health 2022|Height")) |>
+  filter(str_detect(project, "Ecosystem Health 2022|Height|ABMI OSM 2022|Trajectories")) |>
   select(project_id) |>
-  pull() |>
-  unlist()
+  pull()
 
 # Deployments of interest (to filter out from EH 2022)
-locations <- c("759-NE", "759-SW", "760-NE", "760-SW", "792-NE",
+eh_locations <- c("759-NE", "759-SW", "760-NE", "760-SW", "792-NE",
                "792-SW", "793-NE", "793-SW", "794-NE", "794-SW")
+
+osm_locations <- c("1-1A2-CA1", "1-1A2-CA2", "1-1A2-CA3", "1-1A2-CA4",
+                   "1-1A3-CA3", "1-2A2-CA1", )
 
 # In Ecosystem Health 2022 (1m cameras):
 # - 793-NE failed August 6, 2021
