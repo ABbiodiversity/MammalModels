@@ -16,12 +16,7 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 library(wildRtrax) # Just obtaining data
 library(keyring) # Storing credentials
 
-library(dplyr)
-library(stringr)
-library(tidyr)
-library(purrr)
-library(lubridate)
-library(readr)
+library(tidyverse)
 
 # Native species tags in WildTrax
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
@@ -63,13 +58,14 @@ data <- map_df(.x = proj_ids,
                  reports = "main")) |>
   left_join(proj, by = "project_id")
 
-# Locations of interest for pulling out of EH and OSM
+# Locations that had paired camera heights for pulling out of EH and OSM
 osm_eh_loc <- data |>
   filter(str_detect(project, "Height")) |>
   select(location) |>
   distinct() |>
   pull(location)
 
+# Locations that had paired camera heights for pulling out of BDT
 bdt_loc <- data |>
   filter(str_detect(project, "Trajectories"),
          str_detect(location, "-M$")) |>
@@ -80,81 +76,109 @@ bdt_loc <- data |>
 
 bdt_data <- data |>
   filter(str_detect(project, "Trajectories")) |>
-  mutate(lower = ifelse(str_detect(location, "-M$"), TRUE, FALSE),
+  mutate(height = ifelse(str_detect(location, "-M$"), "0.5m", "1m"),
          location = str_remove(location, "-M$")) |>
-  filter(location %in% bdt_loc) |>
-  mutate(location = ifelse(lower == TRUE, paste0(location, "-M"), location)) |>
-  select(-lower)
+  filter(location %in% bdt_loc)
 
 data_all <- data |>
   filter(location %in% osm_eh_loc) |>
+  mutate(height = ifelse(str_detect(project, "Height"), "0.5m", "1m")) |>
   bind_rows(bdt_data) |>
-  filter(image_fov == "WITHIN",
-         species_common_name %in% native_sp) |>
-  select(project, location, image_date_time, species_common_name, individual_count)
+  filter(image_fov == "WITHIN") |>
+  # Don't need project, just keep the lower column
+  select(location, height, image_date_time, species_common_name, individual_count)
 
 #-----------------------------------------------------------------------------------------------------------------------
+
+# Adjustments required:
 
 # Ecosystem Health 2022 (1m cameras):
 # - 793-NE failed August 6, 2021
 # - 793-SW failed May 18, 2022
 
+# OSM 2022 (1m cameras):
+# - 1-1A2-CA1 failed December 19, 2022
+# - 1-1A3-CA3 * Note that this deployment is a bit wonky, with no timelapse images. Will keep in though.
+
 # Heights (0.5m cameras):
 # - 792-SW failed July 1, 2022
+# - 1-1A3-CA3 -> failed on February 12, 2023
 
 # BDT 2023 (1m cameras):
 # - 724-3-NE failed April 8, 2023
 # - 761-1-SE -> Need to adjust time. Seems to be ahead by half a day?
+# - 602-2-SW -> needs to have dates pushed ahead by 5 days
 
 # BDT 2023 (0.5m cameras)
-# - 602-2-SW-M -> needs to have dates pushed ahead by 5 days
+
 # - 637-2-NE-M -> Actual start date is March 12, 2023
 # - 724-4-SE-M -> Actual start date is March 2, 2023
 # - 761-3-NE-M -> Actual start date is March 9, 2023
 
 
+# Camera pairs to remove from analysis:
+# - 1-1A2-CA2 -> 1m camera didn't take reliable images (cute baby lynx photos though)
+# - 1-1A2-CA3 -> Neither camera took reliable images
+# - 1-1A2-CA4 -> Neither camera took reliable images (cute baby bear images though)
+# - 1-1A2-CA5 -> Neither camera took reliable images
+# - 1-2A2-CA1 -> Awkward camera angle / suspicious height.
 
+remove <- c("1-1A2-CA2", "1-1A2-CA3", "1-1A2-CA4", "1-1A2-CA5", "1-2A2-CA1")
 
-
-         # Truncate dates so that only data operating during a common period is used (only 3/10 locations impacted)
-         !(date_detected > as.Date("2021-08-07 00:00:00") & location == "793-NE"),
-         !(date_detected > as.Date("2022-05-19 00:00:00") & location == "793-SW"),
-         !(date_detected > as.Date("2022-07-02 00:00:00") & location == "792-SW")) |>
-  select(project, location, date_detected, field_of_view, common_name, number_individuals)
+data_subset <- data_all |>
+  # Remove deployment pairs that did not collect reliable data
+  filter(!location %in% remove) |>
+  mutate(image_date_time = ymd_hms(image_date_time)) |>
+  # Truncate dates so that only data operating during a common period is used (only 3/10 locations impacted)
+  filter(!(image_date_time > as.Date("2021-08-07 00:00:00") & location == "793-NE"),
+         !(image_date_time > as.Date("2022-05-19 00:00:00") & location == "793-SW"),
+         !(image_date_time > as.Date("2022-07-02 00:00:00") & location == "792-SW"),
+         !(image_date_time > as.Date("2022-12-19 00:00:00") & location == "1-1A2-CA1"),
+         !(image_date_time > as.Date("2023-02-12 00:00:00") & location == "1-1A3-CA3"),
+         !(image_date_time > as.Date("2023-04-08 00:00:00") & location == "OG-ALPAC-724-3-NE"),
+         !(image_date_time < as.Date("2023-03-12 00:00:00") & location == "OG-ALPAC-637-2-NE" & height == "0.5m"),
+         !(image_date_time < as.Date("2023-03-02 00:00:00") & location == "OG-ALPAC-724-4-SE" & height == "0.5m"),
+         !(image_date_time < as.Date("2023-03-09 00:00:00") & location == "OG-ALPAC-761-3-NE" & height == "0.5m")) |>
+  # Adjust date/times that were set wrong
+  mutate(image_date_time = case_when(
+    location == "OG-ALPAC-761-1-SE" & height == "1m" ~ image_date_time %m-% hours(12),
+    location == "OG-ALPAC-602-2-SW" & height == "1m" ~ image_date_time %m+% days(5),
+    TRUE ~ image_date_time))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Assess where NONE images split detections
-df_gap_nones <- data %>%
-  select(project, location, date_detected, common_name) %>%
-  arrange(project, location, date_detected) %>%
+df_gap_nones <- data_subset |>
+  select(location, height, image_date_time, species_common_name) |>
+  arrange(location, height, image_date_time) |>
   # Create gap class column
-  mutate(common_name_next = lead(common_name),
-         gap_class = ifelse(common_name != "NONE" & common_name_next == "NONE", "N", NA)) %>%
-  filter(gap_class == "N") %>%
-  select(-c(common_name_next))
+  mutate(species_common_name_next = lead(species_common_name),
+         gap_class = ifelse(species_common_name != "NONE" & species_common_name_next == "NONE", "N", NA)) |>
+  filter(gap_class == "N") |>
+  select(-c(species_common_name_next))
 
 # Identify independent detections ('series')
-df_series <- data |>
-  filter(common_name %in% native_sp,
-         field_of_view == "WITHIN") |>
+df_series <- data_subset |>
+  filter(species_common_name %in% native_sp,
+         !individual_count == "VNA") |>
   # Identify where NONEs occurred
-  left_join(df_gap_nones, by = c("location", "project", "date_detected", "common_name")) |>
+  left_join(df_gap_nones, by = c("location", "height", "image_date_time", "species_common_name")) |>
+  unite("location", c(location, height), sep = "_") |>
   # Order observations
-  arrange(project, location, date_detected, common_name) |>
+  arrange(location, image_date_time, species_common_name) |>
   # Identify series
   mutate(series_num = 0,
          # Lagged time stamp
-         date_detected_previous = lag(date_detected),
+         image_date_time_previous = lag(image_date_time),
          # Lead time stamp
-         date_detected_next = lead(date_detected),
+         image_date_time_next = lead(image_date_time),
          # Calculate difference in time between ordered images
-         diff_time_previous = as.numeric(date_detected - date_detected_previous),
-         diff_time_next = as.numeric(abs(date_detected - date_detected_next)),
+         diff_time_previous = as.numeric(image_date_time - image_date_time_previous),
+         diff_time_next = as.numeric(abs(image_date_time - image_date_time_next)),
          # Lagged species
-         common_name_previous = lag(common_name),
+         species_common_name_previous = lag(species_common_name),
          # Was is a different species?
-         diff_sp = ifelse(common_name != common_name_previous, TRUE, FALSE),
+         diff_sp = ifelse(species_common_name != species_common_name_previous, TRUE, FALSE),
          # Lagged deployment
          location_previous = lag(location),
          # Was is a different deployment?
@@ -166,7 +190,7 @@ df_series <- data |>
          # Identify new series, based on being different deployment, species, greater than 120 seconds, and approp gaps
          diff_series = ifelse(diff_location == TRUE | diff_sp == TRUE | diff_time_previous > 120 | (gap_class_previous == "L" | gap_class_previous == "N"), 1, 0),
          # Number series
-         series_num = c(0, cumsum(diff_series[-1])),
+         series_num = c(1, cumsum(diff_series[-1]) + 1),
          # Flag gaps that require probabilistic time assignment
          gap_prob = replace_na(ifelse(gap_check == 1 & (gap_class_previous == "" | gap_class_previous == "U"), 1, 0), 0)) |>
   group_by(series_num) |>
@@ -174,7 +198,7 @@ df_series <- data |>
          diff_time_next = ifelse(row_number() == n(), 0, diff_time_next)) |>
   ungroup() |>
   # Join gap group lookup table
-  left_join(df_gap_groups, by = "common_name") |>
+  left_join(df_gap_groups, by = "species_common_name") |>
   # Join gap leaving predictions
   left_join(df_leave_prob_pred, by = c("gap_group", "diff_time_previous" = "diff_time")) |>
   # Adjust time difference between ordered images that require probabilistic time assignment
@@ -184,16 +208,14 @@ df_series <- data |>
 
 # Vector of all project-locations
 dep <- df_series |>
-  unite(col = "location_project", location, project, sep = "_") |>
-  select(location_project) |>
+  select(location) |>
   distinct() |>
   pull()
 
 # Total time for each detection/series
 df_tts <- df_series |>
-  left_join(df_tbp, by = "common_name") |>
-  filter(!number_individuals == "VNA") |>
-  mutate(number_individuals = as.numeric(number_individuals)) |>
+  left_join(df_tbp, by = "species_common_name") |>
+  mutate(individual_count = as.numeric(individual_count)) |>
   group_by(series_num) |>
   mutate(# Check whether the image was first or last in a series
     bookend = ifelse(row_number() == 1 | row_number() == n(), 1, 0),
@@ -202,31 +224,32 @@ df_tts <- df_series |>
                         ((diff_time_previous_adj + diff_time_next_adj) / 2) + (tbp / 2),
                         (diff_time_previous_adj + diff_time_next_adj) / 2),
     # Multiply image time by the number of animals present
-    image_time_ni = image_time * number_individuals) |>
+    image_time_ni = image_time * individual_count) |>
   # Group by common name as well to add it as a variable to output
-  group_by(common_name, location, project, .add = TRUE) |>
+  group_by(species_common_name, location, .add = TRUE) |>
   # Calculate total time and number of images for each series
   summarise(n_images = n(),
             series_total_time = sum(image_time_ni)) |>
   ungroup() |>
   # Just adjust a single WTD series
   mutate(series_total_time = if_else(is.na(series_total_time), 22, series_total_time)) |>
-  select(series_num, common_name, n_images, series_total_time)
+  # Double the series time of single-series images (halved in an earlier step when it shouldn't be)
+  mutate(series_total_time = ifelse(n_images < 2, series_total_time * 2, series_total_time)) |>
+  select(series_num, species_common_name, n_images, series_total_time)
 
 # Calculate total time in front of the camera, by deployment, project, and species
 df_tt <- df_series |>
   group_by(series_num) |>
-  arrange(date_detected, .by_group = TRUE) |>
+  arrange(image_date_time, .by_group = TRUE) |>
   filter(row_number() == 1) |>
-  left_join(df_tts, by = c("series_num", "common_name")) |>
-  select(project, location, date_detected, common_name, series_num, series_total_time) |>
+  left_join(df_tts, by = c("series_num", "species_common_name")) |>
+  select(location, image_date_time, species_common_name, series_num, series_total_time) |>
   ungroup() |>
-  mutate(julian = as.numeric(format(date_detected, "%j")),
+  mutate(julian = as.numeric(format(image_date_time, "%j")),
          season = ifelse(julian >= summer.start.j & julian <= summer.end.j, "summer", "winter")) |>
-  unite(location, project, col = "location_project", sep = "_", remove = TRUE) |>
-  mutate_at(c("location_project", "common_name", "season"), factor) |>
+  mutate_at(c("location", "species_common_name", "season"), factor) |>
   # Note: didn't include season here - not enough sample size at this point (I think ...). TBD.
-  group_by(location_project, common_name, .drop = FALSE) |>
+  group_by(location, species_common_name, .drop = FALSE) |>
   summarise(total_duration = sum(series_total_time)) |>
   ungroup() |>
   mutate_if(is.factor, as.character)
@@ -234,7 +257,6 @@ df_tt <- df_series |>
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Save results
-# write_csv(df_tt, "./data/processed/heights-experiment_tifc_long.csv")
-# Now in Google Drive
+write_csv(df_tt, paste0(g_drive, "data/processed/time-in-cam-fov/camera-heights_fov-time-long_", Sys.Date(), ".csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
