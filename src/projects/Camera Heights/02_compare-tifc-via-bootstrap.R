@@ -10,13 +10,12 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Attach packages
-library(readr)
-library(tidyr)
-library(dplyr)
-library(stringr)
+library(tidyverse)
+
+g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Read in previously processed TIFC data from script 01
-df_tt <- read_csv("./data/processed/heights-experiment_tifc_long.csv")
+df_tt <- read_csv(paste0(g_drive, "data/processed/time-in-cam-fov/camera-heights_fov-time-long_2023-10-23.csv"))
 
 # Only interested in a subset of species with sufficient sample size
 sp_of_interest <- c("Black Bear", "White-tailed Deer", "Moose", "Coyote", "Cougar", "Marten",
@@ -25,18 +24,21 @@ sp_of_interest <- c("Black Bear", "White-tailed Deer", "Moose", "Coyote", "Couga
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Prepare data for bootstrapping
-boot <- df_tt %>%
-  filter(common_name %in% sp_of_interest) %>%
-  separate(location_project, into = c("location", "project"), sep = "_") %>%
-  mutate(height = ifelse(str_detect(project, "Ecosystem"), "full_height", "half_height")) %>%
-  pivot_wider(id_cols = c(location, common_name),
+boot <- df_tt |>
+  filter(species_common_name %in% sp_of_interest) |>
+  separate(location, into = c("location", "height"), sep = "_") |>
+  pivot_wider(id_cols = c(location, species_common_name),
               names_from = "height",
-              values_from = c("total_duration")) %>%
-  mutate(loc_sp = paste0(location, "_", common_name),
-         sp = paste0(common_name)) %>%
-  select(loc_sp, 3:6, location, sp) %>%
+              values_from = c("total_duration")) |>
+  mutate(loc_sp = paste0(location, "_", species_common_name),
+         sp = paste0(species_common_name)) |>
+  rename(full_height = `1m`,
+         half_height = `0.5m`) |>
+  select(loc_sp, 3:6, location, sp) |>
   # Remove deployment-species-season combos without any duration/images at either camera
-  filter(full_height > 0 | half_height > 0)
+  filter(half_height > 0 | full_height > 0) |>
+  # Remove one weird location
+
 
 #-----------------------------------------------------------------------------------------------------------------------
 
