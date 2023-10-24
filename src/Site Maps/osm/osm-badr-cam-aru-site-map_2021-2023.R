@@ -28,76 +28,73 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/Projects/OSM BADR/"
 sf_osr <- st_read(paste0(g_drive, "Data/Spatial/AB_OSR.shp")) |>
   st_transform(4326)
 
+sf_lu_new <- st_read(paste0(g_drive, "Data/Spatial/LU5_2024.shp")) |>
+  st_transform(4326) |>
+  select(deciles) |>
+  mutate(lu = 5,
+         year = 2024,
+         lu_treatment = "PreInSitu",
+         label = "5-Pre In Situ")
+
 # Landscape Units (LUs) for all 3 years.
 sf_lu <- st_read(paste0(g_drive, "Data/Spatial/LU3YR_Aug22.shp")) |>
   st_transform(4326) |>
   clean_names() |>
   mutate(year = as.numeric(paste0("20", str_sub(year, 1, 2)))) |>
-  select(lu, lu_treatment = lu_treatmnt, label, year, deciles, shape_area)
+  select(lu, lu_treatment = lu_treatmnt, label, year, deciles, shape_area) |>
+  bind_rows(sf_lu_new)
 
-# LUs from 2021
-sf_lu_2021 <- sf_lu |>
-  filter(year == "2021") |>
-  st_transform(3400)
 
 # 2023 JEMS (Joint Environmental Monitoring Sites)
-sf_jem_2023 <- read_csv(paste0(g_drive, "Data/jems_2023_v4.csv")) |>
+sf_jem <- read_csv(paste0(g_drive, "Data/OSM JEMs 2021-2024.csv")) |>
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
   st_transform(3400) |>
-  st_buffer(dist = 1500, nQuadSegs = 100) |>
-  select(lu, year, veg_type = type, hf_treatment = treatment, site_name)
+  st_buffer(dist = 1500, nQuadSegs = 100)
 
-sf_jem <- st_read(paste0(g_drive, "Data/Spatial/JEMs_2021_2022_1000m_buffer.shp")) |>
-  st_transform(3400) |>
-  # Clean
-  clean_names() %>%
-  mutate(site_name = ifelse(is.na(site_name), site_name_3, site_name),
-         lu = as.numeric(str_extract(site_name, "[^-]+")),
-         veg_type = case_when(
-           str_detect(site_name, "DM") ~ "DecidMix40",
-           str_detect(site_name, "TL") ~ "TreedLow20",
-           TRUE ~ type),
-         hf_treatment = case_when(
-           str_detect(site_name, "-C") ~ "Low Disturbance/Reference",
-           str_detect(site_name, "-Rd") ~ "Roads",
-           str_detect(site_name, "-SL") ~ "Dense Linear Features",
-           str_detect(site_name, "-HW") ~ "High Activity Insitu Well Pads",
-           str_detect(site_name, "-LW") ~ "Low Activity Well Pads",
-           str_detect(site_name, "-PM") ~ "Plant/Mine",
-           str_detect(site_name, "-PI") ~ "Pre-Insitu",
-           TRUE ~ treatment),
-         year = as.numeric(ifelse(lu == "2" | lu == "3" | lu == "4" | lu == "8", "2021", "2022"))) %>%
-  select(lu, year, veg_type, hf_treatment, site_name) |>
-  bind_rows(sf_jem_2023) |>
-  mutate(hf_treatment = ifelse(str_detect(hf_treatment, "Plant/Mine"), "Plant/Mine Buffer", hf_treatment))
-
-# Camera/ARU sites - from Cris, September 2023
+# Deployed camera/ARU sites - from Cris, September 2023
 sf_camaru <- st_read(paste0(g_drive, "Data/Spatial/OSM_TBM_Cam_2021_23.shp")) |>
   st_transform(4326)
 
-# All treatment and habitat areas
-sf_all <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_LU.shp")) |>
-  clean_names() |>
-  select(type, treatment) |>
-  filter(!treatment == "Plant/Mine Buffer") |>
-  #st_intersection(sf_jem) |>
-  st_transform(4326)
+# 2024 camera sites - from raw csv file
+sf_camaru_24 <- read_csv(paste0(g_drive, "OSM BADR 2024-25 CAMARU Sites_v2.csv")) |>
+  st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) |>
+  filter(Status_2024 == "New Location" | Status_2024 == "Re-Visit") |>
+  filter(!str_detect(Site_ID, "L$"))
 
-sf_all_2021 <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_LU.shp")) |>
+sf_camaru_24 |>
+  st_transform(3400) |>
+  st_write(paste0(g_drive, "Data/proposed_camaru_locations_osm_2024_v3.shp"))
+
+#st_write(sf_camaru, paste0(g_drive, "Data/proposed_camaru_locations_osm_2024_v2.shp"))
+
+sf_lu_2024 <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_new_LU.shp")) |>
   clean_names() |>
   select(type, treatment) |>
-  filter(!treatment == "Plant/Mine Buffer") |>
-  st_intersection(sf_lu_2021) |>
+  filter(!treatment == "Plant/Mine") |>
+  st_intersection(sf_jem) |>
   st_transform(4326) |>
-  select(type, treatment, lu, year) |>
-  st_cast("POLYGON")
+  mutate(lu = 10,
+         year = 2024) |>
+  select(type, treatment, lu, jem, year) |>
+  mutate(year = as.character(year))
+
+# All treatment and habitat areas
+sf_lu_all <- st_read(paste0(g_drive, "Data/Spatial/Veg_Treatment_Clip_to_LU.shp")) |>
+  clean_names() |>
+  select(type, treatment) |>
+  filter(!treatment == "Plant/Mine") |>
+  st_intersection(sf_jem) |>
+  st_transform(4326) |>
+  st_cast("POLYGON") |>
+  select(type, treatment, lu, jem, year) |>
+  bind_rows(sf_lu_2024)
 
 # TreedLow20 layer
-treedlow <- sf_all |>
+treedlow <- sf_lu_all |>
   filter(type == "TreedLow20")
 
 # DecidMix40 layer
-decidmix <- sf_all |>
+decidmix <- sf_lu_all |>
   filter(type == "DecidMix40") |>
   rename(Treatment = treatment)
 
@@ -122,6 +119,29 @@ cam <- makeAwesomeIcon(
   library = "ion",
   markerColor = "white"
 )
+
+cam24 <- makeAwesomeIcon(
+  icon = "camera",
+  iconColor = "white",
+  library = "ion",
+  markerColor = "lightblue"
+)
+
+# Proposed Pike 2 development
+pike_cpf <- st_read(paste0(g_drive, "Data/Spatial/Pike2/Pike2_ProposedCPF.shp")) |>
+  st_transform(4326) |>
+  mutate(TYPE = "Central Processing Facility") |>
+  select(TYPE)
+
+pike_pads <- st_read(paste0(g_drive, "Data/Spatial/Pike2/Pike2_ProposedPadSites.shp")) |>
+  st_transform(4326) |>
+  select(TYPE)
+
+pike_dist <- st_read(paste0(g_drive, "Data/Spatial/Pike2/Pike2_ProposedNewDist.shp")) |>
+  st_transform(4326) |>
+  select(TYPE = DTYPE)
+
+pike <- bind_rows(pike_cpf, pike_pads, pike_dist)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -154,7 +174,10 @@ map <- sf_osr |>
   addMapPane(name = "Boundaries LU", zIndex = 410) |>
   addMapPane(name = "Boundaries JEM", zIndex = 415) |>
   addMapPane(name = "Habitat Treatment Data", zIndex = 420) |>
-  addMapPane(name = "2023 Camera Sites", zIndex = 430) |>
+  addMapPane(name = "Pike 2 Development", zIndex = 425) |>
+  addMapPane(name = "Deployed Cameras", zIndex = 430) |>
+  addMapPane(name = "Proposed Cameras", zIndex = 435) |>
+
 
   # Add polygon layers:
 
@@ -192,11 +215,11 @@ map <- sf_osr |>
               fillOpacity = 0.1,
               group = "JEM Sites",
               options = leafletOptions(pane = "Boundaries JEM"),
-              popup = paste("Habitat Target: ", "<b>", sf_jem$veg_type, "</b>", "<br>",
+              popup = paste("Habitat Target: ", "<b>", sf_jem$type, "</b>", "<br>",
                             "<br>",
-                            "Treatment Target: ", "<b>", sf_jem$hf_treatment, "</b>", "<br>",
+                            "Treatment Target: ", "<b>", sf_jem$treatment, "</b>", "<br>",
                             "<br>",
-                            "JEM Site Code: ", "<b>", sf_jem$site_name, "</b>"),
+                            "JEM Site Code: ", "<b>", sf_jem$jem, "</b>"),
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
 
   # Decidmix40 + HF treatments layer
@@ -213,23 +236,45 @@ map <- sf_osr |>
               popup = paste("Treatment: ", "<b>", treedlow$treatment, "</b>"),
               highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
 
-  addAwesomeMarkers(data = sf_camaru,
-                    icon = cam,
-                    group = "Cam/ARU",
-                    options = leafletOptions(pane = "2023 Camera Sites"),
-                    popup = paste("Location: ", "<b>", sf_camaru$Site_ID, "</b>",
+  addPolygons(data = pike,
+              color = "black",
+              fillColor = "white",
+              weight = 1, smoothFactor = 0.2, opacity = 1, fillOpacity = 0.4, group = "Pike 2 Proposed In Situ Development",
+              options = leafletOptions(pane = "Pike 2 Development"),
+              popup = paste("Disturbance Type: ", "<b>", pike$TYPE, "</b>"),
+              highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) |>
+
+  addAwesomeMarkers(data = sf_camaru_24,
+                    icon = cam24,
+                    group = "2024 Cam/ARUs (Proposed)",
+                    options = leafletOptions(pane = "Proposed Cameras"),
+                    popup = paste("Location: ", "<b>", sf_camaru_24$Site_ID, "</b>",
                                   "<br>", "<br>",
                                   "Notes:", "<br>"
                                   )) |>
+
+  addAwesomeMarkers(data = sf_camaru,
+                    icon = cam,
+                    group = "2021-2023 Cam/ARUs",
+                    options = leafletOptions(pane = "Deployed Cameras"),
+                    popup = paste("Location: ", "<b>", sf_camaru$Site_ID, "</b>",
+                                  "<br>", "<br>",
+                                  "Notes:", "<br>"
+                    )) |>
 
   # Layers control
   addLayersControl(overlayGroups = c("Satellite Imagery",
                                      "Landscape Units",
                                      "JEM Sites",
-                                     "Cam/ARU"),
+                                     "2021-2023 Cam/ARUs",
+                                     "2024 Cam/ARUs (Proposed)",
+                                     "Pike 2 Proposed In Situ Development"),
                    baseGroups = c("None", "Habitat: DecidMix40+", "Habitat: TreedLow20+"),
                    options = layersControlOptions(collapsed = FALSE),
                    position = "topright") |>
+
+  hideGroup(c("Pike 2 Proposed In Situ Development",
+            "2021-2023 Cam/ARUs")) |>
 
   # Legend
   addLegend(data = decidmix, position = "topright", pal = pal_decid,
@@ -242,7 +287,7 @@ map
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Save map
-htmlwidgets::saveWidget(map, file = "./docs/osm_cam-aru-vp_site_map.html", selfcontained = FALSE)
+htmlwidgets::saveWidget(map, file = "./docs/osm_cam-aru_site_map.html", selfcontained = FALSE)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
