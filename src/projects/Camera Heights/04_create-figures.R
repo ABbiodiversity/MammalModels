@@ -22,6 +22,7 @@ library(forcats)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/projects/Camera-Heights/"
 
 # Load previously processed data:
+
 df_tifc <-       table
 df_detections <- read_csv(paste0(g_drive, "data/processed/heights-experiment_independent-detections.csv"))
 df_images <-     read_csv(paste0(g_drive, "data/processed/heights-experiment_summary-of-images.csv"))
