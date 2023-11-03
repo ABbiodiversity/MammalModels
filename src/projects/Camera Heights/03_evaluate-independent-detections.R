@@ -137,7 +137,7 @@ df_no_half <- df |>
          total_images_full_height = n_images.y)
 
 # What's the sp distribution here? Lots of WTD. Weird.
-check <- df_no_full |> group_by(common_name) |> tally() |> arrange(desc(n))
+check <- df_no_half |> group_by(species_common_name) |> tally() |> arrange(desc(n))
 
 # No detection at the full height camera.
 df_no_full <- df |>
@@ -148,7 +148,7 @@ df_no_full <- df |>
          total_images_full_height)
 
 # What's the sp distribution here? Still lots of WTD. I guess it's a sheer volume thing.
-check <- df_no_half |> group_by(common_name) |> tally() |> arrange(desc(n))
+check <- df_no_full |> group_by(species_common_name) |> tally() |> arrange(desc(n))
 
 # Put it all together
 df_detections <- bind_rows(df_matches, df_no_full, df_no_half)
@@ -164,7 +164,7 @@ sp_of_interest <- c("Black Bear", "White-tailed Deer", "Moose", "Coyote", "Couga
 boot <- df_detections |>
   filter(species_common_name %in% sp_of_interest) |>
   # Only BDT
-  filter(str_detect(location, "OG-ALPAC")) |>
+  #filter(str_detect(location, "OG-ALPAC")) |>
   group_by(species_common_name) |>
   # Create variable of series_num (by species) to use as unit of resampling
   mutate(series_num = row_number()) |>
@@ -172,7 +172,7 @@ boot <- df_detections |>
 
 sp.list <- sort(unique(boot$species_common_name))
 
-niter <- 1000
+niter <- 500
 bs1 <- array(0, c(length(sp.list), 2, niter))
 
 dimnames(bs1)[[1]] <- sp.list
@@ -242,8 +242,9 @@ table_final <- boot |>
 
 # Write results
 
-write_csv(df_detections, "./data/processed/heights-experiment_independent-detections.csv")
+write_csv(df_detections, paste0(g_drive, "Results/Comparisons/Heights/heights-experiment_independent-detections-all.csv"))
 
-write_csv(table_final, "./data/processed/heights-experiment_summary-of-images.csv")
+# Two versions - just BDT, and with all the data.
+write_csv(table_final, paste0(g_drive, "Results/Comparisons/Heights/heights-experiment_summary-of-images-all.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
