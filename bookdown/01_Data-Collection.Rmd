@@ -1,0 +1,61 @@
+# Data Collection
+
+## ABMI use of remote cameras
+
+The ABMI has been using remote cameras to monitor mammal species in the province since 2014. 
+
+As of `r Sys.Date()`, the ABMI has deployed X number of cameras across the province. 
+
+## Camera deployment protocols
+
+The ABMI's remote camera deployment protocols can be accessed here: [Terrestrial ABMI Autonomous Recording Unit (ARU) and Remote Camera Trap Protocols](https://abmi.ca/home/publications/551-600/599).
+
+## List of camera projects
+
+The following camera projects have been deployed by the ABMI:
+
+```{r, echo = FALSE, eval = TRUE}
+
+library(wildRtrax)
+library(keyring)
+library(tidyverse)
+library(kableExtra)
+
+Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
+           WT_PASSWORD = key_get("WT_PASSWORD", keyring = "wildtrax"))
+
+wt_auth()
+
+abmi_projects <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(organization == "ABMI",
+         !str_detect(project, "ACME|Pilot|Elk Island|Hare Coat|Sahtu|Ticks|Compression|wildRtrax|first|Lemming|Zoo")) |>
+  select(Project = project, Cameras = tasks, Status = status) |>
+  arrange(desc(Cameras))
+
+kable(abmi_projects)
+
+```
+
+
+### Image Tagging
+
+Image tagging is done on the [WildTrax](https://wildtrax.ca/about/) platform. Raw data is also publicly from the ABMI via this platform.
+
+The tagging protocols can be accessed here: 
+
+There is a companion R package, *wildRtrax*, which is also publicly available and contains many useful functions for downloading and analyzing camera data on the platform. Throughout this document, references will be made to functions within this package.  
+
+## Species detections (2014-2021)
+
+Mammal species detections at ABMI sites sampled with cameras between 2014 and 2021.
+
+Shiny app.  
+
+## Deployment duration lengths
+
+Here we can include all those figures. Yay. 
+
+
+
+
+
