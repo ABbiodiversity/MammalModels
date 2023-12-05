@@ -10,13 +10,13 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Attach packages
-library(readr)
-library(purrr)
+library(tidyverse)
 library(fuzzyjoin)
-library(lubridate)
+
+g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Evaluation of independent detections from script 01
-df_series <- read_csv("./data/processed/heights-experiment_series.csv")
+df_series <- read_csv(paste0(g_drive, "data/processed/series-summary/camera-heights-series.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -24,21 +24,38 @@ df_series <- read_csv("./data/processed/heights-experiment_series.csv")
 
 df_series_summary <- df_series |>
   # Make adjustment to one deployment to line up times properly
-  mutate(date_detected1 = case_when(
-    location == "760-NE" & project == "ABMI Height Comparison 2022" ~ date_detected %m+% seconds(76),
-    TRUE ~ date_detected
+  mutate(image_date_time = case_when(
+    location == "760-NE_0.5m" ~ image_date_time %m+% seconds(76),
+    location == "OG-ALPAC-602-2-NE_1m" ~ image_date_time %m+% seconds(11),
+    location == "OG-ALPAC-602-2-SW_1m" ~ image_date_time %m+% seconds(34),
+    location == "OG-ALPAC-637-2-SW_1m" ~ image_date_time %m+% seconds(55),
+    location == "OG-ALPAC-724-3-SE_1m" ~ image_date_time %m-% seconds(63),
+    location == "OG-ALPAC-724-4-NE_1m" ~ image_date_time %m-% seconds(38),
+    location == "OG-ALPAC-724-4-SE_1m" ~ image_date_time %m+% seconds(15),
+    location == "OG-ALPAC-724-6-NE_1m" ~ image_date_time %m+% seconds(60),
+    location == "OG-ALPAC-761-1-NE_1m" ~ image_date_time %m+% seconds(43),
+    location == "OG-ALPAC-761-1-SE_1m" ~ image_date_time %m+% seconds(41),
+    location == "OG-ALPAC-761-2-NE_1m" ~ image_date_time %m-% seconds(22),
+    location == "OG-ALPAC-761-3-NE_1m" ~ image_date_time %m+% seconds(11),
+    location == "OG-ALPAC-761-3-SE_1m" ~ image_date_time %m-% seconds(18),
+    location == "OG-ALPAC-787-2-NW_1m" ~ image_date_time %m-% seconds(3576),
+    location == "OG-ALPAC-787-2-SW_1m" ~ image_date_time %m-% seconds(31),
+    location == "OG-ALPAC-787-3-NE_1m" ~ image_date_time %m+% seconds(72),
+    location == "OG-ALPAC-787-3-SE_1m" ~ image_date_time %m-% seconds(22),
+    TRUE ~ image_date_time
   )) |>
-  group_by(series_num, location, project, common_name) |>
-  summarise(start = min(date_detected),
-            end = max(date_detected),
+  group_by(series_num, location, species_common_name) |>
+  summarise(start = min(image_date_time),
+            end = max(image_date_time),
             n_images = n()) |>
   ungroup() |>
   # Add a 10-second buffer onto each side
   mutate(start = start %m-% seconds(10),
          end = end %m+% seconds(10)) |>
-  select(series_num, location, project, common_name, start, end, n_images) |>
+  select(series_num, location, species_common_name, start, end, n_images) |>
+  separate(location, into = c("location", "height"), sep = "_") |>
   # Split into two lists with dataframe elements by project
-  group_split(project) |>
+  group_split(height) |>
   # Fuzzy join - join is done by an overlap in the interval between start and end
   reduce(interval_full_join, by = c("start", "end"))
 
@@ -60,11 +77,11 @@ df_int_len <- df_series_summary |>
 # Calculate number of 'detections' were recorded by each camera per event:
 
 df <- df_series_summary |>
-  # .x is the 1m camera
+  # .x is the 0.5 camera
   group_by(series_num.x) |>
   add_count(name = "count_x") |>
   ungroup() |>
-  # .y is the 0.5m camera
+  # .y is the 1m camera
   group_by(series_num.y) |>
   add_count(name = "count_y") |>
   arrange() |>
@@ -72,7 +89,7 @@ df <- df_series_summary |>
 
 # First - a potential issue of mistaken classification with the tagging. Are there matched detections with diff sp?
 diff_sp <- df |>
-  filter(!common_name.x == common_name.y)
+  filter(!species_common_name.x == species_common_name.y)
 # Yes. This occurred 9 times. Not too big of a deal, something to correct eventually though.
 
 # Let's look at the 1:1 matches
@@ -83,8 +100,8 @@ df_1to1_matches <- df |>
 
 # Now the many:1 matches (in either direction)
 df_mult_matches <- df |>
-  filter(!is.na(project.x),
-         !is.na(project.y),
+  filter(!is.na(height.x),
+         !is.na(height.y),
          !(count_x == "1" & count_y == "1")) |>
   # Calculate total number of images across multiple series ... kind of tricky here!
   group_by(series_num.x) |>
@@ -105,33 +122,33 @@ df_mult_matches <- df |>
 
 # Bind the matches together - 578 total detections.
 df_matches <- bind_rows(df_1to1_matches, df_mult_matches) |>
-  select(location = location.x, common_name = common_name.x, start_full_height = start.x, end_full_height = end.x,
-         start_half_height = start.y, end_half_height = end.y, total_images_full_height = total_images_from_x,
-         total_images_half_height = total_images_from_y)
+  select(location = location.x, species_common_name = species_common_name.x, start_half_height = start.x, end_half_height = end.x,
+         start_full_height = start.y, end_full_height = end.y, total_images_half_height = total_images_from_x,
+         total_images_full_height = total_images_from_y)
 
 # Now we assess the detections that were missed by one of the cameras.
 
-# No detection at the full height camera. 553 total detections. Crazy!
-df_no_full <- df |>
-  filter(is.na(project.x)) |>
-  mutate(total_images_full_height = 0) |>
-  select(location = location.y, common_name = common_name.y, start_full_height = start.x, end_full_height = end.x,
-         start_half_height = start.y, end_half_height = end.y, total_images_full_height,
-         total_images_half_height = n_images.y)
+# No detection at the half height camera.
+df_no_half <- df |>
+  filter(is.na(height.x)) |>
+  mutate(total_images_half_height = 0) |>
+  select(location = location.y, species_common_name = species_common_name.y, start_half_height = start.x, end_half_height = end.x,
+         start_full_height = start.y, end_full_height = end.y, total_images_half_height,
+         total_images_full_height = n_images.y)
 
 # What's the sp distribution here? Lots of WTD. Weird.
-check <- df_no_full |> group_by(common_name) |> tally() |> arrange(desc(n))
+check <- df_no_half |> group_by(species_common_name) |> tally() |> arrange(desc(n))
 
-# No detection at the half height camera. 263 total detections. Still kinda crazy.
-df_no_half <- df |>
-  filter(is.na(project.y)) |>
-  mutate(total_images_half_height = 0) |>
-  select(location = location.x, common_name = common_name.x, start_full_height = start.x, end_full_height = end.x,
-         start_half_height = start.y, end_half_height = end.y, total_images_full_height = n_images.x,
-         total_images_half_height)
+# No detection at the full height camera.
+df_no_full <- df |>
+  filter(is.na(height.y)) |>
+  mutate(total_images_full_height = 0) |>
+  select(location = location.x, species_common_name = species_common_name.x, start_half_height = start.x, end_half_height = end.x,
+         start_full_height = start.y, end_full_height = end.y, total_images_half_height = n_images.x,
+         total_images_full_height)
 
 # What's the sp distribution here? Still lots of WTD. I guess it's a sheer volume thing.
-check <- df_no_half |> group_by(common_name) |> tally() |> arrange(desc(n))
+check <- df_no_full |> group_by(species_common_name) |> tally() |> arrange(desc(n))
 
 # Put it all together
 df_detections <- bind_rows(df_matches, df_no_full, df_no_half)
@@ -145,15 +162,17 @@ sp_of_interest <- c("Black Bear", "White-tailed Deer", "Moose", "Coyote", "Couga
                     "Snowshoe Hare", "Fisher", "Canada Lynx", "Gray Wolf", "Red Squirrel")
 
 boot <- df_detections |>
-  filter(common_name %in% sp_of_interest) |>
-  group_by(common_name) |>
+  filter(species_common_name %in% sp_of_interest) |>
+  # Only BDT
+  #filter(str_detect(location, "OG-ALPAC")) |>
+  group_by(species_common_name) |>
   # Create variable of series_num (by species) to use as unit of resampling
   mutate(series_num = row_number()) |>
   ungroup()
 
-sp.list <- sort(unique(boot$common_name))
+sp.list <- sort(unique(boot$species_common_name))
 
-niter <- 1000
+niter <- 500
 bs1 <- array(0, c(length(sp.list), 2, niter))
 
 dimnames(bs1)[[1]] <- sp.list
@@ -166,7 +185,7 @@ set.seed(12345)
 for (sp in 1:length(sp.list)) {
 
   print(paste(sp,length(sp.list),date()))
-  boot.sp<-boot[boot$common_name==sp.list[sp],]
+  boot.sp<-boot[boot$species_common_name==sp.list[sp],]
   series.list <- sort(unique(boot.sp$series_num))
 
   for (iter in 1:niter) {
@@ -197,8 +216,8 @@ for (sp in 1:length(sp.list)) {
 
 # Collect values from matrices into table
 table <- data.frame(
-  common_name = sort(unique(boot$common_name)),
-  npairs = as.numeric(by(boot$series_num, boot$common_name, length)),
+  species_common_name = sort(unique(boot$species_common_name)),
+  npairs = as.numeric(by(boot$series_num, boot$species_common_name, length)),
   half_images_as_pct_of_full_median = bs.sum[,1,1],
   half_images_as_pct_of_full_lci = bs.sum[,1,2],
   half_images_as_pct_of_full_uci = bs.sum[,1,3]
@@ -206,14 +225,14 @@ table <- data.frame(
 
 # Create table for Appendix in report
 table_final <- boot |>
-  group_by(common_name) |>
+  group_by(species_common_name) |>
   # Calculate total number of images by camera/species
   summarise(total_images_half = sum(total_images_half_height),
             total_images_full = sum(total_images_full_height),
             avg_images_half = round(mean(total_images_half_height), digits = 2),
             avg_images_full = round(mean(total_images_full_height), digits = 2)) |>
   # Join bootstrapping results
-  left_join(table, by = "common_name") |>
+  left_join(table, by = "species_common_name") |>
   mutate(factor_median = round(half_images_as_pct_of_full_median / 100, digits = 2),
          factor_lci = round(half_images_as_pct_of_full_lci / 100, digits = 2),
          factor_uci = round(half_images_as_pct_of_full_uci / 100, digits = 2)) |>
@@ -223,8 +242,9 @@ table_final <- boot |>
 
 # Write results
 
-write_csv(df_detections, "./data/processed/heights-experiment_independent-detections.csv")
+write_csv(df_detections, paste0(g_drive, "Results/Comparisons/Heights/heights-experiment_independent-detections-all.csv"))
 
-write_csv(table_final, "./data/processed/heights-experiment_summary-of-images.csv")
+# Two versions - just BDT, and with all the data.
+write_csv(table_final, paste0(g_drive, "Results/Comparisons/Heights/heights-experiment_summary-of-images-all.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------

@@ -36,7 +36,7 @@ boot <- df_tt |>
          half_height = `0.5m`) |>
   select(loc_sp, 3:6, location, sp) |>
   # Remove deployment-species-season combos without any duration/images at either camera
-  filter(half_height > 0 | full_height > 0) |>
+  filter(half_height > 0 | full_height > 0)
   # Remove one weird location
 
 
@@ -106,6 +106,6 @@ table <- data.frame(
 
 # Save results
 
-write_csv(table, "./data/processed/heights-experiment_tifc-bootstrap-comp.csv")
+write_csv(table, paste0(g_drive, "data/processed/heights-experiment_tifc-bootstrap-comp.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------

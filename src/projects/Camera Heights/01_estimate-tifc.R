@@ -206,6 +206,8 @@ df_series <- data_subset |>
          diff_time_previous_adj = ifelse(gap_prob == 1, diff_time_previous * (1 - pred), diff_time_previous),
          diff_time_next_adj = ifelse(lead(gap_prob == 1), diff_time_next * (1 - lead(pred)), diff_time_next))
 
+write_csv(df_series, paste0(g_drive, "data/processed/series-summary/camera-heights-series.csv"))
+
 # Vector of all project-locations
 dep <- df_series |>
   select(location) |>
