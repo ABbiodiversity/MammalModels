@@ -27,77 +27,32 @@ wt_auth()
 # Set path to Shared Google Drive (G Drive)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
-# Pull ABMI EH 2015 Project ID
+#-----------------------------------------------------------------------------------------------------------------------
 
-proj <- wt_get_download_summary(sensor_id = "CAM") |>
-  filter(str_detect(project, "ABMI Ecosystem Health 2015")) |>
-  pull(project_id)
+# TAGGING KEY
 
-# Load image report
-eh15_img_rep <- wt_download_report(project_id = proj,
-                                   sensor_id = "CAM",
-                                   reports = "image_report",
-                                   weather_cols = FALSE)
+# 'Ticks' (under health_diseases)
+# - 1 -> No ticks
+# - 2 -> Slight (0-15%)
+# - 3 -> Moderate (15-40%)
+# - 4 -> Extreme (40-80%)
+# - 5 -> Ghost (80%+)
 
-tag_report <- wt_download_report(project_id = proj,
-                                 sensor_id = "CAM",
-                                 reports = "tag",
-                                 weather_cols = FALSE)
-
-image_report_subset <- image_report |>
-  #filter(image_trigger_mode == "Motion Detection") |>
-  mutate(month = month(image_date_time)) |>
-  filter(month < 7) |>
-  select(location, image_id, image_date_time, media_url)
-
-tag_report_subset <- tag_report |>
-  filter(species_common_name == "Moose") |>
-  mutate(month = month(image_date_time)) |>
-  filter(month < 7) |>
-  select(location, image_id, image_date_time, species_common_name)
-
-images_to_download <- tag_report_subset |>
-  left_join(image_report_subset, by = c("location", "image_id", "image_date_time")) |>
+# - UNKN (Not visible due to image quality)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Folder location for images
-folder <- "G:/Shared drives/ABMI Camera Mammals/projects/Winter Ticks/Moose Images/"
 
-locations <- unique(images_to_download$location)
+proj <- 2154
 
-for (i in locations) {
+data <- wt_download_report(project_id = proj,
+                           sensor_id = "CAM",
+                           reports = "main") |>
+  select(location, image_date_time, species_common_name,
+         individual_count, age_class, sex_class,
+         health_diseases, tag_comments, tag_needs_review)
 
-  print(paste0("Working on location ", i))
 
-  # Create directory for each location
-  # Does it already exist?
-  already.exist <- dir.exists(paste0(folder, i))
-  if (already.exist) {
-    print("Directory already exists, moving on to next locations")
-    next
-  } else {
-    dir.create(paste(folder, i, sep = ""))
-  }
-
-  # Root directory for location
-  dir <- paste(folder, i, "/", sep = "")
-
-  # Subset the data for only images only from this location
-  d <- images_to_download[images_to_download$location == i, ]
-
-  for (u in 1:nrow(d)) {
-
-    url <- d[u, 5]
-    date_time <- d[u, 3]
-    location <- d[u, 1]
-    id <- d[u, 2]
-    date <- strptime(date_time, format = "%Y-%m-%d")
-    try(download.file(url, destfile = paste0(dir, location, "_", date, "_", id, ".jpg"), mode = 'wb'))
-
-  }
-
-}
 
 
 
