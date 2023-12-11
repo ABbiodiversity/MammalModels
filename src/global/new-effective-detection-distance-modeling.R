@@ -46,6 +46,7 @@ df_edd_groups <- read_csv(paste0(g_drive, "data/lookup/species-distance-groups.c
   # Let's change these up
   # Focus on the important ones for now
   filter(species_common_name %in% sp) |>
+  # New species groups (I think these make more sense, but we can experiment)
   mutate(dist_group = case_when(
     species_common_name == "Gray Wolf" ~ "Gray Wolf",
     str_detect(species_common_name, "Moose|Caribou|Elk") ~ "LargeUngulates",
@@ -56,12 +57,17 @@ df_edd_groups <- read_csv(paste0(g_drive, "data/lookup/species-distance-groups.c
     TRUE ~ dist_group
   ))
 
-# Old season date cutoffs (julian day)
+# Old arbitrary season date cutoffs (julian day)
 summer.start.j <- 106
 summer.end.j <- 288
 
+summer_green <- 143
 
 #-----------------------------------------------------------------------------------------------------------------------
+
+# Extra pole tagging done in September 2020
+df_pole_extra <- read_csv(paste0(g_drive, "data/processed/detection-distance/clean-data/extra-pole-position_2021-06-21.csv")) |>
+  rename(species_common_name = common_name, image_date_time = date_detected)
 
 # Pole position data
 df_pole <- read_csv(
@@ -83,8 +89,10 @@ df_pole <- read_csv(
   select(location, project, image_date_time = date_time_taken, species_common_name, distance) |>
   mutate(dashes = str_count(location, "-")) |>
   mutate(location = ifelse(dashes == "3", paste0(location, "-1"), location)) |>
+  select(-dashes) |>
+  mutate(image_date_time = ymd_hms(image_date_time)) |>
   # Join extra tagging
-  # bind_rows(df_pole_extra) |>
+  bind_rows(df_pole_extra) |>
   # Make columns of number of individuals at each pole position
   mutate(at_pole = str_count(distance, "A"),
          behind_pole = str_count(distance, "B"),
@@ -111,28 +119,134 @@ df_pole_veg <- df_pole |>
   # Only use records where number_individuals = behind_pole or front_pole
   filter(n == behind_pole | n == front_pole,
          !is.na(primary_category)) |>
-  mutate(image_date_time = ymd_hms(image_date_time)) |>
   # Create season variables based on julian day, and calculate the proportion of individuals behind pole
   mutate(season_old = as.factor(ifelse(julian  >= summer.start.j & julian <= summer.end.j, "summer", "winter")),
          interval = interval(snow_start, snow_gone),
          intersect = image_date_time %within% interval,
          intersect = ifelse(is.na(intersect), "Not applicable", intersect),
-         season_new = as.factor(ifelse(image_date_time <= snow_gone, "snow", "nonsnow")),
-         season_new = as.factor(if_else(season_new == "snow" & intersect == FALSE, "nonsnow", season_new)),
+         season_new1 = ifelse(image_date_time <= snow_gone, "snow", "nonsnow"),
+         season_new1 = if_else(season_new1 == "snow" & intersect == FALSE, "nonsnow", season_new1),
+         season_new1 = as.factor(ifelse(is.na(season_new1), "nonsnow", season_new1)),
+         snow_gone_early = snow_gone %m-% days(10),
+         season_new2 = ifelse(image_date_time <= snow_gone_early, "snow", "nonsnow"),
+         season_new2 = if_else(season_new2 == "snow" & intersect == FALSE, "nonsnow", season_new2),
+         season_new2 = as.factor(ifelse(is.na(season_new2), "nonsnow", season_new2)),
+         julian_sge = as.numeric(format(ymd(snow_gone_early), "%j")),
+         season_new3 = case_when(
+           julian >= julian_sge & julian <= summer_green ~ "spring",
+           julian < julian_sge ~ "winter",
+           julian > summer_green ~ "summer"),
+         season_new3 = as.factor(ifelse(is.na(season_new3), "spring", season_new3)),
          prop_behind = behind_pole / n) |>
-  select(location, project, species_common_name, dist_group, n, prop_behind, VegHF, season_old,
-         primary_category, secondary_category, season_new)
+  select(dist_group, n, prop_behind, VegHF, season_old,
+         primary_category, secondary_category, season_new1, season_new2, season_new3)
 
 # What do I have of each dist_group and new veg category?
 check <- df_pole_veg |>
   group_by(dist_group, primary_category) |>
   tally()
 
+#-----------------------------------------------------------------------------------------------------------------------
 
+# Step 2. EDD Modeling.
 
+# Start with only Large Ungulates
+d.sp <- df_pole_veg |>
+  filter(dist_group == "LargeUngulates") |>
+  # Turn Forested Open-Shrubby to Open-Open (for now)
+  mutate(secondary_category = ifelse(secondary_category == "Open-Shrubby", "Open-Open", secondary_category)) |>
+  mutate(secondary_category = paste0(primary_category, "-", secondary_category)) |>
+  mutate_if(is.character, as.factor) |>
+  filter(secondary_category == "Open-Open")
+  group_by(secondary_category, season_new3) |>
+  add_count() |>
+  filter(nn >= 20) |>
+  as.data.frame()
 
+unique(d.sp$secondary_category)
 
+d.sp |>
+  group_by(secondary_category, season_new3) |>
+  tally()
 
+m <- list(NULL)
+
+  # Null model
+  #m[[1]]<-try(gam(prop_behind~1,weights=d.sp$n,data=d.sp,family="binomial"))
+  # Old - VegHF
+  #m[[2]]<-try(gam(prop_behind ~ VegHF, weights = d.sp$n, data=d.sp, family="binomial"))
+  # Old - Season as originally defined
+  #m[[3]]<-try(gam(prop_behind ~ season_old, weights = d.sp$n, data=d.sp, family="binomial"))
+  # Old - VegHF plus old season
+  #m[[4]]<-try(gam(prop_behind ~ VegHF + season_old, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Primary Category
+  m[[1]]<-try(gam(prop_behind ~ primary_category, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Secondary Category
+  m[[2]]<-try(gam(prop_behind ~ secondary_category, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Season 1 (Snow / Non-snow period)
+  #m[[1]]<-try(gam(prop_behind ~ season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Season 2 (Snow / Non-snow period minus 10 days)
+  #m[[2]]<-try(gam(prop_behind ~ season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Season 3 (Winter / Spring / Summer)
+  m[[3]]<-try(gam(prop_behind ~ season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Primary Category plus New Season 1
+  #m[[10]]<-try(gam(prop_behind ~ primary_category + season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Primary Category plus New Season 2
+  #m[[11]]<-try(gam(prop_behind ~ primary_category + season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Primary Category plus New Season 3
+  m[[4]]<-try(gam(prop_behind ~ primary_category + season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Secondary Category plus New Season 1
+  #m[[13]]<-try(gam(prop_behind ~ secondary_category + season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Secondary Category plus New Season 2
+  #m[[14]]<-try(gam(prop_behind ~ secondary_category + season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
+  # New - Secondary Category plus New Season 3
+  m[[5]]<-try(gam(prop_behind ~ secondary_category + season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
+
+  nModels<-length(m)
+
+  bic.ta<-rep(999999999,(nModels))
+
+  for (i in 1:nModels) {
+
+    bic.ta[i] <- BIC(m[[i]])
+
+  }
+
+  bic.delta<-bic.ta-min(bic.ta)
+  bic.exp<-exp(-1/2*bic.delta)
+  bic.wt<-bic.exp/sum(bic.exp)
+  best.model<-which.max(bic.wt)
+
+  # Okay, so for LargeUngulates it looks like Model 15 is by far the best.
+
+  # Let's predict this out.
+  newdata <- d.sp |>
+    select(secondary_category, season_new3) |>
+    distinct() |>
+    arrange(secondary_category)
+
+  predictions <- data.frame("prediction" = predict(m[[5]], newdata = newdata)) |>
+    mutate(prediction = 5 / sqrt(1 - plogis(prediction)))
+
+  results <- newdata |> bind_cols(predictions)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Let's visualize
+
+library(ggplot2)
+
+results |>
+  mutate(season_new3 = factor(season_new3, levels = c("winter", "spring", "summer"))) |>
+  ggplot(aes(x = secondary_category, y = prediction, fill = season_new3)) +
+  geom_col(position = position_dodge2(width = 0.7, preserve = "single")) +
+  scale_fill_manual(values = c("grey60", "#CD7F32", "darkgreen")) +
+  labs(y = "Effective Detection Distance (metres)") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 

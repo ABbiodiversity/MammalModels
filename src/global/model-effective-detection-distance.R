@@ -164,6 +164,7 @@ for (sp in 1:length(SpTable)) {
   }
 
   if (SpTable[sp]=="Bear" | SpTable[sp]=="Bighorn sheep" | SpTable[sp]=="Elk") bic.ta[8:14]<-999999999  # Too few winter data to fit properly
+
   bic.delta<-bic.ta-min(bic.ta)
   bic.exp<-exp(-1/2*bic.delta)
   bic.wt<-bic.exp/sum(bic.exp)
