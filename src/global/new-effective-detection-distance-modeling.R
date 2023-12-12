@@ -155,9 +155,8 @@ d.sp <- df_pole_veg |>
   filter(dist_group == "LargeUngulates") |>
   # Turn Forested Open-Shrubby to Open-Open (for now)
   mutate(secondary_category = ifelse(secondary_category == "Open-Shrubby", "Open-Open", secondary_category)) |>
-  mutate(secondary_category = paste0(primary_category, "-", secondary_category)) |>
+  mutate(secondary_category = paste0(primary_category, "_", secondary_category)) |>
   mutate_if(is.character, as.factor) |>
-  filter(secondary_category == "Open-Open")
   group_by(secondary_category, season_new3) |>
   add_count() |>
   filter(nn >= 20) |>
@@ -238,15 +237,27 @@ library(ggplot2)
 
 results |>
   mutate(season_new3 = factor(season_new3, levels = c("winter", "spring", "summer"))) |>
-  ggplot(aes(x = secondary_category, y = prediction, fill = season_new3)) +
+  mutate(prediction = round(prediction, digits = 1)) |>
+  separate(secondary_category, into = c("primary", "secondary"), sep = "_") |>
+  mutate(secondary = case_when(
+    secondary == "Closed-Closed" ~ "C-C",
+    secondary == "Open-Closed" ~ "O-C",
+    secondary == "Open-Open" ~ "O-O",
+    TRUE ~ secondary
+  )) |>
+  mutate(secondary_category = paste0(primary, " (", secondary, ")")) |>
+  ggplot(aes(x = secondary_category, y = prediction, fill = season_new3, label = prediction)) +
   geom_col(position = position_dodge2(width = 0.7, preserve = "single")) +
-  scale_fill_manual(values = c("grey60", "#CD7F32", "darkgreen")) +
-  labs(y = "Effective Detection Distance (metres)") +
+  geom_text(position = position_dodge2(width = 0.9, preserve = "single"), size = 2, vjust = -0.5) +
+  scale_fill_manual(values = c("#829EBC", "#CD7F32", "darkgreen")) +
+  scale_y_continuous(breaks = seq(0, 10, by = 2), limits = c(0, 10)) +
+  labs(y = "EDD (metres)",
+       title = "Large Ungulates") +
   theme_minimal() +
   theme(legend.position = "bottom",
         legend.title = element_blank(),
         axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1))
+        axis.text.x = element_text(angle = 72.5, hjust = 1, size = 8))
 
 
 
