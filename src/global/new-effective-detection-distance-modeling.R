@@ -152,20 +152,22 @@ check <- df_pole_veg |>
 
 # Start with only Large Ungulates
 d.sp <- df_pole_veg |>
-  filter(dist_group == "LargeUngulates") |>
+  filter(dist_group == "SmallMustelids") |>
   # Turn Forested Open-Shrubby to Open-Open (for now)
   mutate(secondary_category = ifelse(secondary_category == "Open-Shrubby", "Open-Open", secondary_category)) |>
   mutate(secondary_category = paste0(primary_category, "_", secondary_category)) |>
   mutate_if(is.character, as.factor) |>
   group_by(secondary_category, season_new3) |>
   add_count() |>
-  filter(nn >= 20) |>
+  #filter(nn >= 20) |>
+  filter(primary_category == "Forested",
+         season_new1 == "snow") |>
   as.data.frame()
 
 unique(d.sp$secondary_category)
 
 d.sp |>
-  group_by(secondary_category, season_new3) |>
+  group_by(secondary_category, season_new1) |>
   tally()
 
 m <- list(NULL)
@@ -173,33 +175,33 @@ m <- list(NULL)
   # Null model
   #m[[1]]<-try(gam(prop_behind~1,weights=d.sp$n,data=d.sp,family="binomial"))
   # Old - VegHF
-  #m[[2]]<-try(gam(prop_behind ~ VegHF, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[2]]<-try(gam(prop_behind ~ VegHF, weights = d.sp$n, data=d.sp, family="binomial"))
   # Old - Season as originally defined
-  #m[[3]]<-try(gam(prop_behind ~ season_old, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[3]]<-try(gam(prop_behind ~ season_old, weights = d.sp$n, data=d.sp, family="binomial"))
   # Old - VegHF plus old season
-  #m[[4]]<-try(gam(prop_behind ~ VegHF + season_old, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[4]]<-try(gam(prop_behind ~ VegHF + season_old, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Primary Category
-  m[[1]]<-try(gam(prop_behind ~ primary_category, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[5]]<-try(gam(prop_behind ~ primary_category, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Secondary Category
-  m[[2]]<-try(gam(prop_behind ~ secondary_category, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[1]]<-try(gam(prop_behind ~ secondary_category, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Season 1 (Snow / Non-snow period)
-  #m[[1]]<-try(gam(prop_behind ~ season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[7]]<-try(gam(prop_behind ~ season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Season 2 (Snow / Non-snow period minus 10 days)
-  #m[[2]]<-try(gam(prop_behind ~ season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[8]]<-try(gam(prop_behind ~ season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Season 3 (Winter / Spring / Summer)
-  m[[3]]<-try(gam(prop_behind ~ season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[9]]<-try(gam(prop_behind ~ season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Primary Category plus New Season 1
-  #m[[10]]<-try(gam(prop_behind ~ primary_category + season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[10]]<-try(gam(prop_behind ~ primary_category + season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Primary Category plus New Season 2
-  #m[[11]]<-try(gam(prop_behind ~ primary_category + season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[11]]<-try(gam(prop_behind ~ primary_category + season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Primary Category plus New Season 3
-  m[[4]]<-try(gam(prop_behind ~ primary_category + season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[12]]<-try(gam(prop_behind ~ primary_category + season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Secondary Category plus New Season 1
-  #m[[13]]<-try(gam(prop_behind ~ secondary_category + season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[13]]<-try(gam(prop_behind ~ secondary_category + season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Secondary Category plus New Season 2
-  #m[[14]]<-try(gam(prop_behind ~ secondary_category + season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[14]]<-try(gam(prop_behind ~ secondary_category + season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Secondary Category plus New Season 3
-  m[[5]]<-try(gam(prop_behind ~ secondary_category + season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[15]]<-try(gam(prop_behind ~ secondary_category + season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
 
   nModels<-length(m)
 
@@ -220,11 +222,11 @@ m <- list(NULL)
 
   # Let's predict this out.
   newdata <- d.sp |>
-    select(secondary_category, season_new3) |>
+    select(secondary_category) |>
     distinct() |>
     arrange(secondary_category)
 
-  predictions <- data.frame("prediction" = predict(m[[5]], newdata = newdata)) |>
+  predictions <- data.frame("prediction" = predict(m[[1]], newdata = newdata)) |>
     mutate(prediction = 5 / sqrt(1 - plogis(prediction)))
 
   results <- newdata |> bind_cols(predictions)
@@ -236,23 +238,25 @@ m <- list(NULL)
 library(ggplot2)
 
 results |>
-  mutate(season_new3 = factor(season_new3, levels = c("winter", "spring", "summer"))) |>
+  #mutate(season_new3 = factor(season_new3, levels = c("winter", "spring", "summer"))) |>
+  mutate(season_new2 = factor(season_new2, levels = c("snow", "nonsnow"))) |>
   mutate(prediction = round(prediction, digits = 1)) |>
-  separate(secondary_category, into = c("primary", "secondary"), sep = "_") |>
-  mutate(secondary = case_when(
-    secondary == "Closed-Closed" ~ "C-C",
-    secondary == "Open-Closed" ~ "O-C",
-    secondary == "Open-Open" ~ "O-O",
-    TRUE ~ secondary
-  )) |>
-  mutate(secondary_category = paste0(primary, " (", secondary, ")")) |>
-  ggplot(aes(x = secondary_category, y = prediction, fill = season_new3, label = prediction)) +
+  #separate(secondary_category, into = c("primary", "secondary"), sep = "_") |>
+  #mutate(secondary = case_when(
+  #  secondary == "Closed-Closed" ~ "C-C",
+  #  secondary == "Open-Closed" ~ "O-C",
+  #  secondary == "Open-Open" ~ "O-O",
+  #  TRUE ~ secondary
+  #)) |>
+  #mutate(secondary_category = paste0(primary, " (", secondary, ")")) |>
+  ggplot(aes(x = primary_category, y = prediction, fill = season_new2, label = prediction)) +
   geom_col(position = position_dodge2(width = 0.7, preserve = "single")) +
   geom_text(position = position_dodge2(width = 0.9, preserve = "single"), size = 2, vjust = -0.5) +
-  scale_fill_manual(values = c("#829EBC", "#CD7F32", "darkgreen")) +
-  scale_y_continuous(breaks = seq(0, 10, by = 2), limits = c(0, 10)) +
+  scale_fill_manual(values = c("#829EBC", "darkgreen")) +
+  #scale_fill_manual(values = c("#829EBC", "#CD7F32", "darkgreen")) +
+  scale_y_continuous(breaks = seq(0, 18, by = 2), limits = c(0, 18)) +
   labs(y = "EDD (metres)",
-       title = "Large Ungulates") +
+       title = "Coyote") +
   theme_minimal() +
   theme(legend.position = "bottom",
         legend.title = element_blank(),
