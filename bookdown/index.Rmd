@@ -8,16 +8,14 @@ bibliography:
 - book.bib
 - packages.bib
 description: |
-  This is a minimal example of using the bookdown package to write a book.
-  set in the _output.yml file.
-  The HTML output format for this example is bookdown::gitbook,
+  ABMI Camera Methods and Mammal Modeling
 link-citations: yes
-github-repo: "rstudio/bookdown-demo"
+github-repo: "ABbiodiversity/MammalModels"
 ---
 
 # Introduction
 
-The Alberta Biodiversity Monitoring Institute (ABMI) has developed a monitoring program for mammals within Alberta, Canada. This technical document contains information describing how the image data from remote camera traps deployed across the province is collected, processed, and analyzed. 
+The Alberta Biodiversity Monitoring Institute (ABMI) has developed a monitoring program for mammals within the province of Alberta, Canada. This technical document contains information describing how the image data from remote camera traps deployed across the province is collected, processed, and analyzed. 
 
 This document will be updated as necessary to reflect changes in available data, deployment protocols, and modeling procedures. Readers are also encouraged to visit the ABMI's [Biodiversity Browser](https://www.abmi.ca/home/data-analytics/biobrowser-home) for current mammal species results.
 
