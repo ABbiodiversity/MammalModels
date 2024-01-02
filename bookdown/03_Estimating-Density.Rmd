@@ -30,10 +30,62 @@ There are additional assumptions involved in the procedures to estimate effectiv
 
 A final consideration is the sampling distribution of density estimates. Because individual cameras sample tiny areas compared to the home ranges of the species they survey, the resulting sampling distribution can be horrendous – the majority of cameras never detect the species at all (density = 0), a few cameras record the species passing by once or twice for brief periods (low densities), and a very few number of cameras record long durations as the animals forage, rest, or play in front of the camera, or revisit a favourite spot repeatedly (very high densities). Longer duration camera deployments can help smooth out some of that extreme variation, but ultimately large numbers of cameras are required for precise estimates. Appropriate questions, rigorous study designs, and modest expectations are required for camera-based studies.
 
+## Probabilistic gaps
 
+From a pilot study, we determined that if there is a gap of less than 20 seconds between images of the same species at a camera, the animal is almost always still in the view (no evidence of it walking out and returning). Missing the odd time when it leaves the view for less than 20 seconds has little effect on estimates of the total time it is in the field-of-view. At the other end, if there is a gap of >120 seconds between images of the same species, this almost always represented animals leaving and then returning (i.e., the animal is seen walking out of the field-of-view, then walking back in). Gaps of 20-120 seconds are uncertain. These relatively long periods when the animal could be in the field-of-view or not are important when estimating the total duration animals are in the field-of-view, and thus density.
 
+Using images from the 2015 ABMI Ecosystem Health project, we checked each 20-120 second gap in series’ of native mammals for evidence of the animal leaving and returning. We supplemented the 2015 data for less common species using data from 2016 and 2017. We looked at several images on either side of gaps of 20-120 seconds. In each sequence, the animal was designated as having left the field-of-view during the 20-120 second gap if there was clear evidence of it walking out of the field-of-view and then returning (or a different individual entering the field-of-view). If the animal stayed in one location within the field-of-view, or sequential images showed the animal in disconnected places (as often happens with smaller animals), the animal was assumed to have stayed.
 
+Through this tagging procedure, we obtained the following training data to estimate the probability of an animal leaving during a gaps between 20 and 120 seconds between images. The `diff_time` variable refers to the number of seconds between images and the `left` variable refers to whether or not the individual left the camera field-of-view and returned ('Yes') or showed in the field-of-view for the duration of the gap ('No').  
 
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+
+raw_gap_data <- read_csv(paste0(g_drive, "data/processed/probabilistic-gaps/gap-leave-prob_raw-data_2021-10-05.csv")) |>
+  mutate(left = ifelse(left == "1", "Yes", "No")) |>
+  filter(!species_common_name == "Songbird") |>
+  group_by(species_common_name) |>
+  add_count() |>
+  ungroup() |>
+  mutate(rank = dense_rank(desc(n))) |>
+  filter(rank < 13) |>
+  mutate(species_common_name = fct_reorder(species_common_name, rank)) |>
+  select(1, 3, 4)
+
+```
+
+```{r, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+
+head(raw_gap_data, 10)
+
+```
+
+We can visualize this data in Figure \@ref(fig:gap). In general, observations where the animal stayed in the field of view are more closely clustered around the 20 second mark, and observations where the animal left the field of view are more evenly spread across the range of gap lengths.
+
+```{r gap, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, fig.showtext=TRUE, fig.align="left", fig.height=9}
+
+library(ggplot2)
+# abmi.themes is a custom R package for ABMI-themed ggplots
+library(abmi.themes)
+# Add Montserrat font
+add_abmi_fonts()
+
+# Plot of checked gaps
+raw_gap_data |>
+  mutate(left = as.factor(left)) %>%
+  ggplot(aes(x = diff_time, y = left, color = species_common_name)) +
+  geom_beeswarm(cex = 0.8) +
+  facet_wrap(~ species_common_name, nrow = 4) +
+  scale_color_viridis_d(direction = -1) +
+  theme_abmi() + # Custom ABMI theme
+  scale_y_discrete(labels = c("Stayed", "Left")) +
+  scale_x_continuous(breaks = seq(20, 120, by = 20), limits = c(20,120)) +
+  labs(y = "",
+       x = "Gap Length (s)",
+       title = "Did the animal leave the camera field of view?") +
+  theme(legend.position = "none",
+        strip.text = element_text(size = 10))
+
+```
 
 
 

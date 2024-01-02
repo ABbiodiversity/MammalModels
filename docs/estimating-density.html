@@ -52,28 +52,6 @@
 <link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
 <link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
 <script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
-<link href="libs/crosstalk-1.1.1.9000/css/crosstalk.min.css" rel="stylesheet" />
-<script src="libs/crosstalk-1.1.1.9000/js/crosstalk.min.js"></script>
-<link href="libs/selectize-0.12.4/css/selectize.bootstrap3.css" rel="stylesheet" />
-<script src="libs/selectize-0.12.4/js/selectize.min.js"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<link href="libs/bootstrap-grid-3.4.1/bootstrap-grid.min.css" rel="stylesheet" />
-<script src="libs/htmlwidgets-1.6.2/htmlwidgets.js"></script>
-<link href="libs/leaflet-1.3.1/leaflet.css" rel="stylesheet" />
-<script src="libs/leaflet-1.3.1/leaflet.js"></script>
-<link href="libs/leafletfix-1.0.0/leafletfix.css" rel="stylesheet" />
-<script src="libs/proj4-2.6.2/proj4.min.js"></script>
-<script src="libs/Proj4Leaflet-1.0.1/proj4leaflet.js"></script>
-<link href="libs/rstudio_leaflet-1.3.1/rstudio_leaflet.css" rel="stylesheet" />
-<script src="libs/leaflet-binding-2.1.2/leaflet.js"></script>
-<script src="libs/leaflet-providers-1.9.0/leaflet-providers_1.9.0.js"></script>
-<script src="libs/leaflet-providers-plugin-2.1.2/leaflet-providers-plugin.js"></script>
-<link href="libs/lfx-fullscreen-1.0.2/lfx-fullscreen-prod.css" rel="stylesheet" />
-<script src="libs/lfx-fullscreen-1.0.2/lfx-fullscreen-prod.js"></script>
-<link href="libs/leaflet-easybutton-1.3.1/easy-button.css" rel="stylesheet" />
-<script src="libs/leaflet-easybutton-1.3.1/easy-button.js"></script>
-<script src="libs/leaflet-easybutton-1.3.1/EasyButton-binding.js"></script>
-<link href="libs/ionicons-2.0.1/ionicons.min.css" rel="stylesheet" />
 
 
 <style type="text/css">
@@ -208,6 +186,7 @@ div.csl-indent {
 <li class="chapter" data-level="3.1.1" data-path="estimating-density.html"><a href="estimating-density.html#simple-explanation"><i class="fa fa-check"></i><b>3.1.1</b> Simple Explanation</a></li>
 <li class="chapter" data-level="3.1.2" data-path="estimating-density.html"><a href="estimating-density.html#assumptions"><i class="fa fa-check"></i><b>3.1.2</b> Assumptions</a></li>
 </ul></li>
+<li class="chapter" data-level="3.2" data-path="estimating-density.html"><a href="estimating-density.html#probabilistic-gaps"><i class="fa fa-check"></i><b>3.2</b> Probabilistic gaps</a></li>
 </ul></li>
 <li class="chapter" data-level="4" data-path="footnotes-and-citations.html"><a href="footnotes-and-citations.html"><i class="fa fa-check"></i><b>4</b> Footnotes and citations</a>
 <ul>
@@ -272,8 +251,51 @@ div.csl-indent {
 </ul>
 <p>There are additional assumptions involved in the procedures to estimate effective detection distance, including an assumption that all animals within a certain distance of the camera are detected, and in converting the discrete images into time in field-of-view. These assumptions are discussed below. Because the world is complicated, assumptions are never met perfectly. The important thing is to consider – and, ideally, design auxiliary tests to measure – is whether the violations are serious enough to impact the answer to whatever question(s) the cameras are being used to answer. In many cases, absolute density estimates may not be accurate, but the results can still serve as a useable index of relative density, if assumptions are violated about equally in whatever units are being compared (habitat types, experimental treatments, years for long-term trend, etc).</p>
 <p>A final consideration is the sampling distribution of density estimates. Because individual cameras sample tiny areas compared to the home ranges of the species they survey, the resulting sampling distribution can be horrendous – the majority of cameras never detect the species at all (density = 0), a few cameras record the species passing by once or twice for brief periods (low densities), and a very few number of cameras record long durations as the animals forage, rest, or play in front of the camera, or revisit a favourite spot repeatedly (very high densities). Longer duration camera deployments can help smooth out some of that extreme variation, but ultimately large numbers of cameras are required for precise estimates. Appropriate questions, rigorous study designs, and modest expectations are required for camera-based studies.</p>
-
 </div>
+</div>
+<div id="probabilistic-gaps" class="section level2 hasAnchor" number="3.2">
+<h2><span class="header-section-number">3.2</span> Probabilistic gaps<a href="estimating-density.html#probabilistic-gaps" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>From a pilot study, we determined that if there is a gap of less than 20 seconds between images of the same species at a camera, the animal is almost always still in the view (no evidence of it walking out and returning). Missing the odd time when it leaves the view for less than 20 seconds has little effect on estimates of the total time it is in the field-of-view. At the other end, if there is a gap of &gt;120 seconds between images of the same species, this almost always represented animals leaving and then returning (i.e., the animal is seen walking out of the field-of-view, then walking back in). Gaps of 20-120 seconds are uncertain. These relatively long periods when the animal could be in the field-of-view or not are important when estimating the total duration animals are in the field-of-view, and thus density.</p>
+<p>Using images from the 2015 ABMI Ecosystem Health project, we checked each 20-120 second gap in series’ of native mammals for evidence of the animal leaving and returning. We supplemented the 2015 data for less common species using data from 2016 and 2017. We looked at several images on either side of gaps of 20-120 seconds. In each sequence, the animal was designated as having left the field-of-view during the 20-120 second gap if there was clear evidence of it walking out of the field-of-view and then returning (or a different individual entering the field-of-view). If the animal stayed in one location within the field-of-view, or sequential images showed the animal in disconnected places (as often happens with smaller animals), the animal was assumed to have stayed.</p>
+<p>Through this tagging procedure, we obtained the following training data to estimate the probability of an animal leaving during a gaps between 20 and 120 seconds between images. The <code>diff_time</code> variable refers to the number of seconds between images and the <code>left</code> variable refers to whether or not the individual left the camera field-of-view and returned (‘Yes’) or showed in the field-of-view for the duration of the gap (‘No’).</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="estimating-density.html#cb1-1" tabindex="-1"></a><span class="fu">head</span>(raw_gap_data, <span class="dv">10</span>)</span></code></pre></div>
+<pre><code>## # A tibble: 10 × 3
+##    species_common_name diff_time left 
+##    &lt;fct&gt;                   &lt;dbl&gt; &lt;chr&gt;
+##  1 Snowshoe Hare              43 Yes  
+##  2 Canada Lynx                31 No   
+##  3 Canada Lynx                63 No   
+##  4 Canada Lynx                22 No   
+##  5 Canada Lynx                22 Yes  
+##  6 Moose                      29 No   
+##  7 Moose                      21 No   
+##  8 Moose                      36 No   
+##  9 Snowshoe Hare              23 No   
+## 10 Canada Lynx                73 Yes</code></pre>
+<p>We can visualize this data in Figure <a href="#fig:gap"><strong>??</strong></a>. In general, observations where the animal stayed in the field of view are more closely clustered around the 20 second mark, and observations where the animal left the field of view are more evenly spread across the range of gap lengths.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="estimating-density.html#cb3-1" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb3-2"><a href="estimating-density.html#cb3-2" tabindex="-1"></a><span class="co"># abmi.themes is a custom R package for ABMI-themed ggplots</span></span>
+<span id="cb3-3"><a href="estimating-density.html#cb3-3" tabindex="-1"></a><span class="fu">library</span>(abmi.themes)</span>
+<span id="cb3-4"><a href="estimating-density.html#cb3-4" tabindex="-1"></a><span class="co"># Add Montserrat font</span></span>
+<span id="cb3-5"><a href="estimating-density.html#cb3-5" tabindex="-1"></a><span class="fu">add_abmi_fonts</span>()</span>
+<span id="cb3-6"><a href="estimating-density.html#cb3-6" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="estimating-density.html#cb3-7" tabindex="-1"></a><span class="co"># Plot of checked gaps</span></span>
+<span id="cb3-8"><a href="estimating-density.html#cb3-8" tabindex="-1"></a>raw_gap_data <span class="sc">|&gt;</span></span>
+<span id="cb3-9"><a href="estimating-density.html#cb3-9" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">left =</span> <span class="fu">as.factor</span>(left)) <span class="sc">%&gt;%</span></span>
+<span id="cb3-10"><a href="estimating-density.html#cb3-10" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> diff_time, <span class="at">y =</span> left, <span class="at">color =</span> species_common_name)) <span class="sc">+</span></span>
+<span id="cb3-11"><a href="estimating-density.html#cb3-11" tabindex="-1"></a>  <span class="fu">geom_beeswarm</span>(<span class="at">cex =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb3-12"><a href="estimating-density.html#cb3-12" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> species_common_name, <span class="at">nrow =</span> <span class="dv">4</span>) <span class="sc">+</span></span>
+<span id="cb3-13"><a href="estimating-density.html#cb3-13" tabindex="-1"></a>  <span class="fu">scale_color_viridis_d</span>(<span class="at">direction =</span> <span class="sc">-</span><span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb3-14"><a href="estimating-density.html#cb3-14" tabindex="-1"></a>  <span class="fu">theme_abmi</span>() <span class="sc">+</span> <span class="co"># Custom ABMI theme</span></span>
+<span id="cb3-15"><a href="estimating-density.html#cb3-15" tabindex="-1"></a>  <span class="fu">scale_y_discrete</span>(<span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Stayed&quot;</span>, <span class="st">&quot;Left&quot;</span>)) <span class="sc">+</span></span>
+<span id="cb3-16"><a href="estimating-density.html#cb3-16" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(<span class="dv">20</span>, <span class="dv">120</span>, <span class="at">by =</span> <span class="dv">20</span>), <span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">20</span>,<span class="dv">120</span>)) <span class="sc">+</span></span>
+<span id="cb3-17"><a href="estimating-density.html#cb3-17" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">y =</span> <span class="st">&quot;&quot;</span>,</span>
+<span id="cb3-18"><a href="estimating-density.html#cb3-18" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">&quot;Gap Length (s)&quot;</span>,</span>
+<span id="cb3-19"><a href="estimating-density.html#cb3-19" tabindex="-1"></a>       <span class="at">title =</span> <span class="st">&quot;Did the animal leave the camera field of view?&quot;</span>) <span class="sc">+</span></span>
+<span id="cb3-20"><a href="estimating-density.html#cb3-20" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;none&quot;</span>,</span>
+<span id="cb3-21"><a href="estimating-density.html#cb3-21" tabindex="-1"></a>        <span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>))</span></code></pre></div>
+<p><img src="_main_files/figure-html/gap-1.png" width="672" style="display: block; margin: auto auto auto 0;" /></p>
+
 </div>
 </div>
             </section>
@@ -313,7 +335,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/ABbiodiversity/MammalModels/tree/main/bookdown02_Estimating-Density.Rmd",
+"link": "https://github.com/ABbiodiversity/MammalModels/tree/main/bookdown03_Estimating-Density.Rmd",
 "text": "Edit"
 },
 "history": {
