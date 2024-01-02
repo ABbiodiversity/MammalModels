@@ -14,7 +14,7 @@ The ABMI's remote camera deployment protocols can be accessed here: [Terrestrial
 
 The following camera projects have been deployed by the ABMI:
 
-Organize by year? Use gt package?
+Organize by year or type of project? Use gt package?
 
 Note - would be nice to have a link to the WildTrax project for those projects that are published.
 
@@ -53,9 +53,9 @@ There is a companion R package, [*wildRtrax*](https://abbiodiversity.github.io/w
 
 Note: Would be nice to insert the wildRtrax package logo. 
 
-## Species detections (2014-2021)
+## Species detections
 
-The map below displays mammal species detections at ABMI Ecosystem Health (core grid) sites sampled with cameras between 2014 and 2023. Each site is sampled with 4 individual cameras placed 600-m apart in a square shape.
+The map below displays mammal species detections at ABMI Ecosystem Health (i.e., core grid) sites sampled with cameras between 2014 and 2022. Each site represented in the map below is sampled with four individual cameras placed 600-m apart in a square shape. Note that if a species is detected at at least one of the four cameras, the species is registered as an occurrence on the site map.   
 
 (Note: Need to add EH 2023)
 
@@ -146,7 +146,6 @@ bscols(widths = c(3, 3),
 map
 
 ```
-
 
 ## Deployment duration lengths
 
