@@ -4,6 +4,17 @@ This chapter describes how the Time In Front of Camera (TIFC) method is used to 
 
 This method is also documented in [Becker et al (2022)](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecs2.4005).
 
+```{r setup, include=FALSE}
+
+# Attach packages for the chapter
+library(ggbeeswarm)
+library(abmi.themes)
+
+add_abmi_fonts()
+
+```
+
+
 ## Overview
 
 ### Simple Explanation
@@ -59,33 +70,76 @@ head(raw_gap_data, 10)
 
 ```
 
-We can visualize this data in Figure \@ref(fig:gap). In general, observations where the animal stayed in the field of view are more closely clustered around the 20 second mark, and observations where the animal left the field of view are more evenly spread across the range of gap lengths.
+Using White-tailed Deer as an example, we can visualize this data in Figure \@ref(fig:wtd). In general, observations where the animal stayed in the field of view are more closely clustered around the 20 second mark, and observations where the animal left the field of view are more evenly spread across the range of gap lengths.
 
-```{r gap, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, fig.showtext=TRUE, fig.align="left", fig.height=9}
+```{r wtd, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, fig.showtext=TRUE, fig.align="left", fig.height=3, fig.cap="White-tailed Deer."}
 
-library(ggplot2)
-# abmi.themes is a custom R package for ABMI-themed ggplots
-library(abmi.themes)
-# Add Montserrat font
-add_abmi_fonts()
-
-# Plot of checked gaps
+# Plot of checked gaps for wtd
 raw_gap_data |>
-  mutate(left = as.factor(left)) %>%
-  ggplot(aes(x = diff_time, y = left, color = species_common_name)) +
-  geom_beeswarm(cex = 0.8) +
-  facet_wrap(~ species_common_name, nrow = 4) +
-  scale_color_viridis_d(direction = -1) +
+  mutate(left = as.factor(left)) |>
+  filter(species_common_name == "White-tailed Deer") |>
+  ggplot(aes(x = diff_time, y = left, color = left)) +
+  geom_jitter(height = 0.15, size = 2, alpha = 0.2) +
+  scale_color_manual(values = c("orange", "darkgreen")) +
   theme_abmi() + # Custom ABMI theme
   scale_y_discrete(labels = c("Stayed", "Left")) +
-  scale_x_continuous(breaks = seq(20, 120, by = 20), limits = c(20,120)) +
+  scale_x_continuous(breaks = seq(20, 120, by = 10), limits = c(20,120)) +
   labs(y = "",
-       x = "Gap Length (s)",
-       title = "Did the animal leave the camera field of view?") +
+       x = "Length of gap between images (seconds)") +
   theme(legend.position = "none",
-        strip.text = element_text(size = 10))
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 13, face = "bold"))
 
 ```
+
+We used this data to develop models of the probability of a species leaving the field-of-view during a 20-120 second gap as a function of the gap duration. Smoothing splines were fit to the probability of leaving as a function of gap length, using a logit-linked binomial model.
+
+```{r}
+
+# Develop model for each species, then make predictions for each second along the 20-120 second span
+predictions <- raw_gap_data |>
+  mutate(left = ifelse(left == "Yes", 1, 0)) |>
+  group_by(species_common_name) |>
+  nest() |>
+  # Models and predictions
+  mutate(model = map(.x = data, ~ smooth.spline(x = .$diff_time, y = .$left, df = 3)),
+         pred = map(.x = model, ~ predict(., x = 20:120))) |>
+  select(species_common_name, pred) |>
+  unnest_wider(pred) |>
+  unnest(cols = c(x, y)) |>
+  rename(diff_time = x, pred = y) |>
+  ungroup()
+
+```
+
+We can plot the model predictions for each value between the 20-120 second interval as follows (Figure \@ref(fig:wtdpred)).
+
+```{r wtdpred, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, fig.showtext=TRUE, fig.align="left", fig.height=5, fig.cap="Probability of leaving the field-of-view based on gap length between subsequent images for white-tailed deer."}
+
+# Plot results for white-tailed deer
+wtd <- predictions |> filter(species_common_name == "White-tailed Deer")
+
+raw_gap_data |>
+  mutate(left = ifelse(left == "Yes", 1, 0)) |>
+  filter(species_common_name == "White-tailed Deer") |>
+  ggplot(aes(x = diff_time, y = left, color = left)) +
+  geom_jitter(height = 0.05, size = 2, alpha = 0.2) +
+  scale_color_gradient(low = "orange", high = "darkgreen") +
+  geom_line(data = wtd, aes(x = diff_time, y = pred), color = "grey40", linewidth = 1.5) +
+  theme_abmi() + # Custom ABMI theme
+  scale_y_continuous(labels = c("Stayed", 0.2, 0.4, 0.6, 0.8, "Left"), breaks = seq(0, 1, 0.2)) +
+  scale_x_continuous(breaks = seq(20, 120, by = 10), limits = c(20,120)) +
+  labs(y = "Probability of leaving field-of-view",
+       x = "Length of gap between images (seconds)") +
+  theme(legend.position = "none",
+        axis.title.x = element_text(size = 12),
+        axis.text.x = element_text(size = 11),
+        axis.title.y = element_text(size = 11),
+        axis.text.y = element_text(size = c(13, 11, 11, 11, 11, 13),
+                                   face = c("bold", "plain", "plain", "plain", "plain", "bold")))
+
+```
+
 
 
 
