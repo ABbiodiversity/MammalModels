@@ -23,6 +23,7 @@ Note - would be nice to have a link to the WildTrax project for those projects t
 library(wildRtrax)
 library(keyring)
 library(tidyverse)
+library(knitr)
 library(kableExtra)
 
 Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),

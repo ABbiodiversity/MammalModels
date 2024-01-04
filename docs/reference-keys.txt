@@ -1,5 +1,7 @@
 fig:wtd
 fig:wtdpred
+fig:gap-illustration
+tab:tbi
 eq:binom
 thm:tri
 introduction
@@ -13,7 +15,7 @@ list-of-abmi-camera-projects
 image-tagging
 species-detections
 deployment-duration-lengths
-estimating-density
+estimating-density-using-tifc
 overview
 simple-explanation
 assumptions
