@@ -125,9 +125,11 @@ raw_gap_data |>
   ggplot(aes(x = diff_time, y = left, color = left)) +
   geom_jitter(height = 0.05, size = 2, alpha = 0.2) +
   scale_color_gradient(low = "orange", high = "darkgreen") +
-  geom_line(data = wtd, aes(x = diff_time, y = pred), color = "grey40", linewidth = 1.5) +
+  geom_line(data = wtd, aes(x = diff_time, y = pred), 
+            color = "grey40", linewidth = 1.5) +
   theme_abmi() + # Custom ABMI theme
-  scale_y_continuous(labels = c("Stayed", 0.2, 0.4, 0.6, 0.8, "Left"), breaks = seq(0, 1, 0.2)) +
+  scale_y_continuous(labels = c("Stayed", 0.2, 0.4, 0.6, 0.8, "Left"), 
+                     breaks = seq(0, 1, 0.2)) +
   scale_x_continuous(breaks = seq(20, 120, by = 10), limits = c(20,120)) +
   labs(y = "Probability of leaving field-of-view",
        x = "Length of gap between images (seconds)") +
@@ -135,8 +137,9 @@ raw_gap_data |>
         axis.title.x = element_text(size = 12),
         axis.text.x = element_text(size = 11),
         axis.title.y = element_text(size = 11),
-        axis.text.y = element_text(size = c(13, 11, 11, 11, 11, 13),
-                                   face = c("bold", "plain", "plain", "plain", "plain", "bold")))
+        axis.text.y = element_text(
+          size = c(13, 11, 11, 11, 11, 13), 
+          face = c("bold", "plain", "plain", "plain", "plain", "bold")))
 
 ```
 
