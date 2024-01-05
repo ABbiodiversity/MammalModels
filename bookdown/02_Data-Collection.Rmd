@@ -1,0 +1,158 @@
+# Data Collection
+
+## ABMI use of remote cameras
+
+The ABMI has been using remote cameras to monitor mammal species in the province since 2014. 
+
+As of `r Sys.Date()`, the ABMI has deployed X number of cameras across the province. 
+
+## Camera deployment protocols
+
+The ABMI's remote camera deployment protocols can be accessed here: [Terrestrial ABMI Autonomous Recording Unit (ARU) and Remote Camera Trap Protocols](https://abmi.ca/home/publications/551-600/599).
+
+## List of ABMI camera projects
+
+The following camera projects have been deployed by the ABMI:
+
+Organize by year or type of project? Use gt package?
+
+Note - would be nice to have a link to the WildTrax project for those projects that are published.
+
+```{r, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+
+library(wildRtrax)
+library(keyring)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+
+Sys.setenv(WT_USERNAME = key_get("WT_USERNAME", keyring = "wildtrax"),
+           WT_PASSWORD = key_get("WT_PASSWORD", keyring = "wildtrax"))
+
+wt_auth()
+
+abmi_projects <- wt_get_download_summary(sensor_id = "CAM") |>
+  filter(organization == "ABMI",
+         !str_detect(project, "ACME|Pilot|Elk Island|Hare Coat|Sahtu|Ticks|Compression|wildRtrax|first|Lemming|Zoo")) |>
+  mutate(Project = str_remove(project, "^ABMI ")) |>
+  select(Project, `No. Cameras` = tasks, Status = status)
+  # Would it be better to arrange by year?
+  # arrange(desc(Cameras))
+
+kable(abmi_projects)
+
+```
+
+
+### Image Tagging
+
+Image tagging is done on the [WildTrax](https://wildtrax.ca/about/) platform. Raw data is also publicly available from the ABMI via this platform.
+
+The image tagging protocols used by the ABMI can be accessed here: 
+
+There is a companion R package, [*wildRtrax*](https://abbiodiversity.github.io/wildRtrax/), which is also publicly available and contains many useful functions for downloading and analyzing camera data hosted on the platform. Throughout this document, references will be made to functions within this package.
+
+Note: Would be nice to insert the wildRtrax package logo. 
+
+## Species detections
+
+The map below displays mammal species detections at ABMI Ecosystem Health (i.e., core grid) sites sampled with cameras between 2014 and 2022. Each site represented in the map below is sampled with four individual cameras placed 600-m apart in a square shape. Note that if a species is detected at at least one of the four cameras, the species is registered as an occurrence on the site map.   
+
+(Note: Need to add EH 2023)
+
+```{r, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+
+library(sf)
+library(crosstalk) # Special branch of GH crosstalk repo required (filter-select-default)
+library(leaflet)
+library(leaflet.extras)
+ 
+g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
+
+# Alberta provincial polygon
+sf_ab <- st_read(paste0(g_drive, "data/spatial/ab_prov.shp"),
+                 quiet = TRUE, stringsAsFactors = FALSE)
+
+# Site locations
+sites <- read_csv(paste0(g_drive, "data/lookup/climate/site-climate-summary_v2020.csv")) |>
+  select(site = SITE_ID,
+         latitude = PUBLIC_LATTITUDE,
+         longitude = PUBLIC_LONGITUDE)
+
+# Occurrence data
+occ <- read_csv(paste0(g_drive, "Results/Occurrence/ABMI/occurrence_eh_site_2023-01-23.csv")) |>
+  filter(!str_detect(site, "^W")) |>
+  mutate(site = as.numeric(site))
+
+# Species to display
+sp <- occ |>
+  group_by(common_name) |>
+  summarise(n = sum(present)) |>
+  filter(n >= 35,
+         !str_detect(common_name, "Ermine|Squirrel"),
+         !common_name == "Deer") |>
+  select(common_name) |>
+  pull()
+
+occ_subset <- occ |>
+  filter(common_name %in% sp) |>
+  mutate(year = str_sub(project, start = -4, end = -1)) |>
+  full_join(sites, by = "site") |>
+  mutate(present = ifelse(is.na(present), "Not Surveyed", present)) |>
+  mutate(present = factor(present, levels = c("Not Surveyed",
+                                                 "TRUE",
+                                                 "FALSE"))) |>
+  select(site, latitude, longitude, year, common_name, present) |>
+  arrange(site, year)
+
+# Create SharedData object for crosstalk interactivity
+shared_ss <- SharedData$new(occ_subset)
+
+# Palette
+pal <- colorFactor(palette = c("grey80",
+                               "gold",
+                               "black"),
+                   domain = occ_subset$present)
+
+# Create leaflet map
+map <- sf_ab |>
+  st_transform("+init=epsg:4326") %>%
+  leaflet() %>%
+  addTiles() %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addFullscreenControl() %>%
+  addResetMapButton() %>%
+  addScaleBar(position = "bottomright", 
+              options = scaleBarOptions(imperial = FALSE)) |>
+  
+  addPolylines(color = "#0a0909", weight = 2.5, smoothFactor = 0.2, opacity = 3, fill = FALSE) |>
+  
+  addCircleMarkers(data = shared_ss,
+                   color = ~pal(present), stroke = FALSE, fillOpacity = 1,
+                   radius = 6) |>
+  
+  addLegend(data = shared_ss, pal = pal, values = ~present,
+            position = "topright", opacity = 1, title = "Occurrence at Site:")
+
+```
+
+```{r, out.width="100%", fig.height=10, eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+
+# Create interactive filters
+bscols(widths = c(3, 3),
+       filter_checkbox("year", "Sampling Year:", shared_ss, ~year, columns = 2),
+       filter_select("common_name", "Species:", shared_ss, ~common_name, multiple = FALSE, selected = "Badger"))
+
+# Display map
+map
+
+```
+
+## Deployment duration lengths
+
+Here we can include all those figures. Yay. Do we really want that?
+
+
+
+
+

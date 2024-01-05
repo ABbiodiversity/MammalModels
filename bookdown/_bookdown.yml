@@ -1,4 +1,6 @@
+output_dir: "C:/Users/mabec/Documents/R/MammalModels/docs"
 delete_merged_file: true
 language:
   ui:
     chapter_name: ""
+

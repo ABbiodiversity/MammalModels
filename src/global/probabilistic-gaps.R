@@ -24,13 +24,14 @@ root <- "G:/Shared drives/ABMI Camera Mammals/"
 df_gap <- read_csv(paste0(root, "data/processed/probabilistic-gaps/abmi-cmu_all-years_gap-class-raw_2021-10-05.csv"))
 
 # Lookup table
-df_gap_groups <- read_csv(paste0(root, "data/lookup/species-gap-groups.csv"))
+df_gap_groups <- read_csv(paste0(root, "data/lookup/species-gap-groups.csv")) |>
+  rename(common_name = species_common_name)
 
 # Load tag data
-df_all <- read_csv(paste0(root, "data/base/clean/abmi-cmu_all-years_all-data_clean_2021-10-05.csv"))
+df_all <- read_csv(paste0(root, "data/base/clean/archive/abmi-cmu_all-years_all-data_clean_2021-10-07.csv"))
 
 # Native species common names in WildTrax
-load(paste0(root, "data/lookup/wt_native_sp.RData"))
+load(paste0(root, "data/lookup/wt_cam_sp_str.RData"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
