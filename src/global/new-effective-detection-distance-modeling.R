@@ -23,7 +23,7 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 df_lure <- read_csv(paste0(g_drive, "data/lookup/lure/abmi_all-years_lure_2023-11-27.csv"))
 
 # Veg/HF lookup
-new_edd_cat <- read_csv(paste0(g_drive, "data/lookup/veghf/VegForDetectionDistance/New EDD Modeling.csv")) |>
+new_edd_cat <- read_csv(paste0(g_drive, "data/lookup/veghf/VegForDetectionDistance/New Veg Categories for EDD Modeling.csv")) |>
   mutate(use = case_when(
     str_detect(location, "^W") ~ "No",
     is.na(use) ~ "Yes",
@@ -152,7 +152,7 @@ check <- df_pole_veg |>
 
 # Start with only Large Ungulates
 d.sp <- df_pole_veg |>
-  filter(dist_group == "SmallMustelids") |>
+  filter(dist_group == "Deer") |>
   # Turn Forested Open-Shrubby to Open-Open (for now)
   mutate(secondary_category = ifelse(secondary_category == "Open-Shrubby", "Open-Open", secondary_category)) |>
   mutate(secondary_category = paste0(primary_category, "_", secondary_category)) |>
@@ -160,8 +160,8 @@ d.sp <- df_pole_veg |>
   group_by(secondary_category, season_new3) |>
   add_count() |>
   #filter(nn >= 20) |>
-  filter(primary_category == "Forested",
-         season_new1 == "snow") |>
+  #filter(primary_category == "Forested",
+  #       season_new1 == "snow") |>
   as.data.frame()
 
 unique(d.sp$secondary_category)
@@ -175,33 +175,33 @@ m <- list(NULL)
   # Null model
   #m[[1]]<-try(gam(prop_behind~1,weights=d.sp$n,data=d.sp,family="binomial"))
   # Old - VegHF
-  m[[2]]<-try(gam(prop_behind ~ VegHF, weights = d.sp$n, data=d.sp, family="binomial"))
+  #m[[2]]<-try(gam(prop_behind ~ VegHF, weights = d.sp$n, data=d.sp, family="binomial"))
   # Old - Season as originally defined
-  m[[3]]<-try(gam(prop_behind ~ season_old, weights = d.sp$n, data=d.sp, family="binomial"))
+  #m[[3]]<-try(gam(prop_behind ~ season_old, weights = d.sp$n, data=d.sp, family="binomial"))
   # Old - VegHF plus old season
-  m[[4]]<-try(gam(prop_behind ~ VegHF + season_old, weights = d.sp$n, data=d.sp, family="binomial"))
+  #m[[4]]<-try(gam(prop_behind ~ VegHF + season_old, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Primary Category
-  m[[5]]<-try(gam(prop_behind ~ primary_category, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[1]]<-try(gam(prop_behind ~ primary_category, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Secondary Category
-  m[[1]]<-try(gam(prop_behind ~ secondary_category, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[2]]<-try(gam(prop_behind ~ secondary_category, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Season 1 (Snow / Non-snow period)
-  m[[7]]<-try(gam(prop_behind ~ season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[3]]<-try(gam(prop_behind ~ season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Season 2 (Snow / Non-snow period minus 10 days)
-  m[[8]]<-try(gam(prop_behind ~ season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[4]]<-try(gam(prop_behind ~ season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Season 3 (Winter / Spring / Summer)
-  m[[9]]<-try(gam(prop_behind ~ season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[5]]<-try(gam(prop_behind ~ season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Primary Category plus New Season 1
-  m[[10]]<-try(gam(prop_behind ~ primary_category + season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[6]]<-try(gam(prop_behind ~ primary_category + season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Primary Category plus New Season 2
-  m[[11]]<-try(gam(prop_behind ~ primary_category + season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[7]]<-try(gam(prop_behind ~ primary_category + season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Primary Category plus New Season 3
-  m[[12]]<-try(gam(prop_behind ~ primary_category + season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[8]]<-try(gam(prop_behind ~ primary_category + season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Secondary Category plus New Season 1
-  m[[13]]<-try(gam(prop_behind ~ secondary_category + season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[9]]<-try(gam(prop_behind ~ secondary_category + season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Secondary Category plus New Season 2
-  m[[14]]<-try(gam(prop_behind ~ secondary_category + season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[10]]<-try(gam(prop_behind ~ secondary_category + season_new2, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Secondary Category plus New Season 3
-  m[[15]]<-try(gam(prop_behind ~ secondary_category + season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[11]]<-try(gam(prop_behind ~ secondary_category + season_new3, weights = d.sp$n, data=d.sp, family="binomial"))
 
   nModels<-length(m)
 
@@ -226,7 +226,7 @@ m <- list(NULL)
     distinct() |>
     arrange(secondary_category)
 
-  predictions <- data.frame("prediction" = predict(m[[1]], newdata = newdata)) |>
+  predictions <- data.frame("prediction" = predict(m[[2]], newdata = newdata)) |>
     mutate(prediction = 5 / sqrt(1 - plogis(prediction)))
 
   results <- newdata |> bind_cols(predictions)
