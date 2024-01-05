@@ -31,3 +31,6 @@ sharing-your-book
 publishing
 pages
 metadata-for-sharing
+effective-detection-distances
+eq:edd
+eq:sa
