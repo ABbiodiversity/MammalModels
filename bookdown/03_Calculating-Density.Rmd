@@ -1,4 +1,4 @@
-# Estimating Density using TIFC
+# Calculating Animal Density
 
 This chapter describes how the Time In Front of Camera (TIFC) method is used to calculate animal density with images collected from remote cameras. 
 
@@ -26,19 +26,13 @@ Two features of cameras require us to do some additional data processing to use 
   
   2. **Cameras take a series of images at discrete intervals, rather than providing a continuous record of how long an animal is in the field-of-view**. The discrete intervals need to be converted to a continuous measure to show how long the animal was in the field-of-view, accounting for the possibility that a moderately long interval between images might be from an animal present but not moving much, and therefore not triggering the camera, versus an animal that left the field-of-view and returned.
 
-### Assumptions
+## Basic Model
 
-There are a number of strong assumptions involved in using this measure to estimate density of a species. A couple big assumptions are: 
+Here is the basic model (equation)
 
-  + The cameras are a random or otherwise representative sample of the area. The density estimate applies to the field-of-view of the cameras. To make inferences about a larger region, the cameras need to be surveying a random or representative (e.g., systematic, systematic-random, random stratified) sample of the larger region. In particular, if cameras are intentionally placed in areas where species are more common, such as game trails, then the density estimate only applies to those places, not to a larger region.  
-  
-  + Animals are not attracted to or repelled by the cameras (or posts used to deploy the cameras, etc).  That also means that they do not spend more or less time in front of the camera because of the presence of the camera. The effect of lures or other attractants needs to be explicitly measured and accounted for. 
-  
-There are additional assumptions involved in the procedures to estimate effective detection distance, including an assumption that all animals within a certain distance of the camera are detected, and in converting the discrete images into time in field-of-view. These assumptions are discussed below. Because the world is complicated, assumptions are never met perfectly. The important thing is to consider – and, ideally, design auxiliary tests to measure – is whether the violations are serious enough to impact the answer to whatever question(s) the cameras are being used to answer. In many cases, absolute density estimates may not be accurate, but the results can still serve as a useable index of relative density, if assumptions are violated about equally in whatever units are being compared (habitat types, experimental treatments, years for long-term trend, etc).
+## Time in Field-of-View
 
-A final consideration is the sampling distribution of density estimates. Because individual cameras sample tiny areas compared to the home ranges of the species they survey, the resulting sampling distribution can be horrendous – the majority of cameras never detect the species at all (density = 0), a few cameras record the species passing by once or twice for brief periods (low densities), and a very few number of cameras record long durations as the animals forage, rest, or play in front of the camera, or revisit a favourite spot repeatedly (very high densities). Longer duration camera deployments can help smooth out some of that extreme variation, but ultimately large numbers of cameras are required for precise estimates. Appropriate questions, rigorous study designs, and modest expectations are required for camera-based studies.
-
-## Probabilistic gaps
+### Probabilistic gaps
 
 From a pilot study, we determined that if there is a gap of less than 20 seconds between images of the same species at a camera, the animal is almost always still in the view (no evidence of it walking out and returning). Missing the odd time when it leaves the view for less than 20 seconds has little effect on estimates of the total time it is in the field-of-view. At the other end, if there is a gap of >120 seconds between images of the same species, this almost always represented animals leaving and then returning (i.e., the animal is seen walking out of the field-of-view, then walking back in). Gaps of 20-120 seconds are uncertain. These relatively long periods when the animal could be in the field-of-view or not are important when estimating the total duration animals are in the field-of-view, and thus density.
 
@@ -176,6 +170,8 @@ kable(tbi, col.names = c("Species", "Average time between images (s)"),
 
 ```
 
+## Time of Camera Operation
+
 ## Effective Detection Distances
 
 One option to define the area surveyed by cameras is to define a fixed maximum distance, using a pole or other marker at 5m or 10m or whatever is appropriate. Animals beyond that distance are not counted. The assumption, which should be tested, is that all target species are detected if they are within that distance. The downside of this simple approach is that it excludes data from animals detected in the potentially long tail of greater distances where they are partially detectable.
@@ -205,3 +201,19 @@ where *angle* is the angle of the camera’s field-of-view in degrees (40° for 
 Detection distances are expected to differ for different species, by habitat types, and possibly by season (e.g., on snowpacks versus in summer shrubs). We therefore used the results to develop detection-distance models for eleven species groups and eight broad habitat types: deciduous forest, upland conifer forest, upland grass, shrub, lowland forest, wet grass, water and human footprint. BIC-based model selection examined seven models with those habitat types grouped into broader categories, and seven more that added a factor for season (winter = October 15 – April 14, summer = April 15 – October 14).
 
 Below we plot the estimated EDD for different species groups for each of the eight broad habitat types and two seasons.
+
+## Calculating Density
+
+Include how to calculate confidence intervals on density of areas. 
+
+A final consideration is the sampling distribution of density estimates. Because individual cameras sample tiny areas compared to the home ranges of the species they survey, the resulting sampling distribution can be horrendous – the majority of cameras never detect the species at all (density = 0), a few cameras record the species passing by once or twice for brief periods (low densities), and a very few number of cameras record long durations as the animals forage, rest, or play in front of the camera, or revisit a favourite spot repeatedly (very high densities). Longer duration camera deployments can help smooth out some of that extreme variation, but ultimately large numbers of cameras are required for precise estimates. Appropriate questions, rigorous study designs, and modest expectations are required for camera-based studies.
+
+## Assumptions
+
+There are a number of strong assumptions involved in using this measure to estimate density of a species. A couple big assumptions are: 
+
+  + The cameras are a random or otherwise representative sample of the area. The density estimate applies to the field-of-view of the cameras. To make inferences about a larger region, the cameras need to be surveying a random or representative (e.g., systematic, systematic-random, random stratified) sample of the larger region. In particular, if cameras are intentionally placed in areas where species are more common, such as game trails, then the density estimate only applies to those places, not to a larger region.  
+  
+  + Animals are not attracted to or repelled by the cameras (or posts used to deploy the cameras, etc).  That also means that they do not spend more or less time in front of the camera because of the presence of the camera. The effect of lures or other attractants needs to be explicitly measured and accounted for. 
+  
+There are additional assumptions involved in the procedures to estimate effective detection distance, including an assumption that all animals within a certain distance of the camera are detected, and in converting the discrete images into time in field-of-view. These assumptions are discussed below. Because the world is complicated, assumptions are never met perfectly. The important thing is to consider – and, ideally, design auxiliary tests to measure – is whether the violations are serious enough to impact the answer to whatever question(s) the cameras are being used to answer. In many cases, absolute density estimates may not be accurate, but the results can still serve as a usable index of relative density, if assumptions are violated about equally in whatever units are being compared (habitat types, experimental treatments, years for long-term trend, etc).

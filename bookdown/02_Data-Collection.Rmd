@@ -1,16 +1,16 @@
 # Data Collection
 
-## ABMI use of remote cameras
+## Overview
 
 The ABMI has been using remote cameras to monitor mammal species in the province since 2014. 
 
 As of `r Sys.Date()`, the ABMI has deployed X number of cameras across the province. 
 
-## Camera deployment protocols
+## Deployment Protocols
 
 The ABMI's remote camera deployment protocols can be accessed here: [Terrestrial ABMI Autonomous Recording Unit (ARU) and Remote Camera Trap Protocols](https://abmi.ca/home/publications/551-600/599).
 
-## List of ABMI camera projects
+## Camera Projects
 
 The following camera projects have been deployed by the ABMI:
 
@@ -43,7 +43,6 @@ kable(abmi_projects)
 
 ```
 
-
 ### Image Tagging
 
 Image tagging is done on the [WildTrax](https://wildtrax.ca/about/) platform. Raw data is also publicly available from the ABMI via this platform.
@@ -52,9 +51,13 @@ The image tagging protocols used by the ABMI can be accessed here:
 
 There is a companion R package, [*wildRtrax*](https://abbiodiversity.github.io/wildRtrax/), which is also publicly available and contains many useful functions for downloading and analyzing camera data hosted on the platform. Throughout this document, references will be made to functions within this package.
 
-Note: Would be nice to insert the wildRtrax package logo. 
+Note: Would be nice to insert the wildRtrax package logo.
 
-## Species detections
+## Deployment Periods
+
+Here we can include all those figures. Yay. Do we really want that?
+
+## Species Detections in Alberta
 
 The map below displays mammal species detections at ABMI Ecosystem Health (i.e., core grid) sites sampled with cameras between 2014 and 2022. Each site represented in the map below is sampled with four individual cameras placed 600-m apart in a square shape. Note that if a species is detected at at least one of the four cameras, the species is registered as an occurrence on the site map.   
 
@@ -148,9 +151,7 @@ map
 
 ```
 
-## Deployment duration lengths
 
-Here we can include all those figures. Yay. Do we really want that?
 
 
 

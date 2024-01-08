@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>3 Calculating Animal Density | Using remote camera trap images to estimate densities and develop habitat models for mammals in Alberta, Canada</title>
+  <meta name="description" content="ABMI Camera Methods and Mammal Modeling" />
+  <meta name="generator" content="bookdown 0.37 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="3 Calculating Animal Density | Using remote camera trap images to estimate densities and develop habitat models for mammals in Alberta, Canada" />
+  <meta property="og:type" content="book" />
+  
+  <meta property="og:description" content="ABMI Camera Methods and Mammal Modeling" />
+  <meta name="github-repo" content="ABbiodiversity/MammalModels" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="3 Calculating Animal Density | Using remote camera trap images to estimate densities and develop habitat models for mammals in Alberta, Canada" />
+  
+  <meta name="twitter:description" content="ABMI Camera Methods and Mammal Modeling" />
+  
+
+<meta name="author" content="Marcus Becker, Dr. David J. Huggard, Dr. David Roberts" />
+
+
+<meta name="date" content="2024-01-08" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="data-collection.html"/>
+<link rel="next" href="testing-assumptions.html"/>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+<link href="libs/crosstalk-1.1.1.9000/css/crosstalk.min.css" rel="stylesheet" />
+<script src="libs/crosstalk-1.1.1.9000/js/crosstalk.min.js"></script>
+<link href="libs/selectize-0.12.4/css/selectize.bootstrap3.css" rel="stylesheet" />
+<script src="libs/selectize-0.12.4/js/selectize.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="libs/bootstrap-grid-3.4.1/bootstrap-grid.min.css" rel="stylesheet" />
+<script src="libs/htmlwidgets-1.6.1/htmlwidgets.js"></script>
+<link href="libs/leaflet-1.3.1/leaflet.css" rel="stylesheet" />
+<script src="libs/leaflet-1.3.1/leaflet.js"></script>
+<link href="libs/leafletfix-1.0.0/leafletfix.css" rel="stylesheet" />
+<script src="libs/proj4-2.6.2/proj4.min.js"></script>
+<script src="libs/Proj4Leaflet-1.0.1/proj4leaflet.js"></script>
+<link href="libs/rstudio_leaflet-1.3.1/rstudio_leaflet.css" rel="stylesheet" />
+<script src="libs/leaflet-binding-2.1.1/leaflet.js"></script>
+<script src="libs/leaflet-providers-1.9.0/leaflet-providers_1.9.0.js"></script>
+<script src="libs/leaflet-providers-plugin-2.1.1/leaflet-providers-plugin.js"></script>
+<link href="libs/lfx-fullscreen-1.0.2/lfx-fullscreen-prod.css" rel="stylesheet" />
+<script src="libs/lfx-fullscreen-1.0.2/lfx-fullscreen-prod.js"></script>
+<link href="libs/leaflet-easybutton-1.3.1/easy-button.css" rel="stylesheet" />
+<script src="libs/leaflet-easybutton-1.3.1/easy-button.js"></script>
+<script src="libs/leaflet-easybutton-1.3.1/EasyButton-binding.js"></script>
+<link href="libs/ionicons-2.0.1/ionicons.min.css" rel="stylesheet" />
+<script src="libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+<style type="text/css">
+/* Used with Pandoc 2.11+ new --citeproc when CSL is used */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">ABMI Mammal Models</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="index.html"><a href="index.html#acknowledgement"><i class="fa fa-check"></i><b>1.1</b> Acknowledgement</a></li>
+<li class="chapter" data-level="1.2" data-path="index.html"><a href="index.html#suggested-citation"><i class="fa fa-check"></i><b>1.2</b> Suggested Citation</a></li>
+<li class="chapter" data-level="1.3" data-path="index.html"><a href="index.html#contact"><i class="fa fa-check"></i><b>1.3</b> Contact</a></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="data-collection.html"><a href="data-collection.html"><i class="fa fa-check"></i><b>2</b> Data Collection</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="data-collection.html"><a href="data-collection.html#overview"><i class="fa fa-check"></i><b>2.1</b> Overview</a></li>
+<li class="chapter" data-level="2.2" data-path="data-collection.html"><a href="data-collection.html#deployment-protocols"><i class="fa fa-check"></i><b>2.2</b> Deployment Protocols</a></li>
+<li class="chapter" data-level="2.3" data-path="data-collection.html"><a href="data-collection.html#camera-projects"><i class="fa fa-check"></i><b>2.3</b> Camera Projects</a>
+<ul>
+<li class="chapter" data-level="2.3.1" data-path="data-collection.html"><a href="data-collection.html#image-tagging"><i class="fa fa-check"></i><b>2.3.1</b> Image Tagging</a></li>
+</ul></li>
+<li class="chapter" data-level="2.4" data-path="data-collection.html"><a href="data-collection.html#deployment-periods"><i class="fa fa-check"></i><b>2.4</b> Deployment Periods</a></li>
+<li class="chapter" data-level="2.5" data-path="data-collection.html"><a href="data-collection.html#species-detections-in-alberta"><i class="fa fa-check"></i><b>2.5</b> Species Detections in Alberta</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="calculating-animal-density.html"><a href="calculating-animal-density.html"><i class="fa fa-check"></i><b>3</b> Calculating Animal Density</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="calculating-animal-density.html"><a href="calculating-animal-density.html#overview-1"><i class="fa fa-check"></i><b>3.1</b> Overview</a>
+<ul>
+<li class="chapter" data-level="3.1.1" data-path="calculating-animal-density.html"><a href="calculating-animal-density.html#simple-explanation"><i class="fa fa-check"></i><b>3.1.1</b> Simple Explanation</a></li>
+</ul></li>
+<li class="chapter" data-level="3.2" data-path="calculating-animal-density.html"><a href="calculating-animal-density.html#basic-model"><i class="fa fa-check"></i><b>3.2</b> Basic Model</a></li>
+<li class="chapter" data-level="3.3" data-path="calculating-animal-density.html"><a href="calculating-animal-density.html#time-in-field-of-view"><i class="fa fa-check"></i><b>3.3</b> Time in Field-of-View</a>
+<ul>
+<li class="chapter" data-level="3.3.1" data-path="calculating-animal-density.html"><a href="calculating-animal-density.html#probabilistic-gaps"><i class="fa fa-check"></i><b>3.3.1</b> Probabilistic gaps</a></li>
+</ul></li>
+<li class="chapter" data-level="3.4" data-path="calculating-animal-density.html"><a href="calculating-animal-density.html#time-of-camera-operation"><i class="fa fa-check"></i><b>3.4</b> Time of Camera Operation</a></li>
+<li class="chapter" data-level="3.5" data-path="calculating-animal-density.html"><a href="calculating-animal-density.html#effective-detection-distances"><i class="fa fa-check"></i><b>3.5</b> Effective Detection Distances</a></li>
+<li class="chapter" data-level="3.6" data-path="calculating-animal-density.html"><a href="calculating-animal-density.html#calculating-density"><i class="fa fa-check"></i><b>3.6</b> Calculating Density</a></li>
+<li class="chapter" data-level="3.7" data-path="calculating-animal-density.html"><a href="calculating-animal-density.html#assumptions"><i class="fa fa-check"></i><b>3.7</b> Assumptions</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="testing-assumptions.html"><a href="testing-assumptions.html"><i class="fa fa-check"></i><b>4</b> Testing Assumptions</a>
+<ul>
+<li class="chapter" data-level="4.1" data-path="testing-assumptions.html"><a href="testing-assumptions.html#movement-not-affected-by-the-camera"><i class="fa fa-check"></i><b>4.1</b> Movement not affected by the camera</a></li>
+<li class="chapter" data-level="4.2" data-path="testing-assumptions.html"><a href="testing-assumptions.html#representative-sampling-of-microhabitats"><i class="fa fa-check"></i><b>4.2</b> Representative sampling of microhabitats</a></li>
+<li class="chapter" data-level="4.3" data-path="testing-assumptions.html"><a href="testing-assumptions.html#perfect-detection-near-the-camera"><i class="fa fa-check"></i><b>4.3</b> Perfect detection near the camera</a></li>
+</ul></li>
+<li class="chapter" data-level="5" data-path="protocol-calibrations.html"><a href="protocol-calibrations.html"><i class="fa fa-check"></i><b>5</b> Protocol Calibrations</a>
+<ul>
+<li class="chapter" data-level="5.1" data-path="protocol-calibrations.html"><a href="protocol-calibrations.html#lure"><i class="fa fa-check"></i><b>5.1</b> Lure</a></li>
+<li class="chapter" data-level="5.2" data-path="protocol-calibrations.html"><a href="protocol-calibrations.html#deployment-height"><i class="fa fa-check"></i><b>5.2</b> Deployment Height</a></li>
+<li class="chapter" data-level="5.3" data-path="protocol-calibrations.html"><a href="protocol-calibrations.html#camera-model"><i class="fa fa-check"></i><b>5.3</b> Camera Model</a></li>
+<li class="chapter" data-level="5.4" data-path="protocol-calibrations.html"><a href="protocol-calibrations.html#camera-age"><i class="fa fa-check"></i><b>5.4</b> Camera Age</a></li>
+<li class="chapter" data-level="5.5" data-path="protocol-calibrations.html"><a href="protocol-calibrations.html#game-trails"><i class="fa fa-check"></i><b>5.5</b> Game Trails</a></li>
+</ul></li>
+<li class="chapter" data-level="6" data-path="sharing-your-book.html"><a href="sharing-your-book.html"><i class="fa fa-check"></i><b>6</b> Sharing your book</a>
+<ul>
+<li class="chapter" data-level="6.1" data-path="sharing-your-book.html"><a href="sharing-your-book.html#publishing"><i class="fa fa-check"></i><b>6.1</b> Publishing</a></li>
+<li class="chapter" data-level="6.2" data-path="sharing-your-book.html"><a href="sharing-your-book.html#pages"><i class="fa fa-check"></i><b>6.2</b> 404 pages</a></li>
+<li class="chapter" data-level="6.3" data-path="sharing-your-book.html"><a href="sharing-your-book.html#metadata-for-sharing"><i class="fa fa-check"></i><b>6.3</b> Metadata for sharing</a></li>
+<li class="chapter" data-level="6.4" data-path="sharing-your-book.html"><a href="sharing-your-book.html#footnotes"><i class="fa fa-check"></i><b>6.4</b> Footnotes</a></li>
+<li class="chapter" data-level="6.5" data-path="sharing-your-book.html"><a href="sharing-your-book.html#citations"><i class="fa fa-check"></i><b>6.5</b> Citations</a></li>
+</ul></li>
+<li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Using remote camera trap images to estimate densities and develop habitat models for mammals in Alberta, Canada</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="calculating-animal-density" class="section level1 hasAnchor" number="3">
+<h1><span class="header-section-number">3</span> Calculating Animal Density<a href="calculating-animal-density.html#calculating-animal-density" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>This chapter describes how the Time In Front of Camera (TIFC) method is used to calculate animal density with images collected from remote cameras.</p>
+<p>This method is also documented in <a href="https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecs2.4005">Becker et al (2022)</a>.</p>
+<div id="overview-1" class="section level2 hasAnchor" number="3.1">
+<h2><span class="header-section-number">3.1</span> Overview<a href="calculating-animal-density.html#overview-1" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="simple-explanation" class="section level3 hasAnchor" number="3.1.1">
+<h3><span class="header-section-number">3.1.1</span> Simple Explanation<a href="calculating-animal-density.html#simple-explanation" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Density is the number of objects (trees, animals, etc.) per unit area. If a 100-m<span class="math inline">\(^2\)</span> plot contains one tree, the density is 1 tree/100-m<span class="math inline">\(^2\)</span>, or 10,000 trees per km<span class="math inline">\(^2\)</span> ( Figure <a href="#fig:density"><strong>??</strong></a>). Similarly, if a camera has a field-of-view of 100-m<span class="math inline">\(^2\)</span> and there is always one animal in the field-of-view for the whole time that the camera is operating, the density of that species is 1 animal per 100-m<span class="math inline">\(^2\)</span>, or 10,000 animals per km<span class="math inline">\(^2\)</span>. It doesn’t matter if the animal is moving around within the field-of-view, as long as it stays in the field-of-view for the whole time. On the other hand, if that camera only has an animal in the field-of-view 1/10,000 of the time that it is operating, there is 1/10,000 animal per 100-m<span class="math inline">\(^2\)</span>, or 1 animal per km-<span class="math inline">\(^2\)</span>. If the camera has two animals together for 1/10,000 of the time, this gives 2/10,000 animals per 100-m<span class="math inline">\(^2\)</span>, or 2 animals per km-<span class="math inline">\(^2\)</span>. This is how we use cameras to calculate density.</p>
+<p>For a given density of animals, this simple measure is independent of home range sizes or movement rates. If home ranges were twice as big, they would have to overlap twice as much to maintain the same density. Therefore, an individual would be in a particular camera’s field-of-view half as often (because its home range is bigger – it has more other places to be), but there would be twice as many individuals at that camera. If movement rates were twice as fast, an individual would pass by the camera twice as often, but would spend half as much time in the field-of-view (because it is moving faster). For the simple example above, there would be two visits to the camera each occupying 1/20,000 of the time the camera is operating, rather than one visit for 1/10,000 of the time. The other way of putting this is that only the total animal-time in the field-of-view matters, whether that comes from one long visit by one individual, several short visits by one individual, or several short visits each by a different individual. In all those cases, the density is the same; it is only the home range size and overlap and/or movement rates that are changing.</p>
+<p>Two features of cameras require us to do some additional data processing to use this simple density measure:</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>Cameras do not survey fixed areas, unlike quadrats</strong>. The probability of an animal triggering the camera decreases with distance. We therefore have to estimate an <em>effective detection distance</em> (EDD) for the cameras, as is done for unlimited-distance point counts for birds or unlimited distance transect surveys. This effective distance can vary for different species, habitat types and time of year.</p></li>
+<li><p><strong>Cameras take a series of images at discrete intervals, rather than providing a continuous record of how long an animal is in the field-of-view</strong>. The discrete intervals need to be converted to a continuous measure to show how long the animal was in the field-of-view, accounting for the possibility that a moderately long interval between images might be from an animal present but not moving much, and therefore not triggering the camera, versus an animal that left the field-of-view and returned.</p></li>
+</ol>
+</div>
+</div>
+<div id="basic-model" class="section level2 hasAnchor" number="3.2">
+<h2><span class="header-section-number">3.2</span> Basic Model<a href="calculating-animal-density.html#basic-model" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Here is the basic model (equation)</p>
+</div>
+<div id="time-in-field-of-view" class="section level2 hasAnchor" number="3.3">
+<h2><span class="header-section-number">3.3</span> Time in Field-of-View<a href="calculating-animal-density.html#time-in-field-of-view" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="probabilistic-gaps" class="section level3 hasAnchor" number="3.3.1">
+<h3><span class="header-section-number">3.3.1</span> Probabilistic gaps<a href="calculating-animal-density.html#probabilistic-gaps" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>From a pilot study, we determined that if there is a gap of less than 20 seconds between images of the same species at a camera, the animal is almost always still in the view (no evidence of it walking out and returning). Missing the odd time when it leaves the view for less than 20 seconds has little effect on estimates of the total time it is in the field-of-view. At the other end, if there is a gap of &gt;120 seconds between images of the same species, this almost always represented animals leaving and then returning (i.e., the animal is seen walking out of the field-of-view, then walking back in). Gaps of 20-120 seconds are uncertain. These relatively long periods when the animal could be in the field-of-view or not are important when estimating the total duration animals are in the field-of-view, and thus density.</p>
+<p>Using images from the 2015 ABMI Ecosystem Health project, we checked each 20-120 second gap in series’ of native mammals for evidence of the animal leaving and returning. We supplemented the 2015 data for less common species using data from 2016 and 2017. We looked at several images on either side of gaps of 20-120 seconds. In each sequence, the animal was designated as having left the field-of-view during the 20-120 second gap if there was clear evidence of it walking out of the field-of-view and then returning (or a different individual entering the field-of-view). If the animal stayed in one location within the field-of-view, or sequential images showed the animal in disconnected places (as often happens with smaller animals), the animal was assumed to have stayed.</p>
+<p>Through this tagging procedure, we obtained the following training data to estimate the probability of an animal leaving during a gaps between 20 and 120 seconds between images. The <code>diff_time</code> variable refers to the number of seconds between images and the <code>left</code> variable refers to whether or not the individual left the camera field-of-view and returned (‘Yes’) or showed in the field-of-view for the duration of the gap (‘No’).</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="calculating-animal-density.html#cb1-1" tabindex="-1"></a><span class="fu">head</span>(raw_gap_data, <span class="dv">10</span>)</span></code></pre></div>
+<pre><code>## # A tibble: 10 × 3
+##    species_common_name diff_time left 
+##    &lt;fct&gt;                   &lt;dbl&gt; &lt;chr&gt;
+##  1 Snowshoe Hare              43 Yes  
+##  2 Canada Lynx                31 No   
+##  3 Canada Lynx                63 No   
+##  4 Canada Lynx                22 No   
+##  5 Canada Lynx                22 Yes  
+##  6 Moose                      29 No   
+##  7 Moose                      21 No   
+##  8 Moose                      36 No   
+##  9 Snowshoe Hare              23 No   
+## 10 Canada Lynx                73 Yes</code></pre>
+<p>Using White-tailed Deer as an example, we can visualize this data in Figure <a href="calculating-animal-density.html#fig:wtd">3.1</a>. In general, observations where the animal stayed in the field of view are more closely clustered around the 20 second mark, and observations where the animal left the field of view are more evenly spread across the range of gap lengths.</p>
+<div class="figure" style="text-align: left"><span style="display:block;" id="fig:wtd"></span>
+<img src="_main_files/figure-html/wtd-1.png" alt="White-tailed Deer." width="672" />
+<p class="caption">
+Figure 3.1: White-tailed Deer.
+</p>
+</div>
+<p>We used this data to develop models of the probability of a species leaving the field-of-view during a 20-120 second gap as a function of the gap duration. Smoothing splines were fit to the probability of leaving as a function of gap length, using a logit-linked binomial model.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="calculating-animal-density.html#cb3-1" tabindex="-1"></a><span class="co"># Develop model for each species, then make predictions for each second along the 20-120 second span</span></span>
+<span id="cb3-2"><a href="calculating-animal-density.html#cb3-2" tabindex="-1"></a>predictions <span class="ot">&lt;-</span> raw_gap_data <span class="sc">|&gt;</span></span>
+<span id="cb3-3"><a href="calculating-animal-density.html#cb3-3" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">left =</span> <span class="fu">ifelse</span>(left <span class="sc">==</span> <span class="st">&quot;Yes&quot;</span>, <span class="dv">1</span>, <span class="dv">0</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb3-4"><a href="calculating-animal-density.html#cb3-4" tabindex="-1"></a>  <span class="fu">group_by</span>(species_common_name) <span class="sc">|&gt;</span></span>
+<span id="cb3-5"><a href="calculating-animal-density.html#cb3-5" tabindex="-1"></a>  <span class="fu">nest</span>() <span class="sc">|&gt;</span></span>
+<span id="cb3-6"><a href="calculating-animal-density.html#cb3-6" tabindex="-1"></a>  <span class="co"># Models and predictions</span></span>
+<span id="cb3-7"><a href="calculating-animal-density.html#cb3-7" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">model =</span> <span class="fu">map</span>(<span class="at">.x =</span> data, <span class="sc">~</span> <span class="fu">smooth.spline</span>(<span class="at">x =</span> .<span class="sc">$</span>diff_time, <span class="at">y =</span> .<span class="sc">$</span>left, <span class="at">df =</span> <span class="dv">3</span>)),</span>
+<span id="cb3-8"><a href="calculating-animal-density.html#cb3-8" tabindex="-1"></a>         <span class="at">pred =</span> <span class="fu">map</span>(<span class="at">.x =</span> model, <span class="sc">~</span> <span class="fu">predict</span>(., <span class="at">x =</span> <span class="dv">20</span><span class="sc">:</span><span class="dv">120</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb3-9"><a href="calculating-animal-density.html#cb3-9" tabindex="-1"></a>  <span class="fu">select</span>(species_common_name, pred) <span class="sc">|&gt;</span></span>
+<span id="cb3-10"><a href="calculating-animal-density.html#cb3-10" tabindex="-1"></a>  <span class="fu">unnest_wider</span>(pred) <span class="sc">|&gt;</span></span>
+<span id="cb3-11"><a href="calculating-animal-density.html#cb3-11" tabindex="-1"></a>  <span class="fu">unnest</span>(<span class="at">cols =</span> <span class="fu">c</span>(x, y)) <span class="sc">|&gt;</span></span>
+<span id="cb3-12"><a href="calculating-animal-density.html#cb3-12" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">diff_time =</span> x, <span class="at">pred =</span> y) <span class="sc">|&gt;</span></span>
+<span id="cb3-13"><a href="calculating-animal-density.html#cb3-13" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span></code></pre></div>
+<p>We can plot the model predictions for each value between the 20-120 second interval as follows (Figure <a href="calculating-animal-density.html#fig:wtdpred">3.2</a>). In the case of White-tailed Deer, the model predicts that there is ~40% chance that an individual would have left the field of view and returned during a gap of 20 seconds; similarly, the model predicts there is an over 80% chance that a gap of 120 seconds would mean the animal left the field of view and returned.</p>
+<div class="figure" style="text-align: left"><span style="display:block;" id="fig:wtdpred"></span>
+<img src="_main_files/figure-html/wtdpred-1.png" alt="Probability of leaving the field-of-view based on gap length between subsequent images for white-tailed deer." width="672" />
+<p class="caption">
+Figure 3.2: Probability of leaving the field-of-view based on gap length between subsequent images for white-tailed deer.
+</p>
+</div>
+<p>The 40% chance the individual left the camera field of view for gaps of 20 seconds implies that they may also have left in slightly shorter gaps, where we assume they all stayed. However, it makes little difference to the total duration to miss a few shorter gaps where the animals left (i.e., to add that extra little bit of time in), especially because we add time to the start and end of a series (next section). At the other end, there was evidence that animals left in about 80% of the 120 second gaps. Missing long periods when an individual is present in the field of view but not moving would lead to underestimates of their densities. For trend estimates and habitat modeling, we would have to assume that the prevalence of those misses does not change over time or by habitat type.</p>
+<p>Ideally, each gap between images would be checked to see if the animal left or not. However, the process of checking each gap is time-consuming. When we have direct information on gap-leaving, we define a series as any set of images separated by less than 120 seconds, unless the animal was observed to leave the field-of-view (in gaps of 20-120 seconds that were checked) (illustrated in <a href="calculating-animal-density.html#fig:gap-illustration">3.3</a>). If it did leave in a gap, then the series ends at the preceding image, and a new series starts when the animal (or a different individual) returns in the subsequent image. The species is in the field-of-view from the first to the last image in the field-of-view (plus end buffers; described below).</p>
+<p>When we haven’t examined 20-120 second gaps, a series is all images separated by &lt;120 seconds. However, we then use the above models of gap-leaving probabilities to prorate the 20-120 second gaps for the probability that the species left for a gap of that length. Instead of the full 20-120 second gap length, we only add the duration of the gap x (1 – probability of leaving) to the total series length (illustrated in <a href="calculating-animal-density.html#fig:gap-illustration">3.3</a>, bottom). For example, if there were 4 images separated by 10 seconds, 5 seconds, 60 seconds and 10 seconds, and the model for that species showed a 40% chance that it left in a gap of 60 seconds, then the total time in the field-of-view for that series is 10 + 5 + 60 x (1 - 0.4) + 10 = 61 seconds. (And, if there were an average of 1.25 individuals in those 4 images, the total animal-seconds would be 1.25 x 61 = 76.25 animal-seconds).</p>
+<p>Finally, we must consider the time before the first image and after the last image of a series, and time to allocate to single-image series’. We estimate that by calculating the average time between images in all series, separately by species (Table <a href="calculating-animal-density.html#tab:tbi">3.1</a>). This is typically 4-7 seconds for larger species and somewhat longer for small species. This time is added to the duration of each series, including to single-image series, which would otherwise have a duration of 0 seconds (striped sections in <a href="calculating-animal-density.html#fig:gap-illustration">3.3</a>. The assumption is that the animal is in the field-of-view for half the average inter-photo time before the first image, and after the last image. (Although animals often appear to be further into the field-of-view when the first image is taken, and nearer the edge when the final one is taken, presumably reflecting a lag-time in the motion-detector – the assumption is that this averages to the average interval within series). When we have 20-120 second gaps that are using the probabilistic gap-leaving model, we add this extra time on the start and end of the whole series in the normal way, and we also added this time multiplied by the probability of leaving for each 20-120 second gap, to account for the cases where the animal would have left the field-of-view in those 20-120 second gaps and hence created another series.</p>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:gap-illustration"></span>
+<img src="pics/gap_illustration.png" alt="Illustration of how sequential individual images are converted to series, and how the species' total time in the field-of-view is calculated for each series, when we have directly examined gaps of 20-120 seconds (top) or not examined them and used probabilistic model instead (bottom)." width="500" />
+<p class="caption">
+Figure 3.3: Illustration of how sequential individual images are converted to series, and how the species’ total time in the field-of-view is calculated for each series, when we have directly examined gaps of 20-120 seconds (top) or not examined them and used probabilistic model instead (bottom).
+</p>
+</div>
+<p><br></p>
+<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+<span id="tab:tbi">Table 3.1: </span>Average time between sequential images of the same species
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Species
+</th>
+<th style="text-align:right;">
+Average time between images (s)
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Snowshoe Hare
+</td>
+<td style="text-align:right;">
+10.97
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Fisher
+</td>
+<td style="text-align:right;">
+9.81
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Marten
+</td>
+<td style="text-align:right;">
+8.45
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Coyote
+</td>
+<td style="text-align:right;">
+7.66
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Black Bear
+</td>
+<td style="text-align:right;">
+6.25
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Gray Wolf
+</td>
+<td style="text-align:right;">
+5.77
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Pronghorn
+</td>
+<td style="text-align:right;">
+5.43
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+White-tailed Deer
+</td>
+<td style="text-align:right;">
+4.96
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Canada Lynx
+</td>
+<td style="text-align:right;">
+4.85
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mule Deer
+</td>
+<td style="text-align:right;">
+4.76
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Moose
+</td>
+<td style="text-align:right;">
+4.53
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Woodland Caribou
+</td>
+<td style="text-align:right;">
+4.19
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Elk (wapiti)
+</td>
+<td style="text-align:right;">
+3.85
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="time-of-camera-operation" class="section level2 hasAnchor" number="3.4">
+<h2><span class="header-section-number">3.4</span> Time of Camera Operation<a href="calculating-animal-density.html#time-of-camera-operation" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+</div>
+<div id="effective-detection-distances" class="section level2 hasAnchor" number="3.5">
+<h2><span class="header-section-number">3.5</span> Effective Detection Distances<a href="calculating-animal-density.html#effective-detection-distances" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>One option to define the area surveyed by cameras is to define a fixed maximum distance, using a pole or other marker at 5m or 10m or whatever is appropriate. Animals beyond that distance are not counted. The assumption, which should be tested, is that all target species are detected if they are within that distance. The downside of this simple approach is that it excludes data from animals detected in the potentially long tail of greater distances where they are partially detectable.</p>
+<p>The ABMI uses all images (unlimited distance), with a procedure to estimate the effective detection distance of cameras. “Effective detection distance” is the fixed distance that would give the same number of detections as observed if all animals up to that distance were perfectly detectable and none were detectable further away. This approach is used for any point counts or transects with unlimited distances or with distance bands beyond the distance of perfect detectability. In the ABMI protocol, we place a prominently coloured pole 5m from the camera. All native mammals are recorded as being closer than the pole or farther than the pole, with additional categories for animals that are uncertain (near 5m but not directly in line with the pole), investigating the pole, or investigating the camera. Simple geometry gives the effective detection distance from the proportion of locations that are &lt;5m away versus &gt;5m (excluding the uncertain and investigating images), which is shown in Equation <a href="calculating-animal-density.html#eq:edd">(3.1)</a>.</p>
+<p><br>
+<span class="math display" id="eq:edd">\[\begin{equation}
+EDD~(m) = \frac{5}{sqrt(1-p_{&gt;5m})}
+\tag{3.1}
+\end{equation}\]</span>
+<br></p>
+<p>where <em>p</em> is the proportion of images with the species greater than 5-m away.</p>
+<p>The area surveyed by the camera then becomes as shown in Equation <a href="calculating-animal-density.html#eq:sa">(3.2)</a>.</p>
+<p><br>
+<span class="math display" id="eq:sa">\[\begin{equation}
+Surveyed~Area~(m^2)~=~\frac{(π~*~EDD^2~*~angle)}{360}
+\tag{3.2}
+\end{equation}\]</span>
+<br></p>
+<p>where <em>angle</em> is the angle of the camera’s field-of-view in degrees (40° for the Reconyx PC900 model cameras that the ABMI uses)<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>.</p>
+<p>Detection distances are expected to differ for different species, by habitat types, and possibly by season (e.g., on snowpacks versus in summer shrubs). We therefore used the results to develop detection-distance models for eleven species groups and eight broad habitat types: deciduous forest, upland conifer forest, upland grass, shrub, lowland forest, wet grass, water and human footprint. BIC-based model selection examined seven models with those habitat types grouped into broader categories, and seven more that added a factor for season (winter = October 15 – April 14, summer = April 15 – October 14).</p>
+<p>Below we plot the estimated EDD for different species groups for each of the eight broad habitat types and two seasons.</p>
+</div>
+<div id="calculating-density" class="section level2 hasAnchor" number="3.6">
+<h2><span class="header-section-number">3.6</span> Calculating Density<a href="calculating-animal-density.html#calculating-density" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Include how to calculate confidence intervals on density of areas.</p>
+<p>A final consideration is the sampling distribution of density estimates. Because individual cameras sample tiny areas compared to the home ranges of the species they survey, the resulting sampling distribution can be horrendous – the majority of cameras never detect the species at all (density = 0), a few cameras record the species passing by once or twice for brief periods (low densities), and a very few number of cameras record long durations as the animals forage, rest, or play in front of the camera, or revisit a favourite spot repeatedly (very high densities). Longer duration camera deployments can help smooth out some of that extreme variation, but ultimately large numbers of cameras are required for precise estimates. Appropriate questions, rigorous study designs, and modest expectations are required for camera-based studies.</p>
+</div>
+<div id="assumptions" class="section level2 hasAnchor" number="3.7">
+<h2><span class="header-section-number">3.7</span> Assumptions<a href="calculating-animal-density.html#assumptions" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>There are a number of strong assumptions involved in using this measure to estimate density of a species. A couple big assumptions are:</p>
+<ul>
+<li><p>The cameras are a random or otherwise representative sample of the area. The density estimate applies to the field-of-view of the cameras. To make inferences about a larger region, the cameras need to be surveying a random or representative (e.g., systematic, systematic-random, random stratified) sample of the larger region. In particular, if cameras are intentionally placed in areas where species are more common, such as game trails, then the density estimate only applies to those places, not to a larger region.</p></li>
+<li><p>Animals are not attracted to or repelled by the cameras (or posts used to deploy the cameras, etc). That also means that they do not spend more or less time in front of the camera because of the presence of the camera. The effect of lures or other attractants needs to be explicitly measured and accounted for.</p></li>
+</ul>
+<p>There are additional assumptions involved in the procedures to estimate effective detection distance, including an assumption that all animals within a certain distance of the camera are detected, and in converting the discrete images into time in field-of-view. These assumptions are discussed below. Because the world is complicated, assumptions are never met perfectly. The important thing is to consider – and, ideally, design auxiliary tests to measure – is whether the violations are serious enough to impact the answer to whatever question(s) the cameras are being used to answer. In many cases, absolute density estimates may not be accurate, but the results can still serve as a usable index of relative density, if assumptions are violated about equally in whatever units are being compared (habitat types, experimental treatments, years for long-term trend, etc).</p>
+
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol start="1">
+<li id="fn1"><p>The PC900 model was discontinued by Reconyx and the ABMI now used the HP2X model. In Section X we discuss calibrations between the two camera models in order to combine data collected from both.<a href="calculating-animal-density.html#fnref1" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="data-collection.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="testing-assumptions.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"whatsapp": false,
+"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": "https://github.com/ABbiodiversity/MammalModels/tree/main/bookdown03_Calculating-Density.Rmd",
+"text": "Edit"
+},
+"history": {
+"link": null,
+"text": null
+},
+"view": {
+"link": null,
+"text": null
+},
+"download": ["_main.pdf", "_main.epub"],
+"search": {
+"engine": "fuse",
+"options": null
+},
+"toc": {
+"collapse": "subsection"
+}
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

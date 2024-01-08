@@ -1,0 +1,11 @@
+# Testing Assumptions
+
+In this section we describe work that has been done to test the assumptions of the TIFC method.
+
+## Movement not affected by the camera
+
+## Representative sampling of microhabitats
+
+## Perfect detection near the camera
+
+

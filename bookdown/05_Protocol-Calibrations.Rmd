@@ -1,0 +1,15 @@
+# Protocol Calibrations
+
+In this section we describe corrections to common protocol differences.
+
+## Lure
+
+## Deployment Height
+
+## Camera Model
+
+## Camera Age
+
+## Game Trails
+
+
