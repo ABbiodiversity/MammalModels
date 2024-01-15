@@ -4,6 +4,14 @@ In this section we describe corrections to common protocol differences.
 
 ## Lure
 
+For many species, and carnivores in particular, detections at randomly located camera sites can be very low. Lure or other attractants are often used to increase the number of detections at cameras, which can help reduce the high inherent measurement error of cameras. However, lures clearly violate the assumption that animal movement is not influenced by the camera deployment. Furthermore, differential attraction to lures in different habitats would bias habitat models based on camera data.
+
+We deployed both lured and unlured cameras in a paired design to calibrate lure effects for each species. Each site used four cameras spaced 600-m apart, two of which were lured. This design allowed for a simple paired comparison of species' occurrences and time in field-of-view. We examined results for common species at 558 core sites from both lured and unlured cameras (992 of each, with two pairs at most sites) with similar total operating times. We summarized the ratio of lured:unlured results by species in three measures: (1) occurrence (presence/absence at the camera over the entire deployment time); (2) density given occurrence (density at only cameras where the species was present); and (3) total density (the product of occurrence and density given occurrence, that is, our density estimates as described above). We used bootstrapping to calculate CIs for each mean ratio, with site as the resampling unit.
+
+
+
+The ratio of the mean lured:unlured values for moose occurrence was 1.07 (90% CI: 0.99–1.16), 1.17 (0.92–1.5) for density given occurrence, and 1.26 (0.98–1.62) for total density. We found more substantial positive effects of lure for other species, particularly fisher (Pekania pennanti), red fox (Vulpes vulpes), and gray wolf (Canis lupus) (Appendix S5). For these carnivore species, a larger proportion of the effect on total density came from the density given occurrence component, indicating that lure was primarily effective for increasing the time animals spend in the camera field-of-view. Occurrence increases due to lure tended to be smaller, which suggests that animals are not being drawn in from large distances. We use the total density ratios to correct the estimates of densities at lured cameras to an unlured density equivalent.
+
 ## Deployment Height
 
 ## Camera Model
