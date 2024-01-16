@@ -1,6 +1,6 @@
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Project:          ABMI (Ecosystem Health 2019, 2020, 2021, 2022)
+# Project:          ABMI (Ecosystem Health 2019, 2020, 2021, 2022, 2023)
 
 # Title:            Calculate density of species by project/location
 # Description:      Process raw ABMI Ecosystem Health camera tag data from WildTrax and estimate density using the time
@@ -32,7 +32,7 @@ load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 proj <- "eh"
 
 # Years
-years <- "_19-20-21-22"
+years <- "_19-20-21-22-23"
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -46,11 +46,8 @@ wt_auth()
 
 # Pull EH project IDs - 2019, 2020, 2021, and 2022.
 eh_proj_ids <- wt_get_download_summary(sensor_id = "CAM") |>
-  filter(str_detect(project, "Health 2019|Health 2020|Health 2021|Health 2022"),
-         # Don't want the new 'Late Arrivals' 2019 yet
-         !str_detect(project, "Late Arrivals")) |>
-  pull(project_id) |>
-  unlist()
+  filter(str_detect(project, "Health 2019|Health 2020|Health 2021|Health 2022|Health 2023")) |>
+  pull(project_id)
 
 # Download tag and image reports using IDs
 tag_reports <- map_df(.x = eh_proj_ids,
