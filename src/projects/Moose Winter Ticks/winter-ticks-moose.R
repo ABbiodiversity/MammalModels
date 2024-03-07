@@ -80,6 +80,10 @@ data <- wt_download_report(project_id = proj,
          individual_count, age_class, sex_class,
          health_diseases, tag_comments, tag_needs_review)
 
+images <- wt_download_report(project_id = proj,
+                             sensor_id = "CAM",
+                             reports = "image_report")
+
 threshold <- 120
 
 # Adult Females
@@ -237,29 +241,245 @@ juv_all <- bind_rows(juv_kns, juv_unkns) |>
 
 all <- bind_rows(juv_all, adult_male_all, adult_female_all, adult_unkn_all)
 
+class_status <- all |>
+  mutate(classified = ifelse(hli == "UNKN", "no", "yes")) |>
+  uncount(n_individuals) |>
+  group_by(classified) |>
+  tally()
+
+class_demo_status <- all |>
+  uncount(n_individuals) |>
+  filter(!hli == "UNKN") |>
+  group_by(class) |>
+  tally()
+
+class_demo_tick <- all |>
+  uncount(n_individuals) |>
+  filter(!hli == "UNKN") |>
+  mutate(tick = ifelse(hli > 1, "yes", "no")) |>
+  group_by(class, tick) |>
+  tally()
+
+# Sankey
+# Sankey
+#// Enter Flows between Nodes, like this:
+#  //         Source [AMOUNT] Target
+
+#Total \nIndividuals [1458] Classified \nTick Status #52A211
+#Total \nIndividuals [419] Unverified \nTick Status #708090
+
+#Classified \nTick Status [593] Adult Female #9467BD
+#Classified \nTick Status [389] Adult Male #9467BD
+#Classified \nTick Status [289] Adult Unkn #9467BD
+#Classified \nTick Status [187] Juvenile #fb8072
+
+#Adult Female [368] No Ticks\n(HLI 1) #9467BD
+#Adult Female [225] Ticks\n(HLI 2-5) #9467BD
+
+#Adult Male [260] No Ticks\n(HLI 1) #9467BD
+#Adult Male [129] Ticks\n(HLI 2-5) #9467BD
+
+#Adult Unkn [189] No Ticks\n(HLI 1) #9467BD
+#Adult Unkn [100] Ticks\n(HLI 2-5) #9467BD
+
+#Juvenile [149] No Ticks\n(HLI 1) #fb8072
+#Juvenile [38] Ticks\n(HLI 2-5) #fb8072
+
 #-----------------------------------------------------------------------------------------------------------------------
 
 monthly_trend <- all |>
   filter(!hli == "UNKN") |>
   mutate(hli = as.numeric(hli)) |>
   mutate(month = month(date, label = TRUE)) |>
-  group_by(month, class) |>
-  summarise(wmean_hli = weighted.mean(hli, w = n_individuals))
+  uncount(n_individuals) |>
+  group_by(month) |>
+  summarise(mean = mean(hli),
+            n = n())
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-biweekly_trend <- all |>
+biweekly_values <- all |>
   filter(!hli == "UNKN") |>
   mutate(hli = as.numeric(hli)) |>
   mutate(yday = yday(date)) |>
-  mutate(case_when(
-    yday < 16 ~ "Jan 1-15",
-    yday > 16 & yday < 31 ~ "Jan 16-31",
-    yday > 31 & yday < 47 ~ "Feb 1-15",
-    yday > 47 & yday < 59 ~ "Feb 16-28",
-    yday > 59 &
-  ))
-  group_by(month, class) |>
-  summarise(wmean_hli = weighted.mean(hli, w = n_individuals))
+  uncount(n_individuals) |>
+  mutate(period = case_when(
+    yday <= 15 ~ "Jan 1-15",
+    yday > 15 & yday <= 31 ~ "Jan 16-31",
+    yday > 31 & yday <= 46 ~ "Feb 1-15",
+    yday > 46 & yday <= 59 ~ "Feb 16-28",
+    yday > 59 & yday <= 74 ~ "Mar 1-15",
+    yday > 74 & yday <= 90 ~ "Mar 16-31",
+    yday > 90 & yday <= 105 ~ "Apr 1-15",
+    yday > 105 & yday <= 120 ~ "Apr 16-30",
+    yday > 120 & yday <= 135 ~ "May 1-15",
+    yday > 135 & yday <= 151 ~ "May 16-31",
+    yday > 151 & yday <= 166 ~ "June 1-15",
+    yday > 166 ~ "June 16-30"
+  )) |>
+  mutate(period = factor(period, levels = c("Jan 1-15", "Jan 16-31",
+                                            "Feb 1-15", "Feb 16-28",
+                                            "Mar 1-15", "Mar 16-31",
+                                            "Apr 1-15", "Apr 16-30",
+                                            "May 1-15", "May 16-31",
+                                            "June 1-15", "June 16-30"))) |>
+  mutate(hli = ifelse(location == "1024-NW" & date == "2015-05-30" & hli == "4", 5, hli))
+
+biweekly_trend <- biweekly_values |>
+  group_by(period) |>
+  summarise(mean = mean(hli))
+
+hline <- data.frame(
+  period = c(1:12),
+  mean = biweekly_trend$mean
+)
+
+
+# Okay, let's plot this ... somehow.
+
+library(ggplot2)
+library(abmi.themes)
+add_abmi_fonts()
+
+biweekly_values |>
+  mutate(year = year(date)) |>
+  ggplot(aes(x = period, y = hli)) +
+  geom_jitter(aes(color = hli),
+    alpha = 0.25, width = 0.15, height = 0.25, size = 2) +
+  geom_segment(data = hline,
+               aes(x = period - 0.4, xend = period + 0.4,
+                   y = mean, yend = mean),
+               color = "red", linewidth = 1.75) +
+  labs(y = "",
+       x = "") +
+  scale_color_gradient(low = "grey10", high = "grey80") +
+  scale_y_continuous(breaks = c(1, 2, 3, 4, 5), labels = c("None (1)", "Slight (2)", "Moderate (3)", "Severe (4)", "Ghost (5)")) +
+  theme_abmi() +
+  theme(axis.text.x = element_text(hjust = 1, angle = 45, size = 15),
+        axis.title.x = element_blank(),
+        axis.text.y = element_text(size = 17, face = "bold"),
+        axis.title.y = element_blank(),
+        legend.position = "none")
+
+# Facet wrap by year
+
+biweekly_trend_year <- biweekly_values |>
+  mutate(year = year(date)) |>
+  group_by(year, period, .drop = FALSE) |>
+  summarise(mean = mean(hli))
+
+hline <- data.frame(
+  year = c(2015:2018)
+) |>
+  crossing(period = 1:12) |>
+  bind_cols(mean = biweekly_trend_year$mean) |>
+  mutate(year = as.factor(year))
+
+
+biweekly_values |>
+  mutate(year = year(date)) |>
+  ggplot(aes(x = period, y = hli)) +
+  geom_jitter(aes(color = hli),
+              alpha = 0.25, width = 0.15, height = 0.25, size = 1.5) +
+  scale_color_gradient(low = "grey10", high = "grey80", guide = "none") +
+  new_scale_color() +
+  geom_point(data = hline, aes(x = period, y = mean, color = year), size = 2) +
+  geom_line(data = hline, aes(x = period, y = mean, color = year), linewidth = 1) +
+  #geom_segment(data = hline,
+  #             aes(x = period - 0.4, xend = period + 0.4,
+  #                 y = mean, yend = mean, color = year), linewidth = 1.75) +
+  labs(y = "",
+       x = "") +
+  scale_y_continuous(breaks = c(1, 2, 3, 4), labels = c("None (1)", "Slight (2)", "Moderate (3)", "Severe (4)"), limits = c(1, 4)) +
+  theme_abmi() +
+  theme(axis.text.x = element_text(hjust = 1, angle = 45, size = 12),
+        axis.title.x = element_blank(),
+        axis.text.y = element_text(size = 14, face = "bold"),
+        axis.title.y = element_blank(),
+        strip.text = element_text(size = 14),
+        legend.position = "top")
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Values by region (NR? LUF?)
+
+library(sf)
+library(ggnewscale)
+library(MetBrewer)
+
+load(paste0(g_drive, "data/spatial/provincial-boundary.Rdata"))
+
+province.shapefile <- province.shapefile |> st_transform(4326)
+
+ab_wmus <- st_read(paste0(g_drive, "data/spatial/ab_wmus_all.shp")) |>
+  st_transform(4326) |>
+  select(WMUNIT_NAM)
+
+# Spatial subset of the HLI data
+locations <- data |>
+  select(location, latitude, longitude) |>
+  distinct()
+
+all_locations <- all |>
+  uncount(n_individuals) |>
+  left_join(locations) |>
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
+  st_join(ab_wmus, left = TRUE) |>
+  st_set_geometry(NULL) |>
+  #select(-Color) |>
+  filter(!hli == "UNKN") |>
+  mutate(hli = as.numeric(hli),
+         month = month(date, label = TRUE, abbr = FALSE)) |>
+  filter(month == "April" | month == "May") |>
+  group_by(WMUNIT_NAM) |>
+  summarise(n_moose = n(),
+            avg_hli = mean(hli)) |>
+  filter(n_moose > 3)
+
+ab_wmus_gg <- ab_wmus |>
+  left_join(all_locations) |>
+  #filter(!is.na(avg_hli)) |>
+  st_transform(3400)
+
+
+city.locations <- data.frame(City = c("Calgary", "Edmonton", "Grande Prarie", "Fort McMurrary"),
+                             Easting = c(567338, 599585, 256736, 723381),
+                             Northing = c(5654236, 5930763, 6121296, 6290032))
+
+ggplot() +
+  #geom_sf(data = province.shapefile, aes(color = NRNAME, fill = NRNAME), show.legend = FALSE) +
+  geom_sf(data = ab_wmus_gg, aes(color = avg_hli, fill = avg_hli), show.legend = TRUE) +
+  coord_sf(datum = NA) +
+  scale_fill_viridis_c(na.value = "grey90", name = "Mean\nHLI Value") +
+  scale_color_viridis_c(na.value = "grey60", name = "Mean\nHLI Value") +
+  new_scale_color() +
+  new_scale_fill() +
+  geom_point(data = city.locations, aes(x = Easting, y = Northing), size = 3, shape = 25, fill = "#FFFFFF") +
+  geom_text(data = city.locations, aes(x = Easting, y = Northing, label = City),
+            size = 3, hjust = 0, nudge_x = 12000, nudge_y = 2000) +
+  theme_light() +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        title = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 12),
+        axis.line = element_blank(),
+        panel.border = element_blank(),
+        legend.position = "right")
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Images
+
+images_comment <- images |>
+  filter(!is.na(image_comments)) |>
+  select(location, image_id, image_date_time, image_comments, media_url) |>
+  # Anything that says "example"
+  filter(str_detect(image_comments, "Could be a"))
+
+ext <- data |>
+  filter(tag_comments == "4", age_class == "Juv") |>
+  select(location, image_date_time, individual_count, tag_comments)
 
 
