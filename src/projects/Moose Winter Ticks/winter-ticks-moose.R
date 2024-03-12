@@ -418,7 +418,8 @@ ab_wmus <- st_read(paste0(g_drive, "data/spatial/ab_wmus_all.shp")) |>
 # Spatial subset of the HLI data
 locations <- data |>
   select(location, latitude, longitude) |>
-  distinct()
+  distinct() |>
+  st_as_sf(coords = c("longitude", "latitude"), crs = 3400)
 
 all_locations <- all |>
   uncount(n_individuals) |>
@@ -439,6 +440,8 @@ all_locations <- all |>
 ab_wmus_gg <- ab_wmus |>
   left_join(all_locations) |>
   #filter(!is.na(avg_hli)) |>
+  mutate(avg_hli = ifelse(WMUNIT_NAM == "Saddle Hills", 3, avg_hli)) |>
+  mutate(avg_hli = ifelse(WMUNIT_NAM == "Beaverlodge", 2.5, avg_hli)) |>
   st_transform(3400)
 
 
@@ -450,8 +453,8 @@ ggplot() +
   #geom_sf(data = province.shapefile, aes(color = NRNAME, fill = NRNAME), show.legend = FALSE) +
   geom_sf(data = ab_wmus_gg, aes(color = avg_hli, fill = avg_hli), show.legend = TRUE) +
   coord_sf(datum = NA) +
-  scale_fill_viridis_c(na.value = "grey90", name = "Mean\nHLI Value") +
-  scale_color_viridis_c(na.value = "grey60", name = "Mean\nHLI Value") +
+  scale_fill_viridis_c(na.value = "grey90", name = "Mean HLI") +
+  scale_color_viridis_c(na.value = "grey60", name = "Mean HLI") +
   new_scale_color() +
   new_scale_fill() +
   geom_point(data = city.locations, aes(x = Easting, y = Northing), size = 3, shape = 25, fill = "#FFFFFF") +
@@ -468,6 +471,46 @@ ggplot() +
         panel.border = element_blank(),
         legend.position = "right")
 
+province.shapefile <- st_transform(province.shapefile, 3400)
+
+# Spatial subset of the HLI data
+locations <- data |>
+  select(location, latitude, longitude) |>
+  distinct() |>
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
+
+loc <- read_csv(paste0(g_drive, "data/lookup/locations/abmi-cmu_public-locations_2021-10-20.csv")) |>
+  filter(str_detect(project, "Health 2015|Health 2016|Health 2017|Health 2018")) |>select(location, latitude, longitude) |>
+  distinct() |>
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
+
+
+# Sampling sites
+ggplot() +
+  geom_sf(data = province.shapefile,
+          #aes(color = NRNAME),
+          color = "grey80",
+          fill = "grey80",
+          show.legend = FALSE) +
+  geom_sf(data = loc, color = "#122451") +
+  #geom_sf(data = ab_wmus_gg, aes(color = avg_hli, fill = avg_hli), show.legend = TRUE) +
+  coord_sf(datum = NA) +
+  new_scale_color() +
+  new_scale_fill() +
+  geom_point(data = city.locations, aes(x = Easting, y = Northing), size = 4, shape = 25, fill = "#FFFFFF") +
+  geom_label(data = city.locations, aes(x = Easting, y = Northing, label = City),
+            size = 3.5, hjust = 0, nudge_x = 12000, nudge_y = 2000) +
+  theme_light() +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        title = element_blank(),
+        legend.text = element_blank(),
+        legend.title = element_blank(),
+        axis.line = element_blank(),
+        panel.border = element_blank(),
+        legend.position = "none")
+
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Images
@@ -476,10 +519,22 @@ images_comment <- images |>
   filter(!is.na(image_comments)) |>
   select(location, image_id, image_date_time, image_comments, media_url) |>
   # Anything that says "example"
-  filter(str_detect(image_comments, "Could be a"))
+  filter(str_detect(image_comments, "Normal|normal"))
 
 ext <- data |>
   filter(tag_comments == "4", age_class == "Juv") |>
   select(location, image_date_time, individual_count, tag_comments)
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# gifs
+
+create_gif(images_folder = paste0(g_drive, "data/base/sample-images/Moose Ticks/June"),
+           file_type = "jpg",
+           fps = 1,
+           gif_folder = paste0(g_drive, "data/base/sample-images/Moose Ticks"),
+           gif_name = "june.gif")
+
+
 
 
