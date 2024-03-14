@@ -21,7 +21,7 @@ sum_total_time <- function(series, tbd, season_spec) {
     tt <- series |>
       unite("project_location", project, location, sep = "_", remove = TRUE) |>
       mutate(julian = as.numeric(format(series_start, "%j"))) |>
-      # Create season variables based on julian day, and calculate the proportion of individuals behind pole
+      # Create season variables based on julian day
       mutate(interval = interval(snow_start, snow_gone),
              intersect = series_start %within% interval,
              intersect = ifelse(is.na(intersect), "Not applicable", intersect),
@@ -57,7 +57,7 @@ sum_total_time <- function(series, tbd, season_spec) {
     tt <- series |>
       unite("project_location", project, location, sep = "_", remove = TRUE) |>
       mutate(julian = as.numeric(format(series_start, "%j"))) |>
-      # Create season variables based on julian day, and calculate the proportion of individuals behind pole
+      # Create season variables based on julian day
       mutate(interval = interval(snow_start, snow_gone),
              intersect = series_start %within% interval,
              intersect = ifelse(is.na(intersect), "Not applicable", intersect),
@@ -70,7 +70,7 @@ sum_total_time <- function(series, tbd, season_spec) {
       summarise(total_duration = sum(series_total_time)) |>
       ungroup() |>
       mutate_if(is.factor, as.character) |>
-      left_join(tbd, by = c("project_location"))
+      left_join(df_tbd_new3, by = c("project_location"))
 
     # Unique species seen
     sp <- as.character(sort(unique(tt$species_common_name)))
@@ -94,7 +94,7 @@ sum_total_time <- function(series, tbd, season_spec) {
     tt <- series |>
       unite("project_location", project, location, sep = "_", remove = TRUE) |>
       mutate(julian = as.numeric(format(series_start, "%j"))) |>
-      # Create season variables based on julian day, and calculate the proportion of individuals behind pole
+      # Create season variables based on julian day
       mutate(interval = interval(snow_start, snow_gone),
              intersect = series_start %within% interval,
              intersect = ifelse(is.na(intersect), "Not applicable", intersect),

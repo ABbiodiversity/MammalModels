@@ -148,11 +148,11 @@ check <- df_pole_veg |>
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-# Step 2. EDD Modeling.
+# Step 2. EDD Modeling, by Dist Group. There are 8 groups.
 
 # Start with only Large Ungulates
 d.sp <- df_pole_veg |>
-  filter(dist_group == "Deer") |>
+  filter(dist_group == "SmallMustelids") |>
   # Turn Forested Open-Shrubby to Open-Open (for now)
   mutate(secondary_category = ifelse(secondary_category == "Open-Shrubby", "Open-Open", secondary_category)) |>
   mutate(secondary_category = paste0(primary_category, "_", secondary_category)) |>
@@ -160,7 +160,7 @@ d.sp <- df_pole_veg |>
   group_by(secondary_category, season_new3) |>
   add_count() |>
   #filter(nn >= 20) |>
-  #filter(primary_category == "Forested",
+  filter(primary_category == "Forested") |>
   #       season_new1 == "snow") |>
   as.data.frame()
 
@@ -181,9 +181,9 @@ m <- list(NULL)
   # Old - VegHF plus old season
   #m[[4]]<-try(gam(prop_behind ~ VegHF + season_old, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Primary Category
-  m[[1]]<-try(gam(prop_behind ~ primary_category, weights = d.sp$n, data=d.sp, family="binomial"))
+  #m[[1]]<-try(gam(prop_behind ~ primary_category, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Secondary Category
-  m[[2]]<-try(gam(prop_behind ~ secondary_category, weights = d.sp$n, data=d.sp, family="binomial"))
+  m[[1]]<-try(gam(prop_behind ~ secondary_category, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Season 1 (Snow / Non-snow period)
   m[[3]]<-try(gam(prop_behind ~ season_new1, weights = d.sp$n, data=d.sp, family="binomial"))
   # New - Season 2 (Snow / Non-snow period minus 10 days)
@@ -218,18 +218,21 @@ m <- list(NULL)
   bic.wt<-bic.exp/sum(bic.exp)
   best.model<-which.max(bic.wt)
 
-  # Okay, so for LargeUngulates it looks like Model 15 is by far the best.
-
   # Let's predict this out.
   newdata <- d.sp |>
     select(secondary_category) |>
     distinct() |>
     arrange(secondary_category)
 
-  predictions <- data.frame("prediction" = predict(m[[2]], newdata = newdata)) |>
+  predictions <- data.frame("prediction" = predict(m[[1]], newdata = newdata)) |>
     mutate(prediction = 5 / sqrt(1 - plogis(prediction)))
 
-  results <- newdata |> bind_cols(predictions)
+  results <- newdata |> bind_cols(predictions) |>
+    mutate(dist_group = "SmallMustelids") |>
+    select(dist_group, everything())
+
+# Write results
+write_csv(results, paste0(g_drive, "data/processed/detection-distance/predictions/New/SmallMustelids.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 

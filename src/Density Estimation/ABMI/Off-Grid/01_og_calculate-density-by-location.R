@@ -173,14 +173,14 @@ veghf_sheets <- drive_find(type = "spreadsheet", shared_drive = "ABMI Camera Mam
 # Dataframe for use in density function
 df_vegdetdist_focal <- map_df(.x = veghf_sheets,
                               .f = ~ read_sheet(ss = .x)) |>
-  select(project, location, VegForDetectionDistance) |>
+  select(project, location, VEGHFAGEclass, VegForDetectionDistance) |>
   unite("project_location", project, location, sep = "_", remove = TRUE)
 
 # Bring in information form 2013-2018 contained in lookup file (manually checked in the past)
 df_vegdetdist <- read_csv(paste0(g_drive, "data/lookup/veghf/abmi-cmu_2013-2018_vegsoilhf-detdistveg_2022-12-06.csv")) |>
   # This lookup contains only OG projects and the Edge-Interior project
   filter(str_detect(project, "Off-Grid|Edge")) |>
-  select(project, location, VegForDetectionDistance) |>
+  select(project, location, VEGHFAGEclass, VegForDetectionDistance) |>
   unite("project_location", project, location, sep = "_", remove = TRUE) |>
   bind_rows(df_vegdetdist_focal)
 

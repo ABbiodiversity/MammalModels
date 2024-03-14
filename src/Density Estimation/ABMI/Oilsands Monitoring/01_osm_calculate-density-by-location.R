@@ -144,7 +144,7 @@ image_fov_trigger <- read_csv(paste0(g_drive, "data/lookup/image-reports/", proj
 file <- list.files(path = paste0(g_drive, "data/base/clean"), full.names = TRUE) |>
   str_subset(pattern = paste0(proj, years, "_all-data_clean"))
 # Import
-tags_clean <- read_csv(file)
+main_reports_clean <- read_csv(file[[2]])
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -230,3 +230,10 @@ write_and_archive(
 )
 
 #-----------------------------------------------------------------------------------------------------------------------
+
+# Re-estimate density with NEW EDD predictions
+
+df_vdd_new <- read_csv(paste0(g_drive, "data/lookup/veghf/VegForDetectionDistance/New/EDD (Re-) Modeling OSM.csv")) |>
+                         select(1, 2, 5:8) |>
+  mutate(secondary_category = paste0(primary_category, "_", secondary_category))
+
