@@ -1,21 +1,44 @@
-# R Summarize OSM BADR cameras 2022 - DJH
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Project:          ABMI (Oilsands Monitoring)
+
+# Title:            Estimate Treatment Effects
+# Description:
+
+# Author:           Marcus Becker, David J. Huggard
+
+# Previous scripts: None
+
+# Last updated:     March 2024
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+# Attach packages
+library(tidyverse)
 
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
-d1<-read.csv(paste0(g_drive, "results/density/deployments/osm_2021-2022_density_wide_2023-09-25.csv"),stringsAsFactors=FALSE)  # From Marcus - summarized to densities by season
-# 2022 sites NOT to include
+# From Marcus - summarized to densities (not by season anymore)
+d1 <- read.csv(paste0(g_drive, "Results/Density/Deployments/og-sup_all-years_density_wide_2024-03-14.csv"), stringsAsFactors = FALSE)
+
+# 2022 OSM BADR sites NOT to include
 df_2022_bad <- read_csv(paste0(g_drive, "data/lookup/veghf/VegForDetectionDistance/osm2022.csv")) |>
   select(project, location, Useable)
+
+# Remove unusable sites - these are those that had camera failures in 2022
 d1 <- d1 |>
   left_join(df_2022_bad, by = c("project", "location")) |>
   mutate(Useable = ifelse(is.na(Useable), TRUE, Useable)) |>
   filter(!Useable == FALSE) |>
   select(-Useable)
 
-s<-read.csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv"),stringsAsFactors=FALSE)  # From Marcus - treatment info for each deployment
+# Metadata treatment info for each OSM deployment in 2021
+s <- read.csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv"),stringsAsFactors=FALSE)
 
+# Lure information OSM 2022
 lure_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_lure.csv"))
 
+# Metadata treatment info for each OSM deployment in 2022
 df_meta_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_deployment-metadata.csv")) |>
   mutate(camera = str_sub(location, -3, -1)) |>
   left_join(lure_22, by = "location") |>
@@ -23,12 +46,8 @@ df_meta_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_deployment-me
 
 s <- bind_rows(s, df_meta_22)
 
-lure<-read.csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv"),stringsAsFactors=FALSE)  # Modified from MS summary, to include expansion factor to adjust for greater than expected year (=habitat, weather, timing, etc.) effects
-lure$Species<-gsub("\\.","",lure$Species)  # To use same names as density file
-
-d1<-d1[d1$project!="ACME OSM 2021",]  # paired trail/random deployments
-d1$location[is.na(match(d1$location,s$location))]  # Check if there is metadata for each deployment
-s$location[is.na(match(s$location,d1$location))]  # And vice versa
+# Modified from MS summary, to include expansion factor to adjust for greater than expected year (=habitat, weather, timing, etc.) effects
+lure<-read.csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv"),stringsAsFactors=FALSE)
 
 d2<-merge(s,d1)
 d2$jem<-ifelse(d2$jem=="1.00E+01","1E1",d2$jem)  # Fix Excel stupidity
@@ -208,7 +227,6 @@ pinterp<-function(x,p,ptarg)  {
   }
   xinterp
 }
-
 
 # This is the On/Off treatments.
 
