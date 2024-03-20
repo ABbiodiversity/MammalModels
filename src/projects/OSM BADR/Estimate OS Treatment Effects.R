@@ -33,7 +33,16 @@ d1 <- d1 |>
   select(-Useable)
 
 # Metadata treatment info for each OSM deployment in 2021
-s <- read.csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv"),stringsAsFactors=FALSE)
+s <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv")) |>
+  # Fix Excel stupidity
+  mutate(jem = case_when(
+    jem == "1.00E+01" ~ "1E1",
+    jem == "1.00E+02" ~ "1E2",
+    jem == "2.00E+01" ~ "2E1",
+    jem == "2.00E+02" ~ "2E2",
+    jem == "3.00E+01" ~ "3E1",
+    TRUE ~ jem
+  ))
 
 # Lure information OSM 2022
 lure_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_lure.csv"))
@@ -44,101 +53,90 @@ df_meta_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_deployment-me
   left_join(lure_22, by = "location") |>
   select(-notes)
 
-s <- bind_rows(s, df_meta_22)
+# All OSM metadata
+# Note: slightly different ways between the two years in how JEMs are specified. To fix later. I don't think it matters now.
+s <- bind_rows(s, df_meta_22) |>
+  # Fix the road buffer fine scale specs
+  mutate(fine_scale = str_remove(fine_scale, " metres"),
+         fine_scale = ifelse(fine_scale == "200" | fine_scale == "600", "300", fine_scale))
+
+# Now all metadata for EH and OG deployments
+s_eh <- read.csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_EH_2022-06-16.csv"),stringsAsFactors=FALSE)  # On-grid (ecosystem health) deployments from Marcus with OSM treatment info
+s_og <- read.csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_OG_2022-06-16.csv"),stringsAsFactors=FALSE)  # Off-grid (ecosystem health) deployments from Marcus with OSM treatment info
+
+# Get NearestSite and Lure info for supplemental deployments
+dataset.out<-paste0(g_drive, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData")
+load(dataset.out)
+d <- d |>
+  select(project, location, NearestSite, Lured)
+
+# Clean up supplemental sites metadata
+s_sup <- bind_rows(s_eh, s_og) |>
+  # Add a "-1" to the end of OG 2018 in order to join properly
+  mutate(location = ifelse(project == "ABMI Off-Grid Monitoring 2018", paste0(location, "-1"), location)) |>
+  # Include only the most recent (re)visit
+  arrange(location, desc(project)) |>
+  group_by(location) |>
+  filter(row_number() == 1) |>
+  # Attach Lure and Nearest Site information
+  left_join(d, by = c("project", "location")) |>
+  # Landscape Unit not relevant - unless I do a spatial join? But we don't care yet in this first-pass analysis.
+  mutate(landscape_unit = 9999) |>
+  # 'JEM' unit for ABMI sites is the site number
+  mutate(jem = as.character(NearestSite)) |>
+  # Missing a few records - probaby means there is no camera data? Remove for now
+  filter(!is.na(jem)) |>
+  # Standardize edge distances to 4 classes used in BADR
+  mutate(fine_scale = str_remove(fine_scale, " metres")) |>
+  mutate(fine_scale = case_when(
+    fine_scale == "150" ~ "100",
+    fine_scale == "170" ~ "100",
+    fine_scale == "200" ~ "300",
+    fine_scale == "250" ~ "300",
+    fine_scale == "350" ~ "300",
+    fine_scale == "400" ~ "300",
+    fine_scale == "450" ~ "300",
+    fine_scale == "50" ~ "30",
+    fine_scale == "600" ~ "300",
+    TRUE ~ fine_scale
+  )) |>
+  # A few more random fixes
+  mutate(fine_scale = ifelse(treatment == "Low Disturbance/Reference", NA, fine_scale),
+         fine_scale = ifelse(treatment == "Roads" & is.na(fine_scale), "300", fine_scale),
+         fine_scale = ifelse(treatment == "Dense Linear Features" & is.na(fine_scale), "Off", fine_scale),
+         camera = "9999") |>
+  select(project, location, landscape_unit, jem, camera, treatment, vegetation, fine_scale, lure = Lured) |>
+  # Update treatment names
+  mutate(treatment = case_when(
+    treatment == "Low Disturbance/Reference" ~ "reference",
+    treatment == "Roads" ~ "road buffer",
+    treatment == "Dense Linear Features" ~ "dense linear features",
+    treatment == "High Activity Insitu Well Pads" ~ "high activity in situ",
+    treatment == "Low Activity Well Pads" ~ "low activity well pads",
+    treatment == "Plant/Mine Buffer" ~ "plant/mine buffer",
+    treatment == "Pre-Insitu" ~ "pre-insitu"
+  )) |>
+  mutate(vegetation = case_when(
+    vegetation == "TreedLow20" ~ "treedlow20",
+    vegetation == "DecidMix40" ~ "decidmix40"
+  ))
+
+# All metadata together
+meta <- bind_rows(s_sup, s)
 
 # Modified from MS summary, to include expansion factor to adjust for greater than expected year (=habitat, weather, timing, etc.) effects
-lure<-read.csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv"),stringsAsFactors=FALSE)
+lure <- read.csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv"),stringsAsFactors=FALSE) |>
+  # Just gonna call an audible here and make "expansion factor" 1
+  mutate(Expansion = 1)
 
-d2<-merge(s,d1)
-d2$jem<-ifelse(d2$jem=="1.00E+01","1E1",d2$jem)  # Fix Excel stupidity
-d2$jem<-ifelse(d2$jem=="1.00E+02","1E2",d2$jem)  # Fix Excel stupidity
-d2$jem<-ifelse(d2$jem=="2.00E+01","2E1",d2$jem)  # Fix Excel stupidity
-d2$jem<-ifelse(d2$jem=="2.00E+02","2E2",d2$jem)  # Fix Excel stupidity
-d2$jem<-ifelse(d2$jem=="3.00E+01","3E1",d2$jem)  # Fix Excel stupidity
-d2$fine_scale<-gsub(" metres","",d2$fine_scale)  # Skip the " metres" part
-d2$fine_scale<-ifelse(d2$fine_scale=="200" | d2$fine_scale=="600","300",d2$fine_scale)  # Treat the oddball 200 and 600m distances as 300m
-
-# Summarize number of cameras (before these are combined into replicates below) - BADR only here
-#write.table(table(paste(d2$treatment,d2$vegetation),ifelse(is.na(d2$fine_scale),"NA",as.character(d2$fine_scale))), file="C:/Dave/ABMI/Cameras/2022 analysis/OSM 2022/Table of fine scale treatment by jem treatmentXveg including extra ABMI - n cameras BADR.csv",sep=",",col.names=NA)
-
-# Add ABMI on-grid and off-grid deployments
-dataset.out<-paste0(g_drive, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData")  # Processed main camera density file
-load(dataset.out)
-s1<-read.csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_EH_2022-06-16.csv"),stringsAsFactors=FALSE)  # On-grid (ecosystem health) deployments from Marcus with OSM treatment info
-s2<-read.csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_OG_2022-06-16.csv"),stringsAsFactors=FALSE)  # Off-grid (ecosystem health) deployments from Marcus with OSM treatment info
-# Fix some off-grid deployment names
-i<-which(is.na(match(s2$location,d$location)))
-s2$location[i]<-paste(s2$location[i],"-1",sep="")  # This fixes most of the problems.  Just omit the other few.
-# Merge density and OSM BADR info
-s<-rbind(s1,s2)
-d<-merge(d,s,by="location")
-d$project.y<-NULL
-names(d)[which(names(d)=="project.x")]<-"project"
-# There are some revisited sites, and some duplicate records - use just the most recent one
-d<-d[order(d$project,decreasing=TRUE),]
-d<-d[duplicated(d$location)==FALSE,]
-# Make the column names compatible
-names(d2)<-gsub("\\.","",names(d2))
-names(d)<-gsub("Winter","_winter",names(d))
-names(d)<-gsub("Summer","_summer",names(d))
-names(d)[which(names(d)=="Lured")]<-"lure"
-names(d)[which(names(d)=="_winterDays")]<-"winter"
-names(d)[which(names(d)=="_summerDays")]<-"summer"
-d$landscape_unit<-9999  # Not assigned for ABMI sites
-d$jem<-substr(d$location,1,3)  # The "JEM" unit for ABMI sites is just the site (with OG sites added to the nearest site).  This line only works because all ABMI sites in OSM have 3 digits (i.e., >=100, <1000)
-d$jem<-ifelse(substr(d$location,1,7)=="OG-ABMI",substr(d$location,9,11),d$jem)  # This line only works because the only OG sites are OG-ABMI and the nearest ABMI sites has 3 digits in all cases
-d$camera<-"9999"
-# Standardize the edge distances to 4 classes
-fs1<-c("10","100","100","100","300","300","30","300","300","300","300","30","300","Off","On")[match(d$fine_scale,c("10 metres","100 metres","150 metres","170 metres","200 metres","250 metres","30 metres","300 metres","350 metres","400 metres","450 metres","50 metres","600 metres","Off","On"))]  # Check with table(d$fine_scale,fs1) and sum(is.na(fs1))
-d$fine_scale<-fs1
-# And use the simpler JEM treatment names
-t1<-c("reference","low activity well pads","plant/mine buffer","road buffer","dense linear features","high activity in situ")[match(d$treatment,c("Low Disturbance/Reference","Low Activity Well Pads","Plant/Mine Buffer","Roads","Dense Linear Features","High Activity Insitu Well Pads"))]  # NOTE: No pre-insitu among ABMI sites?
-t1<-ifelse(is.na(t1),as.character(d$treatment),t1)  # This is for the cases that were right to begin with
-d$treatment<-t1
-# And standardize vegetation
-d$vegetation<-tolower(d$vegetation)
-# Correct some mistakes in meta-data
-d$fine_scale<-ifelse(is.na(d$fine_scale) & d$vegetation!="wetland","Off",d$fine_scale)
-d$fine_scale<-ifelse(d$treatment=="reference",NA,as.character(d$fine_scale))  # These are all "Off" in the ABMI meta-data, all NA in OSM data
-d$fine_scale<-ifelse(d$treatment=="road buffer" & d$fine_scale=="Off","300",as.character(d$fine_scale))
-
-names(d)<-gsub("\\ ","",names(d))
-names(d)<-gsub("\\-","",names(d))
-col <- intersect(colnames(d), colnames(d2))
-d <- d |>
-  select(all_of(col)) |>
-  bind_rows(d2)
-# Then add to BADR cameras
-# d<-rbind(d2,d[,colnames(d2)])
-
-# Summarize number of cameras (before these are combined into replicates below)
-#write.table(table(paste(d$treatment,d$vegetation),ifelse(is.na(d$fine_scale),"NA",as.character(d$fine_scale))), file="C:/Dave/ABMI/Cameras/2022 analysis/OSM 2022/Table of fine scale treatment by jem treatmentXveg including extra ABMI - n cameras.csv",sep=",",col.names=NA)
-
-# Set densities with <20 operating days in season to NA
-i<-which(d$summer<20)
-j<-which(regexpr("_summer",names(d))>0)
-d[i,j]<-NA
-i<-which(d$winter<20)
-j<-which(regexpr("_winter",names(d))>0)
-d[i,j]<-NA
+d <- d1 |> left_join(meta, by = c("project", "location")) |>
+  # Remove deployments without metadata - ~40, no big deal. To fix for next year.
+  filter(!is.na(treatment))
 
 # Analyzable species - >15 occurrences
-sp.first<-which(names(d)=="Beaver_summer")
-sp.last<-which(names(d)=="WoodlandCaribou_winter")
-occ1<-colSums(sign(d[,sp.first:sp.last]),na.rm=TRUE)
-occ2<-by(occ1,substr(names(occ1),1,nchar(names(occ1))-7),sum)  # Using simple sum of summer and winter (whether or not they were at the same deployment)
-occ<-as.numeric(occ2)
-names(occ)<-names(occ2)
-SpTable<-names(occ)[occ>15]
-SpTable<-c("BlackBear","CanadaLynx","Coyote","Fisher","GrayWolf","Marten","Moose","SnowshoeHare","WhitetailedDeer","WoodlandCaribou")  # Excluding a few species that get added only because of the ABMI cameras
-sp.names<-c("Black Bear","Lynx","Coyote","Fisher","Wolf","Marten","Moose","Snowshoe Hare","White-tailed Deer","Woodland Caribou")
 
-# Calculate average density for the two seasons
-for (sp in 1:length(SpTable)) {
-  sp.summer<-paste(SpTable[sp],"summer",sep="_")
-  sp.winter<-paste(SpTable[sp],"winter",sep="_")
-  d[,SpTable[sp]]<-ifelse(is.na(d[,sp.winter]) | SpTable[sp]=="Black.Bear",d[,sp.summer],ifelse(is.na(d[,sp.summer]),d[,sp.winter],(d[,sp.summer]+d[,sp.winter])/2))  # Use summer if winter=NA (or bear), winter if summer=NA, average if both not NA
-}
+SpTable<-c("Black.Bear","Canada.Lynx","Coyote","Fisher","Gray.Wolf","Marten","Moose","Snowshoe.Hare","White.tailed.Deer","Woodland.Caribou")
+# sp.names<-c("Black Bear","Lynx","Coyote","Fisher","Wolf","Marten","Moose","Snowshoe Hare","White-tailed Deer","Woodland Caribou")
 
 # Figure out variance of log abundance-given-presence, using all (individual) cameras
 log.var<-NULL
@@ -174,8 +172,10 @@ for (i in 1:length(LU.jem.fine.list)) {
   }
 }
 
-d<-d2  # This is the basic file to use for analyses
-d<-d[!is.na(d$BlackBear),]  # Two edge distances in LU 3 JEM 1F1 have no info
+# This is the basic file to use for analyses
+d <- d2 |>
+  mutate(Black.Bear = ifelse(Black.Bear > 15, 2, Black.Bear),
+         White.tailed.Deer = ifelse(White.tailed.Deer > 30, 5, White.tailed.Deer))
 
 # Figure out expected abundance-given-presence when there are no occurrences
 agp0<-NULL
@@ -190,13 +190,13 @@ for (sp in 1:length(SpTable)) {
 
 # Summaries to figure out analyses
 # Number of replicates for fine scale treatments by treatment+vegetation type
-write.table(table(paste(d$treatment,d$vegetation),ifelse(is.na(d$fine_scale),"NA",as.character(d$fine_scale))), file=paste0(g_drive, "Projects/OSM BADR/Table of fine scale treatment by jem treatmentXveg including extra ABMI - n replicates.csv"),sep=",",col.names=NA)
+# write.table(table(paste(d$treatment,d$vegetation),ifelse(is.na(d$fine_scale),"NA",as.character(d$fine_scale))), file=paste0(g_drive, "Projects/OSM BADR/Table of fine scale treatment by jem treatmentXveg including extra ABMI - n replicates.csv"),sep=",",col.names=NA)
 
 # JEM treatment X fine scale treatment figures
 d$TreatType<-ifelse(regexpr("buffer",d$treatment)>0,"Buffer","HF")  # Separate graphs for buffer-distance treatments and on/off HF treatments
 # Treatments with on/off HF
-treat.list<-c("dense linear features NA","dense linear features Off","dense linear features On","high activity in situ NA","high activity in situ Off","high activity in situ On",
-              "low activity well pads NA","low activity well pads Off","low activity well pads On","pre-insitu NA","reference NA")  # Pasted treatment, fine_scale
+treat.list<-c("dense linear features Off","dense linear features On","high activity in situ Off","high activity in situ On",
+              "low activity well pads Off","low activity well pads On","pre-insitu NA","reference NA")  # Pasted treatment, fine_scale
 #jem.name<-c("","DLF","","","HAIS","","","LAWP","","Pre","Ref")  # Labels for JEM treatments, in same order as above
 #fine.name<-c("wet","off","on","wet","off","on","wet","off","on","","")  # Labels for fine scale treatments, in same order as above
 treat.x<-c(3.4,3,3.25,5.4,5,5.25,4.4,4,4.25,2,1)  # x-axis position of treatments, in same order as above
@@ -304,7 +304,7 @@ for (sp in 1:length(SpTable)) {
     }  # Next veg type
   } # Next treatment
   # Then do figure(s)
-  fname<-paste(g_drive, "results/osm/figures/2022/Figure JEM x on off x veg ",SpTable[sp],".png",sep="")
+  fname<-paste(g_drive, "Results/OSM BADR/Figures/2022/Figure JEM x on off x veg ",SpTable[sp],".png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -315,7 +315,7 @@ for (sp in 1:length(SpTable)) {
   axis(side=1,at=x.tick,lab=rep("",length(x.tick)),tck=0.015)
   mtext(side=1,at=x.tick,adj=0.5,line=0.6,x.label)
   mtext(side=1,at=x.jem,adj=0.5,line=1.8,cex=1.3,jem.label)
-  mtext(side=3,at=1,adj=0,cex=1.4,sp.names[sp])
+  mtext(side=3,at=1,adj=0,cex=1.4,SpTable[sp])
   for (i in 1:length(treat.list)) {
     for (j in 1:length(veg.list)) {
       x.point<-treat.x[i]+veg.x.offset[j]
@@ -328,7 +328,7 @@ for (sp in 1:length(SpTable)) {
   }  # Next treat i
   graphics.off()
   # Version with sqrt-transformation on y-axis
-  fname<-paste(g_drive, "results/osm/figures/2022/Figure JEM x on off x veg ",SpTable[sp]," SQRT version.png",sep="")
+  fname<-paste(g_drive, "Results/OSM BADR/Figures/2022/Figure JEM x on off x veg ",SpTable[sp]," SQRT version.png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -342,7 +342,7 @@ for (sp in 1:length(SpTable)) {
   axis(side=1,at=x.tick,lab=rep("",length(x.tick)),tck=0.015)
   mtext(side=1,at=x.tick,adj=0.5,line=0.6,x.label)
   mtext(side=1,at=x.jem,adj=0.5,line=1.8,cex=1.3,jem.label)
-  mtext(side=3,at=1,adj=0,cex=1.4,sp.names[sp])
+  mtext(side=3,at=1,adj=0,cex=1.4,SpTable[sp])
   for (i in 1:length(treat.list)) {
     for (j in 1:length(veg.list)) {
       x.point<-treat.x[i]+veg.x.offset[j]
@@ -594,7 +594,8 @@ wtd_uci <- x.hf[9, , 1:2, 4] |>
 
 wtd <- wtd_mean |>
   left_join(wtd_lci) |>
-  left_join(wtd_uci)
+  left_join(wtd_uci) |>
+  select(common_name, treatment, vegetation, mean_density, lci_density, uci_density)
 
 # Woodland Caribou
 caribou_mean <- x.hf[10, , 1:2, 2] |>
@@ -629,7 +630,7 @@ all_on_off <- bind_rows(
   mutate(treatment = str_remove(treatment, " NA"))
 
 # Save csv
-write_csv(all_on_off, paste0(g_drive, "results/osm/2021-2022_osm-on-off_treatment_results.csv"))
+write_csv(all_on_off, paste0(g_drive, "Results/OSM BADR/2021-2022_osm-on-off_treatment_results_new.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -727,7 +728,7 @@ for (sp in 1:length(SpTable)) {
     }  # Next veg type
   } # Next treatment
   # Then do figure(s)
-  fname<-paste(g_drive, "results/osm/figures/2022/Figure JEM x buffer distance x veg ",SpTable[sp],".png",sep="")
+  fname<-paste(g_drive, "Results/OSM BADR/Figures/2022/Figure JEM x buffer distance x veg ",SpTable[sp],".png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -738,7 +739,7 @@ for (sp in 1:length(SpTable)) {
   axis(side=1,at=x.tick,lab=rep("",length(x.tick)),tck=0.015)
   mtext(side=1,at=x.tick,adj=0.5,line=0.6,x.label)
   mtext(side=1,at=x.jem,adj=0.5,line=1.8,cex=1.3,jem.label)
-  mtext(side=3,at=1,adj=0,cex=1.4,sp.names[sp])
+  mtext(side=3,at=1,adj=0,cex=1.4,SpTable[sp])
   for (i in 1:length(treat.list)) {
     for (j in 1:length(veg.list)) {
       x.point<-treat.x[i]+veg.x.offset[j]
@@ -751,7 +752,7 @@ for (sp in 1:length(SpTable)) {
   }  # Next treat i
   graphics.off()
   # Version with sqrt-transformation on y-axis
-  fname<-paste(g_drive, "results/osm/figures/2022/Figure JEM x buffer distance x veg ",SpTable[sp]," SQRT version.png",sep="")
+  fname<-paste(g_drive, "Results/OSM BADR/Figures/2022/Figure JEM x buffer distance x veg ",SpTable[sp]," SQRT version.png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -765,7 +766,7 @@ for (sp in 1:length(SpTable)) {
   axis(side=1,at=x.tick,lab=rep("",length(x.tick)),tck=0.015)
   mtext(side=1,at=x.tick,adj=0.5,line=0.6,x.label)
   mtext(side=1,at=x.jem,adj=0.5,line=1.8,cex=1.3,jem.label)
-  mtext(side=3,at=1,adj=0,cex=1.4,sp.names[sp])
+  mtext(side=3,at=1,adj=0,cex=1.4,SpTable[sp])
   for (i in 1:length(treat.list)) {
     for (j in 1:length(veg.list)) {
       x.point<-treat.x[i]+veg.x.offset[j]
@@ -1052,7 +1053,7 @@ all_buffer <- bind_rows(
   select(common_name, treatment, vegetation, mean_density, lci_density, uci_density)
 
 # Save csv
-write_csv(all_buffer, paste0(g_drive, "results/osm/2021-2022_osm_buffer_treatment_results.csv"))
+write_csv(all_buffer, paste0(g_drive, "Results/OSM BADR/2021-2022_osm_buffer_treatment_results_new.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -1061,12 +1062,12 @@ write_csv(all_buffer, paste0(g_drive, "results/osm/2021-2022_osm_buffer_treatmen
 dens.adj<-d1$Density/(1+(d1$n.lure/d1$n*(lure.factor$TA-1)))
 
 jem_density <- d |>
-  pivot_longer(cols = c(BlackBear:WoodlandCaribou), names_to = "common_name", values_to = "density") |>
+  pivot_longer(cols = c(`Black.Bear`:`Woodland.Caribou`), names_to = "common_name", values_to = "density") |>
   left_join(lure, by = c("common_name" = "Species")) |>
   mutate(density_adj = density / (1 + ((n.lure / n) * (TA - 1)))) |>
-  select(jem, vegetation, treatment, fine_scale, type = TreatType, common_name, density, density_adj)
+  select(project, landscape_unit, jem, vegetation, treatment, fine_scale, type = TreatType, common_name, density, density_adj)
 
-write_csv(jem_density, paste0(g_drive, "data/processed/osm/2021-2022_osm_mean_jem_density_values.csv"))
+write_csv(jem_density, paste0(g_drive, "data/processed/osm/2021-2022_osm_mean_jem_density_values_new.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
