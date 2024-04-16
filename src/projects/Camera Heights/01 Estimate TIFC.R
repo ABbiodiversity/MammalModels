@@ -21,7 +21,7 @@ library(tidyverse)
 # Native species tags in WildTrax
 load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
 
-# Probabilistic gaps probability of leaving predictions
+# Probabilistic gaps (i.e., probability of leaving predictions)
 df_leave_prob_pred <- read_csv(paste0(g_drive, "data/processed/probabilistic-gaps/gap-leave-prob_predictions_2021-10-05.csv"))
 # Gap groups
 df_gap_groups <- read_csv(paste0(g_drive, "data/lookup/species-gap-groups.csv"))
@@ -115,7 +115,6 @@ data_all <- data |>
 # - 724-4-SE-M -> Actual start date is March 2, 2023
 # - 761-3-NE-M -> Actual start date is March 9, 2023
 
-
 # Camera pairs to remove from analysis:
 # - 1-1A2-CA2 -> 1m camera didn't take reliable images (cute baby lynx photos though)
 # - 1-1A2-CA3 -> Neither camera took reliable images
@@ -129,7 +128,7 @@ data_subset <- data_all |>
   # Remove deployment pairs that did not collect reliable data
   filter(!location %in% remove) |>
   mutate(image_date_time = ymd_hms(image_date_time)) |>
-  # Truncate dates so that only data operating during a common period is used (only 3/10 locations impacted)
+  # Truncate dates so that only data operating during a common period is used
   filter(!(image_date_time > as.Date("2021-08-07 00:00:00") & location == "793-NE"),
          !(image_date_time > as.Date("2022-05-19 00:00:00") & location == "793-SW"),
          !(image_date_time > as.Date("2022-07-02 00:00:00") & location == "792-SW"),

@@ -181,10 +181,10 @@ dimnames(ta.bs.sum)[[1]] <- SpTable
 dimnames(ta.bs.sum)[[2]] <- c("TA", "TA.lci", "TA.uci")
 ta <- as.data.frame(ta.bs.sum)
 
-check <- bind_cols(pa, agp, ta) %>% tibble::rownames_to_column(var = "common_name")
+full_results <- bind_cols(pa, agp, ta) %>% tibble::rownames_to_column(var = "species_common_name")
 
 # Write results
-readr::write_csv(check, paste0(root, "data/processed/lure/lure-effect-summary_", Sys.Date(), ".csv"))
+readr::write_csv(full_results, paste0(g_drive, "data/processed/lure/lure-effect-summary_", Sys.Date(), ".csv"))
 
 
 
