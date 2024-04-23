@@ -4,6 +4,7 @@ fig:gap-illustration
 tab:tbi
 eq:edd
 eq:sa
+tab:lure-summary
 fig:lure-plot
 introduction
 acknowledgement
