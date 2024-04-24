@@ -6,43 +6,69 @@ In this section we describe corrections to common protocol differences.
 
 For many species, and carnivores in particular, detections at randomly located camera sites can be very low. Lure or other attractants are often used to increase the number of detections at cameras, which can help reduce the high inherent measurement error of cameras. However, lures clearly violate the assumption that animal movement is not influenced by the camera deployment. 
 
-The ABMI deploys both lured and unlured cameras in a paired design to calibrate lure effects for each species. Each site uses four cameras spaced 600 m apart, two of which were lured. This design allows for a simple paired comparison of species' occurrences and time in field-of-view. Direct comparisons of lured and unlured deployments are not confounded by geographic location, year, or, with enough samples, microhabitats. We examined results for common species at 558 core sites from both lured and unlured cameras (992 of each, with two pairs at most sites) with the same total operating times. We summarized the ratio of lured:unlured results by species in three measures: (1) **Occurrence** (presence/absence at the camera over the entire deployment time); (2) **Density given Occurrence** (density at only cameras where the species was present); and (3) **Total Density** (the product of occurrence and density given occurrence, that is, our density estimates as described in previous sections). We used bootstrapping to calculate confidence intervals for each mean ratio, with site as the re-sampling unit^[[Calculating Lure Effects](https://github.com/ABbiodiversity/MammalModels/blob/main/src/global/Calculate%20Lure%20Effects.R) - This script demonstrates how lure effects are calculated using the paired ABMI camera design.]. Table \@ref(tab:lure-summary) displays the results across all three measures for 14 species with sufficient data. Figure \@ref(fig:lure-plot) displays the Total Density results for those same 14 species, differentiating between the carnivores and non-carnivores.
+The ABMI deploys both lured and unlured cameras in a paired design to calibrate lure effects for each species. Each site uses four cameras spaced 600 m apart, two of which were lured. This design allows for a simple paired comparison of species' occurrences and time in field-of-view. Direct comparisons of lured and unlured deployments are not confounded by geographic location, year, or, with enough samples, microhabitats. We examined results for common species at 558 core sites from both lured and unlured cameras (992 of each, with two pairs at most sites) with the same total operating times. We summarized the ratio of lured:unlured results by species in three measures: (1) **Occurrence** (presence/absence at the camera over the entire deployment time); (2) **Density given Occurrence** (density at only cameras where the species was present); and (3) **Total Density** (the product of occurrence and density given occurrence, that is, our density estimates as described in previous sections). We used bootstrapping to calculate confidence intervals for each mean ratio, with site as the re-sampling unit. Table \@ref(tab:lure-summary) displays the results across all three measures for 14 species with sufficient data. 
 
 ```{r lure-summary, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
 
 library(gt)
 
-lure <- read_csv(paste0(g_drive, "data/processed/lure/lure-effect-summary_2024-04-16.csv")) |>
-  mutate(carnivore = ifelse(str_detect(species_common_name, "Bear|Lynx|Fisher|Marten|Wolf|Coyote|Fox|Cougar"), "Yes", "No")) |>
+lure <- read_csv(paste0(g_drive, "data/processed/lure/ABMI Lure Effect Summary 2024-04-24.csv")) |>
+  mutate(carnivore = ifelse(str_detect(species_common_name, "Bear|Lynx|Fisher|Marten|Wolf|Coyote|Fox|Cougar|Wolverine"), "Carnivore", "Non-Carnivore")) |>
   mutate(species_common_name = str_remove_all(species_common_name, "\\(wapiti\\)")) |>
   mutate(species_common_name = str_replace_all(species_common_name, "(?<!^)([A-Z])", " \\1")) |>
   mutate(species_common_name = fct_reorder(species_common_name, TA)) |>
   arrange(species_common_name)
 
 lure |>
-  select(species_common_name, PA, AGP, TA) |>
-  mutate(across(PA:TA, ~ round(., digits = 2))) |>
-  gt() |>
+  mutate(across(PA:TA.uci, ~ round(., digits = 2)),
+         PA.ci = paste0("(", PA.lci, ", ", PA.uci, ")"),
+         AGP.ci = paste0("(", AGP.lci, ", ", AGP.uci, ")"),
+         TA.ci = paste0("(", TA.lci, ", ", TA.uci, ")")) |>
+  select(species_common_name, carnivore, PA, PA.ci, AGP, AGP.ci, TA, TA.ci) |>
+  gt(groupname_col = "carnivore") |>
   data_color(
-    columns = c(PA, AGP, TA),
+    columns = vars(PA, AGP, TA),
     fn = scales::col_numeric(
       palette = "magma",
-      domain = c(0.93, 10.83)
+      domain = c(0.93, 8)
     )
   ) |>
   cols_label(
-    species_common_name = "Species",
-    PA = "Occurrence",
-    AGP = "Density|Occurrence",
-    TA = "Total Density") |>
+    species_common_name = md("**Species**"),
+    PA.ci = "90% CI",
+    PA = "Mean",
+    AGP.ci = "90% CI",
+    AGP = "Mean",
+    TA.ci = "90% CI",
+    TA = "Mean") |>
   cols_align("left", columns = "species_common_name") |>
-  tab_caption(caption = "Summary of the lure effect across three different measures.")
+  cols_align("center", columns = vars(PA:TA.ci)) |>
+  tab_spanner(label = md("**Occurrence**"),
+              columns = vars(PA, PA.ci)) |>
+  tab_spanner(label = md("**Density|Occurrence**"),
+              columns = vars(AGP, AGP.ci)) |>
+  tab_spanner(label = md("**Total Density**"),
+              columns = vars(TA, TA.ci)) |>
+  tab_caption(caption = "Summary of the lure effect across three different measures.") |>
+  tab_style(
+    style = cell_text(style = "italic"),
+    locations = cells_row_groups(groups = c(1, 2))) |>
+  # Manually colour the higher TA Fisher value
+  tab_style(
+    style = list(
+      cell_fill(color = "#fcfdbf"),
+      cell_text(color = "black")),
+    locations = cells_body(
+      columns = TA,
+      rows = TA > 8
+    ))
 
 ```
-
 <br>
 
-```{r lure-plot, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, fig.showtext=TRUE, fig.cap="Lure effect on Total Density"}
+```{r lure-plot, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, fig.showtext=TRUE, fig.cap="Lure effect on Total Density", include=FALSE}
+
+# Not including this Figure for now, but potentially in the future. 
 
 library(ggtext)
 
@@ -80,7 +106,11 @@ plot
 
 ```
 
-The ratio of the mean lured:unlured values for moose occurrence was 1.07 (90% CI: 0.99–1.16), 1.17 (0.92–1.5) for density given occurrence, and 1.26 (0.98–1.62) for total density. We found more substantial positive effects of lure for other species, particularly fisher (Pekania pennanti), red fox (Vulpes vulpes), and gray wolf (Canis lupus) (Appendix S5). For these carnivore species, a larger proportion of the effect on total density came from the density given occurrence component, indicating that lure was primarily effective for increasing the time animals spend in the camera field-of-view. Occurrence increases due to lure tended to be smaller, which suggests that animals are not being drawn in from large distances. We use the total density ratios to correct the estimates of densities at lured cameras to an unlured density equivalent.
+Lure generally had a positive effect on occurrence for every species, although the mean lured:unlured ratio was very close to 1 (and had 90% confidence intervals overlapping 1) for most of the ungulate species (e.g., White-tailed Deer, Moose, Elk, and Mule Deer). Of all the ungulate species, Woodland Caribou had largest response to lure, with a mean lured:unlured value for occurrence of 1.27 (90% CI: 0.97-1.69), 2.03 (1.22-3.32) for density given occurrence, and 2.59 (1.51-4.36) for total density.  
+
+As expected, the effect of lure was more pronounced for the carnivore species. Substantial positive effects were found for species such as Fisher, Red Fox, and Gray Wolf. For certain species, such as Marten, Cougar, and Fisher, a larger proportion of the effect on total density came from the occurrence component, suggesting that lure was effective in drawing species to the camera field of view. However, for other species such as Black Bear, Coyote, and Gray Wolf, the primary effect came from the density given occurrence component. This indicates that the animal were not necessarily being drawn in (although the occurrence component was still >1), but the lure was effective at increasing the time the animal spent in the camera field-of-view once they were there. 
+
+We use the mean total density ratios to correct the densities at lured cameras to an unlured density equivalent. To better understand how the mean ratio calculations (and bootstrapping for confidence intervals) with the ABMI paired design are done, [this script](https://github.com/ABbiodiversity/MammalModels/blob/main/src/global/Calculate%20Lure%20Effects.R) outlines the process. The ratios (and confidence intervals) are available in a csv [here](https://github.com/ABbiodiversity/MammalModels). 
 
 ## Deployment Height
 

@@ -30,7 +30,8 @@ eh_later <- read_csv(paste0(g_drive, "Results/Density/Deployments/eh_19-20-21-22
 # Species of interest
 sp <- c("White-tailed Deer", "Mule Deer", "Moose", "Woodland Caribou",
         "Black Bear", "Grizzly Bear", "Canada Lynx", "Fisher", "Marten",
-        "Elk (wapiti)", "Gray Wolf", "Coyote", "Red Fox", "Cougar")
+        "Elk (wapiti)", "Gray Wolf", "Coyote", "Red Fox", "Cougar",
+        "Snowshoe Hare", "Wolverine")
 
 df_density <- bind_rows(eh_early, eh_later) |>
   filter(common_name %in% sp)
@@ -184,7 +185,8 @@ ta <- as.data.frame(ta.bs.sum)
 full_results <- bind_cols(pa, agp, ta) %>% tibble::rownames_to_column(var = "species_common_name")
 
 # Write results
-readr::write_csv(full_results, paste0(g_drive, "data/processed/lure/lure-effect-summary_", Sys.Date(), ".csv"))
+readr::write_csv(full_results, paste0(g_drive, "data/processed/lure/ABMI Lure Effect Summary ", Sys.Date(), ".csv"))
 
+readr::write_csv(full_results, paste0("data/ABMI Lure Effect Summary ", Sys.Date(), ".csv"))
 
 
