@@ -25,13 +25,20 @@ g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Import data:
 load(paste0(g_drive, "data/lookup/locations/veg-hf_grid_v61hf2016v3WildFireUpTo2016.Rdata"))
+
 veg_current   <- dd_kgrid[["veg_current"]]
 veg_reference <- dd_kgrid[["veg_reference"]]
 rm(dd_kgrid)
 gc()
 
+# Latest kgrid
+load("S:/samba/abmisc/AB_data_v2023/kgrid/kgrid_2.2.Rdata")
+kgrid_new <- kgrid
+
 # Province-wide km2 grid info
 load(paste0(g_drive, "data/lookup/locations/kgrid_table_km.Rdata"))
+
+
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -45,10 +52,10 @@ veg_current <- data.frame(as.matrix(veg_current)) |>
   select(LinkID, cell_area, everything())
 
 # Add in info about km2 cells - lat, long, natural region and subregion, landuse framework
-kgrid_veg_current_north <- kgrid |>
-  mutate(Lat = ifelse(POINT_Y < 51.5, 51.5, POINT_Y)) |>
-  select(Long = POINT_X, TrueLat = POINT_Y, Lat, NR = NRNAME, NSR = NSRNAME, LUF = LUF_NAME, AHM:pAspen) |>
-  rownames_to_column(var = "LinkID") |>
+kgrid_veg_current_north <- kgrid_new |>
+  mutate(Lat = ifelse(Latitude < 51.5, 51.5, Latitude)) |>
+  select(LinkID, Long = Longitude, TrueLat = Latitude, Lat, NR = NrName, NSR = NsrName, LUF = LufName, pAspen,
+         Easting, Northing, MAT:AgeOffset) |>
   # Join veghf information
   left_join(veg_current, by = "LinkID") |>
   # Include only the north cells (by definition, anything that isn't in the grassland natural region)
@@ -132,10 +139,10 @@ veg_reference <- data.frame(as.matrix(veg_reference)) |>
   select(LinkID, cell_area, everything())
 
 # Add in info about km2 cells - lat, long, natural region and subregion, landuse framework
-kgrid_veg_reference_north <- kgrid |>
-  mutate(Lat = ifelse(POINT_Y < 51.5, 51.5, POINT_Y)) |>
-  select(Long = POINT_X, TrueLat = POINT_Y, Lat, NR = NRNAME, NSR = NSRNAME, LUF = LUF_NAME, AHM:pAspen) |>
-  rownames_to_column(var = "LinkID") |>
+kgrid_veg_reference_north <- kgrid_new |>
+  mutate(Lat = ifelse(Latitude < 51.5, 51.5, Latitude)) |>
+  select(LinkID, Long = Longitude, TrueLat = Latitude, Lat, NR = NrName, NSR = NsrName, LUF = LufName, pAspen,
+         Easting, Northing, MAT:AgeOffset) |>
   # Join veghf information
   left_join(veg_reference, by = "LinkID") |>
   # Include only the north cells (by definition, anything that isn't in the grassland natural region)
@@ -172,7 +179,8 @@ kgrid_veg_reference_north <- kgrid |>
 #-----------------------------------------------------------------------------------------------------------------------
 
 # Save processed km2 grid data
-save(file = paste0(g_drive, "data/processed/km2-grid/km2-grid-north_current-backfilled_processed.RData"),
+# Note: Most recently done in May 2024 - new kgrid with new climate variables, but old veg+HF. Not suitable for modeling use until updated.
+save(file = paste0(g_drive, "data/processed/km2-grid/km2-grid-north_current-backfilled_processed_2024-05-09.RData"),
      kgrid_veg_current_north,
      kgrid_veg_reference_north)
 
