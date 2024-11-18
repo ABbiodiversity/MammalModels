@@ -13,7 +13,7 @@
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Attach packages
-library(wildRtrax) # Just obtaining data
+library(wildrtrax) # Just obtaining data
 library(keyring) # Storing credentials
 
 library(tidyverse)
@@ -86,7 +86,8 @@ data_all <- data |>
   bind_rows(bdt_data) |>
   filter(image_fov == "WITHIN") |>
   # Don't need project, just keep the lower column
-  select(location, height, image_date_time, species_common_name, individual_count)
+  select(location, latitude, longitude, height, image_date_time,
+         species_common_name, species_scientific_name, individual_count, age_class, sex_class)
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -127,7 +128,7 @@ remove <- c("1-1A2-CA2", "1-1A2-CA3", "1-1A2-CA4", "1-1A2-CA5", "1-2A2-CA1")
 data_subset <- data_all |>
   # Remove deployment pairs that did not collect reliable data
   filter(!location %in% remove) |>
-  mutate(image_date_time = ymd_hms(image_date_time)) |>
+  # mutate(image_date_time = ymd_hms(image_date_time)) |>
   # Truncate dates so that only data operating during a common period is used
   filter(!(image_date_time > as.Date("2021-08-07 00:00:00") & location == "793-NE"),
          !(image_date_time > as.Date("2022-05-19 00:00:00") & location == "793-SW"),

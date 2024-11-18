@@ -15,13 +15,13 @@ pinterp<-function(x,p,ptarg)  {
   xinterp
 }
 
-g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
+g_drive_old <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Summary results come from Marcus in .csv form.  Convert to array like 2022 to use same script below
 # This may have to be changed in the future if results are in different format
-n<-read.csv(paste0(g_drive, "Projects/OSM BADR/Total Number of Camera Per OSM Treatment and Vegetation Type.csv"),stringsAsFactors=FALSE)  # Sample size incl ABMI, from Marcus. "treatment1" added to use same treatment names as main results files
-# HF treatments
-d.hf<-read.csv(paste0(g_drive, "Results/OSM BADR/2021-2022_osm-on-off_treatment_results_new.csv"),stringsAsFactors=FALSE)
+n<-read.csv(paste0(g_drive_old, "Projects/OSM BADR/Total Number of Camera Per OSM Treatment and Vegetation Type.csv"),stringsAsFactors=FALSE)  # Sample size incl ABMI, from Marcus. "treatment1" added to use same treatment names as main results files
+# HF treatments - updates Sep 2024
+d.hf<-read.csv(paste0(g_drive, "Results/OSM BADR ABMI 2021-2023 On Off Treatment Results.csv"),stringsAsFactors=FALSE)
 SpTable<-sort(unique(d.hf$common_name))
 hf.list<-sort(unique(d.hf$treatment))
 veg.list<-sort(unique(d.hf$vegetation))
@@ -38,7 +38,7 @@ for (sp in 1:length(SpTable)) {
   }  # Next treatment hf
 }  # Next sp
 # Distance treatments
-d.dist<-read.csv(paste0(g_drive, "Results/OSM BADR/2021-2022_osm_buffer_treatment_results_new.csv"),stringsAsFactors=FALSE)
+d.dist<-read.csv(paste0(g_drive, "Results/OSM BADR ABMI 2021-2023 Buffer Treatment Results.csv"),stringsAsFactors=FALSE)
 d.dist$lci_density[is.na(d.dist$lci_density)]<-0.1234388  # Single NA - using value from last year
 d.dist$uci_density[is.na(d.dist$uci_density)]<-1.9516508  # Single NA - using value from last year
 SpTable<-sort(unique(d.dist$common_name))
@@ -90,7 +90,7 @@ for (sp in 1:length(SpTable)) {
     combo[i,1]<-xd.log[which.max(p.combo)]
     combo[i,2:3]<-pinterp(xd.log,cumsum(p.combo),c(0.05,0.95))
     if (sp==1 & i==2)  {  # Example figure of combining likelihoods
-      png(file=paste0(g_drive, "Results/OSM BADR/Smoothed edge distance likelihood example.png"),width=600,height=500)
+      png(file=paste0(g_drive, "Results/Figures/Smoothed edge distance likelihood example.png"),width=600,height=500)
       plot((xd.log),p.combo,xaxt="n",xlab="Density",ylab="Likelihood (sum=1)",typ="l",lwd=3,xlim=c(log(0.01),log(0.8)))
       axis(side=1,at=log(c(0.01,0.02,0.03,0.05,0.1,0.2,0.3,0.4,0.6,0.8,1)),rep("",11),tck=0.015,cex.axis=1.3)
       mtext(side=1,line=0.5,at=log(c(0.01,0.02,0.03,0.05,0.1,0.2,0.3,0.4,0.6,0.8,1)),c(0.01,0.02,0.03,0.05,0.1,0.2,0.3,0.4,0.6,0.8,1),cex=1.3)
@@ -106,7 +106,7 @@ for (sp in 1:length(SpTable)) {
     }  # End if for example figure
   }
   combo.roads[sp,,]<-exp(combo)
-  fname<-paste(paste0(g_drive, "Results/OSM BADR/Figures/Smoothed/Smoothed figure Road distance "),SpTable[sp],".png",sep="")
+  fname<-paste(paste0(g_drive, "Results/Figures/Smoothed figure Road distance "),SpTable[sp],".png",sep="")
   png(file=fname,width=500,height=500)
   ymax<-max(d1[1:4,,2:4])
   ymax<-ifelse(ymax>2*max(d1[1:4,,2]),max(d1[1:4,,2])*2,ymax)
@@ -154,7 +154,7 @@ for (sp in 1:length(SpTable)) {
     combo[i,2:3]<-pinterp(xd.log,cumsum(p.combo),c(0.05,0.95))
   }
   combo.plant[sp,,]<-exp(combo)
-  fname<-paste(paste0(g_drive, "Results/OSM BADR/Figures/Smoothed/Smoothed figure PlantMine distance "),SpTable[sp],".png",sep="")
+  fname<-paste(paste0(g_drive, "Results/Figures/Smoothed figure PlantMine distance "),SpTable[sp],".png",sep="")
   png(file=fname,width=500,height=500)
   ymax<-max(d1[5:8,,2:4])
   ymax<-ifelse(ymax>2*max(d1[5:8,,2]),max(d1[5:8,,2])*2,ymax)
@@ -219,7 +219,7 @@ for (sp in 1:length(SpTable)) {
     combo[i,2:3]<-pinterp(xd.log,cumsum(p.combo),c(0.05,0.95))
   }
   combo.hf[sp,,]<-exp(combo)
-  fname<-paste(paste0(g_drive, "Results/OSM BADR/Figures/Smoothed/Smoothed figure On off HF "),SpTable[sp],".png",sep="")
+  fname<-paste(paste0(g_drive, "Results/Figures/Smoothed figure On off HF "),SpTable[sp],".png",sep="")
   png(file=fname,width=600,height=500)
   ymax<-max(d1[,,2:4])
   ymax<-ifelse(ymax>2*max(d1[,,2]),max(d1[,,2])*2,ymax)
@@ -280,9 +280,9 @@ for (sp1 in 1:length(SpToReport)) {
     q.hf<-rbind(q.hf,data.frame(Sp=SpTable[sp],Treat=dimnames(combo.hf)[[2]],combo.hf[sp,,]))
   }
 }
-write.table(q.roads,file= paste0(g_drive, "Results/OSM BADR/OSM mammals 2021 2022 Smoothed Road distance.csv"),sep=",",row.names=FALSE)
-write.table(q.plant,file= paste0(g_drive, "Results/OSM BADR/OSM mammals 2021 2022 Smoothed Plant mine distance.csv"),sep=",",row.names=FALSE)
-write.table(q.hf,file=paste0(g_drive, "Results/OSM BADR/OSM mammals 2021 2022 Smoothed On off HF.csv"),sep=",",row.names=FALSE)
+write.table(q.roads,file= paste0(g_drive, "Results/OSM mammals 2021 2022 Smoothed Road Distance.csv"),sep=",",row.names=FALSE)
+write.table(q.plant,file= paste0(g_drive, "Results/OSM mammals 2021 2022 Smoothed Plant Mine Distance.csv"),sep=",",row.names=FALSE)
+write.table(q.hf,file=paste0(g_drive, "Results/OSM mammals 2021 2022 Smoothed On Off HF.csv"),sep=",",row.names=FALSE)
 
 
 

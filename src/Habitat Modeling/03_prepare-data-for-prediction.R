@@ -366,4 +366,8 @@ pm <- df_pred_matrix
 save(file = paste0(g_drive, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData"),
      d,FirstSpCol.s,LastSpCol.s,FirstSpCol.w,LastSpCol.w,SpTable.s,SpTable.s.ua,SpTable.w,SpTable.w.ua,pm)
 
+# NEW - Including South sites (for climate modeling)
+save(file = paste0(g_drive, "data/lookup/R Dataset SpTable for ABMI North and South mammal coefficients 2022.RData"),
+     d,FirstSpCol.s,LastSpCol.s,FirstSpCol.w,LastSpCol.w,SpTable.s,SpTable.s.ua,SpTable.w,SpTable.w.ua,pm)
+
 #-----------------------------------------------------------------------------------------------------------------------

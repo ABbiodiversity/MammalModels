@@ -40,7 +40,8 @@ n.HF<-diag(x.hf2[1,i2,i3,1])
 names(n.HF)<-vegHF
 for (sp in 1:length(SpTable)) {
   CI.HF[sp,]<-(diag(x.hf2[sp,i2,i3,4])-diag(x.hf2[sp,i2,i3,3]))/2  # CI half-width
-  logSE.HF[sp,]<-(log(diag(x.hf2[sp,i2,i3,4]))-log(diag(x.hf2[sp,i2,i3,2])) + log(diag(x.hf2[sp,i2,i3,2]))-log(diag(x.hf2[sp,i2,i3,3])) )/1.65/2  # logSE, taken as the simple average of (logUCI-logmean)/1.65 and (logmean-logLCI)/1.65
+  logSE.HF[sp,]<-(log(diag(x.hf2[sp,i2,i3,4]))-log(diag(x.hf2[sp,i2,i3,2])) + log(diag(x.hf2[sp,i2,i3,2]))-log(diag(x.hf2[sp,i2,i3,3])) )/1.65/2
+  # logSE, taken as the simple average of (logUCI-logmean)/1.65 and (logmean-logLCI)/1.65
   mean.HF[sp,]<-diag(x.hf2[sp,i2,i3,2])  # Mean
 }
 
@@ -74,7 +75,10 @@ for (sp in 1:length(SpTable)) {
   col1<-ifelse(regexpr("decid",names(CI.all[sp,i]))>0,"#FF880077","#33AA3377")
   pch1<-ifelse(regexpr("buffer",names(CI.all[sp,i]))>0,15,18)
   cex1<-ifelse(pch1==15,2,2.5)  # Squares are too big...
-  ncams<-ifelse(regexpr("buffer",names(CI.all[sp,i]))<=0 | regexpr("road buffer 300_decid",names(CI.all[sp,i]))>0,"2cam","1cam")  # Number of cameras per site, roughly - 1 for buffer treatments, except 300m from roads in decid where there are also ABMI sites; 2+ otherwise
+
+  # Number of cameras per site, roughly - 1 for buffer treatments, except 300m from roads in decid where there are also ABMI sites; 2+ otherwise
+  ncams<-ifelse(regexpr("buffer",names(CI.all[sp,i]))<=0 | regexpr("road buffer 300_decid",names(CI.all[sp,i]))>0,"2cam","1cam")
+
   fname<-paste(paste0(g_drive, "Results/OSM BADR/Figures/Precision/logSE vs n for ",SpTable[sp],".png",sep=""))
   png(file=fname,width=500,height=500)
   dplot(log(n.all[i]),y,pch=pch1,cex=cex1,col=col1,xlab="Sample size",ylab="logSE",xaxt="n",yaxt="n",xlim=log(c(2,108)))
@@ -106,9 +110,12 @@ q<-cbind(q,q1)
 write.table(q,file=paste0(g_drive, "Results/OSM BADR/Sites needed to reach precision targets OSM camera mammals.csv"),sep=",",col.names=NA)
 
 # Graphs of 90% CI width around a mean of 1 at different n, 1 and 2+ cameras/site
-n.list<-c(3,5,7,10,20,30,50,100)
-y.ticks<-c(0.2,0.33,0.5,0.66,0.8,1,1.25,1.5,2,3,5)  # Version for log y-axis
+
+n.list <- c(3, 5, 7, 10, 20, 30, 50, 100, 150, 200)
+
+# y.ticks<-c(0.2,0.33,0.5,0.66,0.8,1,1.25,1.5,2,3,5)  # Version for log y-axis
 y.ticks<-c(0.2,0.5,0.8,1,1.2,1.5,2,3,4,5)  # Version for ordinal y-axis
+
 for (sp in 1:length(SpTable)) {
   p1<-exp(predict(m[[sp]],newdata=data.frame(lognall=log(n.list),ncams="1cam")))
   p2<-exp(predict(m[[sp]],newdata=data.frame(lognall=log(n.list),ncams="2cam")))
@@ -116,28 +123,28 @@ for (sp in 1:length(SpTable)) {
   uci1<-exp(p1*1.65)  # Assuming mean of 1 (0 on log scale)
   lci2<-exp(-p2*1.65)  # Assuming mean of 1 (0 on log scale)
   uci2<-exp(p2*1.65)  # Assuming mean of 1 (0 on log scale)
-  fname<-paste(paste0(g_drive, "Results/OSM BADR/Figures/Precision/CI examples vs n ",SpTable[sp],".png",sep=""))
-  png(file=fname,height=600,width=1000)
+  fname<-paste(paste0(g_drive, "Results/OSM BADR/Figures/Precision/CI examples vs n ",SpTable[sp],"new.png",sep=""))
+  png(file=fname,height=600,width=500)
   par(mfrow=c(1,2))
   # 1 camera/site
-  dplot(log(n.list),rep(1,8),pch=18,cex=2,xaxt="n",yaxt="n",xlab="Sample size",ylab="90% CI on mean=1",ylim=(c(0.2,5)))
+  dplot(log(n.list),rep(1,10),pch=18,cex=2,xaxt="n",yaxt="n",xlab="Sample size",ylab="90% CI on mean=1",ylim=(c(0.2,5)))
   abline(0,0)
-  axis(side=1,at=log(n.list),n.list,tck=0.01,cex.axis=1.3)
+  axis(side=1,at=log(n.list),n.list,tck=0.01,cex.axis=0.95)
   axis(side=2,at=(y.ticks),rep("",length(y.ticks)),tck=1,col="grey85",cex.axis=1.3)
   axis(side=2,at=(y.ticks),y.ticks,tck=0.01,cex.axis=1.3,las=2)
-  points(log(n.list),rep(1,8),pch=18,cex=2)
-  for (i in 1:8) {
+  points(log(n.list),rep(1,10),pch=18,cex=2)
+  for (i in 1:10) {
     lines(rep(log(n.list)[i],2),(c(lci1[i],uci1[i])),lwd=2)
   }
   mtext(side=3,at=log(3),adj=0,paste(SpTable[sp],": 1 camera/site",sep=""),cex=1.5)
   # 2+ cameras/site
-  dplot(log(n.list),rep(1,8),pch=18,cex=2,xaxt="n",yaxt="n",xlab="Sample size",ylab="90% CI on mean=1",ylim=(c(0.2,5)))
+  dplot(log(n.list),rep(1,10),pch=18,cex=2,xaxt="n",yaxt="n",xlab="Sample size",ylab="90% CI on mean=1",ylim=(c(0.2,5)))
   abline(0,0)
-  axis(side=1,at=log(n.list),n.list,tck=0.01,cex.axis=1.3)
+  axis(side=1,at=log(n.list),n.list,tck=0.01,cex.axis=0.95)
   axis(side=2,at=(y.ticks),rep("",length(y.ticks)),tck=1,col="grey85",cex.axis=1.3)
   axis(side=2,at=(y.ticks),y.ticks,tck=0.01,cex.axis=1.3,las=2)
-  points(log(n.list),rep(1,8),pch=18,cex=2)
-  for (i in 1:8) {
+  points(log(n.list),rep(1,10),pch=18,cex=2)
+  for (i in 1:10) {
     lines(rep(log(n.list)[i],2),(c(lci2[i],uci2[i])),lwd=2)
   }
   mtext(side=3,at=log(3),adj=0,paste(SpTable[sp],": 2+ cameras/site",sep=""),cex=1.5)
@@ -146,30 +153,31 @@ for (sp in 1:length(SpTable)) {
 
 # Graphs of the expected SE for a difference between two treatments as a function of the sample size of each
 for (sp in 1:length(SpTable)) {
-  p1<-exp(predict(m[[sp]],newdata=data.frame(lognall=log(2:100),ncams="1cam")))
-  p2<-exp(predict(m[[sp]],newdata=data.frame(lognall=log(2:100),ncams="2cam")))
+  # Changing from 2:100 to 2:200
+  p1<-exp(predict(m[[sp]],newdata=data.frame(lognall=log(2:500),ncams="1cam")))
+  p2<-exp(predict(m[[sp]],newdata=data.frame(lognall=log(2:500),ncams="2cam")))
   p1.diff<-array(NA,c(length(p1),length(p1)))
   for (i in 1:length(p1)) p1.diff[i,]<-sqrt(p1[i]^2+p1^2)  # logSE of difference, following rule of summing variance
   p1.diff.ratio<-exp(p1.diff*1.65)
   p2.diff<-array(NA,c(length(p2),length(p2)))
   for (i in 1:length(p2)) p2.diff[i,]<-sqrt(p2[i]^2+p2^2)  # logSE of difference, following rule of summing variance
   p2.diff.ratio<-exp(p2.diff*1.65)
-  fname<-paste(paste0(g_drive, "Results/OSM BADR/Figures/Precision/Significantly detectable ratio versus n ",SpTable[sp],".png",sep=""))
+  fname<-paste(paste0(g_drive, "Results/OSM BADR/Figures/Precision/Significantly detectable ratio versus n ",SpTable[sp],"new.png",sep=""))
   png(file=fname,height=500,width=900)
   par(mfrow=c(1,2))
   # 1 camera/site
-  contour(log(2:100),log(2:100),p1.diff.ratio,xaxt="n",yaxt="n",labcex=1.2,xlab="Sample size 1",ylab="Sample size 2",cex.lab=1.4,levels=c(40,30,20,10,8,6,5,4,3,2.5,2,1.5,1))
-  axis(side=1,at=log(c(2,3,5,10,20,30,50,100)),c(2,3,5,10,20,30,50,100),tck=1,col="grey90",cex.axis=1.3)
-  axis(side=1,at=log(c(2,3,5,10,20,30,50,100)),c(2,3,5,10,20,30,50,100),tck=0.01,cex.axis=1.3)
-  axis(side=2,at=log(c(2,3,5,10,20,30,50,100)),c(2,3,5,10,20,30,50,100),tck=1,col="grey90",cex.axis=1.3)
-  axis(side=2,at=log(c(2,3,5,10,20,30,50,100)),c(2,3,5,10,20,30,50,100),tck=0.01,cex.axis=1.3)
+  contour(log(2:500),log(2:500),p1.diff.ratio,xaxt="n",yaxt="n",labcex=1.2,xlab="Sample size 1",ylab="Sample size 2",cex.lab=1.4,levels=c(40,30,20,10,8,6,5,4,3,2.5,2,1.5,1.4,1.3,1.2,1.1))
+  axis(side=1,at=log(c(2,3,5,10,20,30,50,100,150,200,250,500)),c(2,3,5,10,20,30,50,100,150,200,250,500),tck=1,col="grey90",cex.axis=0.8)
+  axis(side=1,at=log(c(2,3,5,10,20,30,50,100,150,200,250,500)),c(2,3,5,10,20,30,50,100,150,200,250,500),tck=0.01,cex.axis=0.8)
+  axis(side=2,at=log(c(2,3,5,10,20,30,50,100,150,200,250,500)),c(2,3,5,10,20,30,50,100,150,200,250,500),tck=1,col="grey90",cex.axis=0.8)
+  axis(side=2,at=log(c(2,3,5,10,20,30,50,100,150,200,250,500)),c(2,3,5,10,20,30,50,100,150,200,250,500),tck=0.01,cex.axis=0.8)
   mtext(side=3,at=log(2),adj=0,paste(SpTable[sp],": 1 camera/site",sep=""),cex=1.5)
   # 2+ cameras/site
-  contour(log(2:100),log(2:100),p2.diff.ratio,xaxt="n",yaxt="n",labcex=1.2,xlab="Sample size 1",ylab="Sample size 2",cex.lab=1.4,levels=c(40,30,20,10,8,6,5,4,3,2.5,2,1.5,1))
-  axis(side=1,at=log(c(2,3,5,10,20,30,50,100)),c(2,3,5,10,20,30,50,100),tck=1,col="grey90",cex.axis=1.3)
-  axis(side=1,at=log(c(2,3,5,10,20,30,50,100)),c(2,3,5,10,20,30,50,100),tck=0.01,cex.axis=1.3)
-  axis(side=2,at=log(c(2,3,5,10,20,30,50,100)),c(2,3,5,10,20,30,50,100),tck=1,col="grey90",cex.axis=1.3)
-  axis(side=2,at=log(c(2,3,5,10,20,30,50,100)),c(2,3,5,10,20,30,50,100),tck=0.01,cex.axis=1.3)
+  contour(log(2:500),log(2:500),p2.diff.ratio,xaxt="n",yaxt="n",labcex=1.2,xlab="Sample size 1",ylab="Sample size 2",cex.lab=1.4,levels=c(40,30,20,10,8,6,5,4,3,2.5,2,1.5,1.4,1.3,1.2,1.1))
+  axis(side=1,at=log(c(2,3,5,10,20,30,50,100,150,200,250,500)),c(2,3,5,10,20,30,50,100,150,200,250,500),tck=1,col="grey90",cex.axis=0.8)
+  axis(side=1,at=log(c(2,3,5,10,20,30,50,100,150,200,250,500)),c(2,3,5,10,20,30,50,100,150,200,250,500),tck=0.01,cex.axis=0.8)
+  axis(side=2,at=log(c(2,3,5,10,20,30,50,100,150,200,250,500)),c(2,3,5,10,20,30,50,100,150,200,250,500),tck=1,col="grey90",cex.axis=0.8)
+  axis(side=2,at=log(c(2,3,5,10,20,30,50,100,150,200,250,500)),c(2,3,5,10,20,30,50,100,150,200,250,500),tck=0.01,cex.axis=0.8)
   mtext(side=3,at=log(2),adj=0,paste(SpTable[sp],": 2+ cameras/site",sep=""),cex=1.5)
   graphics.off()
 }  # Next sp

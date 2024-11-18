@@ -15,57 +15,62 @@
 
 # Attach packages
 library(tidyverse)
+library(googlesheets4)
+library(googledrive)
 
-g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
+g_drive_old <- "G:/Shared drives/ABMI Camera Mammals/"
+g_drive <- "G:/Shared drives/OSM BADR Mammals/"
 
-# From Marcus - summarized to densities (not by season anymore)
-d1 <- read.csv(paste0(g_drive, "Results/Density/Deployments/og-sup_all-years_density_wide_2024-03-14.csv"), stringsAsFactors = FALSE)
+# Done in March 2024 - Use for EH and OG Supplemental - Note that these are not done with the latest EDD modeling, however.
+d1 <- read_csv(paste0(g_drive_old, "Results/Density/Deployments/og-sup_all-years_density_wide_2024-03-14.csv")) |>
+  filter(!str_detect(project, "OSM"))
 
-# 2022 OSM BADR sites NOT to include
-df_2022_bad <- read_csv(paste0(g_drive, "data/lookup/veghf/VegForDetectionDistance/osm2022.csv")) |>
-  select(project, location, Useable)
+# Read in latest OSM densities (done in September 2024)
+d2 <- read_csv(paste0(g_drive, "Results/OSM BADR ABMI ACME 2021-2023 Species Density By Deployment.csv")) |>
+  pivot_wider(id_cols = c(project, location), names_from = species_common_name, values_from = density_km2)
 
-# Remove unusable sites - these are those that had camera failures in 2022
-d1 <- d1 |>
-  left_join(df_2022_bad, by = c("project", "location")) |>
-  mutate(Useable = ifelse(is.na(Useable), TRUE, Useable)) |>
-  filter(!Useable == FALSE) |>
-  select(-Useable)
+# Join together
+d1 <- bind_rows(d1, d2)
 
-# Metadata treatment info for each OSM deployment in 2021
-s <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/osm_2021_deployment-metadata.csv")) |>
-  # Fix Excel stupidity
-  mutate(jem = case_when(
-    jem == "1.00E+01" ~ "1E1",
-    jem == "1.00E+02" ~ "1E2",
-    jem == "2.00E+01" ~ "2E1",
-    jem == "2.00E+02" ~ "2E2",
-    jem == "3.00E+01" ~ "3E1",
-    TRUE ~ jem
-  ))
+# Load metadata
+# OSM deployments from 2022 and 2023 to NOT include
+sheet_ids <- drive_find(type = "spreadsheet",
+                        shared_drive = "OSM BADR Mammals") |>
+  filter(str_detect(name, "Metadata")) |>
+  select(id) |>
+  pull()
 
-# Lure information OSM 2022
-lure_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_lure.csv"))
+bad <- map_df(.x = sheet_ids, .f = ~ read_sheet(ss = .)) |>
+  filter(!str_detect(project, "ACME")) |>
+  select(project, location, include)
 
-# Metadata treatment info for each OSM deployment in 2022
-df_meta_22 <- read_csv(paste0(g_drive, "Projects/OSM BADR/osm_2022_deployment-metadata.csv")) |>
-  mutate(camera = str_sub(location, -3, -1)) |>
-  left_join(lure_22, by = "location") |>
-  select(-notes)
+# Remove unusable sites - these are those that had camera failures in 2022 and 2023
+d_all <- d1 |>
+  left_join(bad, by = c("project", "location")) |>
+  mutate(include = ifelse(is.na(include), TRUE, include)) |>
+  # Note: Less got kicked out here than expected, but that's because they were axed at the density estimation step previously
+  # Due to minimum days requirement etc.
+  filter(!include == FALSE) |>
+  select(-include)
 
-# All OSM metadata
-# Note: slightly different ways between the two years in how JEMs are specified. To fix later. I don't think it matters now.
-s <- bind_rows(s, df_meta_22) |>
+# Stressor and Veg metadata for OSM deployments
+s <- map_df(.x = sheet_ids, .f = ~ read_sheet(ss = .)) |>
+  mutate(include = ifelse(is.na(include), TRUE, include)) |>
+  filter(!include == FALSE) |>
+  select(project:lure) |>
+  # Remove ACME and Wetland - may be bringing some of these back
+  filter(!str_detect(project, "ACME"),
+         !vegetation == "wetland") |>
   # Fix the road buffer fine scale specs
   mutate(fine_scale = str_remove(fine_scale, " metres"),
          fine_scale = ifelse(fine_scale == "200" | fine_scale == "600", "300", fine_scale))
 
 # Now all metadata for EH and OG deployments
-s_eh <- read.csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_EH_2022-06-16.csv"),stringsAsFactors=FALSE)  # On-grid (ecosystem health) deployments from Marcus with OSM treatment info
-s_og <- read.csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_OG_2022-06-16.csv"),stringsAsFactors=FALSE)  # Off-grid (ecosystem health) deployments from Marcus with OSM treatment info
+s_eh <- read.csv(paste0(g_drive_old, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_EH_2022-06-16.csv"),stringsAsFactors=FALSE)  # On-grid (ecosystem health) deployments from Marcus with OSM treatment info
+s_og <- read.csv(paste0(g_drive_old, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_OG_2022-06-16.csv"),stringsAsFactors=FALSE)  # Off-grid (ecosystem health) deployments from Marcus with OSM treatment info
 
 # Get NearestSite and Lure info for supplemental deployments
-dataset.out<-paste0(g_drive, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData")
+dataset.out<-paste0(g_drive_old, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData")
 load(dataset.out)
 d <- d |>
   select(project, location, NearestSite, Lured)
@@ -84,7 +89,7 @@ s_sup <- bind_rows(s_eh, s_og) |>
   mutate(landscape_unit = 9999) |>
   # 'JEM' unit for ABMI sites is the site number
   mutate(jem = as.character(NearestSite)) |>
-  # Missing a few records - probaby means there is no camera data? Remove for now
+  # Missing a few records - probably means there is no camera data? Remove for now
   filter(!is.na(jem)) |>
   # Standardize edge distances to 4 classes used in BADR
   mutate(fine_scale = str_remove(fine_scale, " metres")) |>
@@ -125,25 +130,34 @@ s_sup <- bind_rows(s_eh, s_og) |>
 meta <- bind_rows(s_sup, s)
 
 # Modified from MS summary, to include expansion factor to adjust for greater than expected year (=habitat, weather, timing, etc.) effects
-lure <- read.csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OSM May 2022.csv"),stringsAsFactors=FALSE) |>
+lure <- read.csv(paste0(g_drive_old, "data/processed/lure/Lure effect from MS for OSM May 2022.csv"),stringsAsFactors=FALSE) |>
   # Just gonna call an audible here and make "expansion factor" 1
   mutate(Expansion = 1)
 
-d <- d1 |> left_join(meta, by = c("project", "location")) |>
-  # Remove deployments without metadata - ~40, no big deal. To fix for next year.
-  filter(!is.na(treatment))
+d <- d_all |> left_join(meta, by = c("project", "location")) |>
+  # Remove deployments without metadata - ~20, no big deal. To fix for next year.
+  filter(!is.na(treatment)) |>
+  rename_with(~ str_replace_all(., " |-", ".")) |>
+  # Something funky happens below with Tibbles
+  data.frame()
 
-# Analyzable species - >15 occurrences
+n1 <- d |>
+  group_by(vegetation, treatment, fine_scale) |>
+  tally() |>
+  mutate(treatment1 = paste0(treatment, " ", fine_scale))
+
+# Analyzable species
 
 SpTable<-c("Black.Bear","Canada.Lynx","Coyote","Fisher","Gray.Wolf","Marten","Moose","Snowshoe.Hare","White.tailed.Deer","Woodland.Caribou")
 # sp.names<-c("Black Bear","Lynx","Coyote","Fisher","Wolf","Marten","Moose","Snowshoe Hare","White-tailed Deer","Woodland Caribou")
+
 
 # Figure out variance of log abundance-given-presence, using all (individual) cameras
 log.var<-NULL
 for (sp in 1:length(SpTable)) {
   dx<-data.frame(Treat=paste(d$treatment,d$fine_scale,d$vegetation),
                  Camera=d$camera,
-                 Count=d[,SpTable[sp]]/ifelse(!is.na(d$lure) & d$lure=="Yes",lure$TA[lure$Species==SpTable[sp]],1))  # Count includes direct lure adjustment
+                 Count=d[, SpTable[sp]]/ifelse(!is.na(d$lure) & d$lure=="Yes", lure$TA[lure$Species==SpTable[sp]], 1))  # Count includes direct lure adjustment
   dx1<-dx[dx$Count>0,]
   m<-lm(log(Count)~Treat,data=dx1)  # Using residual after means for treatment X fine_scale X vegetation
   log.var[sp]<-(summary(m)$sigma)^2  # Residual variance
@@ -304,7 +318,7 @@ for (sp in 1:length(SpTable)) {
     }  # Next veg type
   } # Next treatment
   # Then do figure(s)
-  fname<-paste(g_drive, "Results/OSM BADR/Figures/2022/Figure JEM x on off x veg ",SpTable[sp],".png",sep="")
+  fname<-paste(g_drive, "Results/Figures/Figure JEM x on off x veg ",SpTable[sp],".png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -328,7 +342,7 @@ for (sp in 1:length(SpTable)) {
   }  # Next treat i
   graphics.off()
   # Version with sqrt-transformation on y-axis
-  fname<-paste(g_drive, "Results/OSM BADR/Figures/2022/Figure JEM x on off x veg ",SpTable[sp]," SQRT version.png",sep="")
+  fname<-paste(g_drive, "Results/Figures/Figure JEM x on off x veg ",SpTable[sp]," SQRT version.png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -359,7 +373,7 @@ for (sp in 1:length(SpTable)) {
   x.hf[sp,,,2]<-xmean
   x.hf[sp,,,3]<-lci
   x.hf[sp,,,4]<-uci
-}  # Next species
+} # Next species
 
 str(x.hf)
 # Black Bear
@@ -630,7 +644,7 @@ all_on_off <- bind_rows(
   mutate(treatment = str_remove(treatment, " NA"))
 
 # Save csv
-write_csv(all_on_off, paste0(g_drive, "Results/OSM BADR/2021-2022_osm-on-off_treatment_results_new.csv"))
+write_csv(all_on_off, paste0(g_drive, "Results/OSM BADR ABMI 2021-2023 On Off Treatment Results.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -728,7 +742,7 @@ for (sp in 1:length(SpTable)) {
     }  # Next veg type
   } # Next treatment
   # Then do figure(s)
-  fname<-paste(g_drive, "Results/OSM BADR/Figures/2022/Figure JEM x buffer distance x veg ",SpTable[sp],".png",sep="")
+  fname<-paste(g_drive, "Results/Figures/Figure JEM x buffer distance x veg ",SpTable[sp],".png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -752,7 +766,7 @@ for (sp in 1:length(SpTable)) {
   }  # Next treat i
   graphics.off()
   # Version with sqrt-transformation on y-axis
-  fname<-paste(g_drive, "Results/OSM BADR/Figures/2022/Figure JEM x buffer distance x veg ",SpTable[sp]," SQRT version.png",sep="")
+  fname<-paste(g_drive, "Results/Figures/Figure JEM x buffer distance x veg ",SpTable[sp]," SQRT version.png",sep="")
   png(file=fname,height=600,width=600)
   i<-match(jem.fine,treat.list)
   j<-match(d1$vegetation,veg.list)
@@ -1053,7 +1067,7 @@ all_buffer <- bind_rows(
   select(common_name, treatment, vegetation, mean_density, lci_density, uci_density)
 
 # Save csv
-write_csv(all_buffer, paste0(g_drive, "Results/OSM BADR/2021-2022_osm_buffer_treatment_results_new.csv"))
+write_csv(all_buffer, paste0(g_drive, "Results/OSM BADR ABMI 2021-2023 Buffer Treatment Results.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -1067,7 +1081,7 @@ jem_density <- d |>
   mutate(density_adj = density / (1 + ((n.lure / n) * (TA - 1)))) |>
   select(project, landscape_unit, jem, vegetation, treatment, fine_scale, type = TreatType, common_name, density, density_adj)
 
-write_csv(jem_density, paste0(g_drive, "data/processed/osm/2021-2022_osm_mean_jem_density_values_new.csv"))
+write_csv(jem_density, paste0(g_drive, "Results/OSM BADR ABMI 2021-2023 Mean JEM Density Values.csv"))
 
 #-----------------------------------------------------------------------------------------------------------------------
 

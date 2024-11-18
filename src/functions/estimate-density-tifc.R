@@ -476,15 +476,22 @@ calculate_time_by_series <- function(main_report_clean) {
 #' @param summer.end.j Julian date of summer period end; defaults to 288 (October 15)
 #'
 
-sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288) {
+sum_total_time <- function(series,
+                           tbd,
+                           spring.start = 99,
+                           summer.start = 143,
+                           winter.start = 288) {
 
   # Summarise total time
   tt <- series |>
     unite("project_location", project, location, sep = "_", remove = TRUE) |>
     mutate(julian = as.numeric(format(series_start, "%j")),
-           season = ifelse(julian >= summer.start.j & julian <= summer.end.j, "summer", "winter")) |>
-    mutate_at(c("project_location", "species_common_name", "season"), factor) |>
-    group_by(project_location, species_common_name, season, .drop = FALSE) |>
+           season_new = as.factor(case_when(
+             julian >= spring.start & julian <= summer.start ~ "Spring",
+             julian > summer.start & julian <= winter.start ~ "Summer",
+             TRUE ~ "Winter"))) |>
+    mutate_at(c("project_location", "species_common_name", "season_new"), factor) |>
+    group_by(project_location, species_common_name, season_new, .drop = FALSE) |>
     summarise(total_duration = sum(series_total_time)) |>
     ungroup() |>
     mutate_if(is.factor, as.character) |>
@@ -496,16 +503,20 @@ sum_total_time <- function(series, tbd, summer.start.j = 106, summer.end.j = 288
   tt_nn <- tbd |>
     # Retrieve only those that had no images of animals
     anti_join(tt, by = "project_location") |>
-    crossing(season = c("summer", "winter"), common_name = sp) |>
+    crossing(season = c("Spring", "Summer", "Winter"), common_name = sp) |>
     # Add total_duration column, which is zero in these cases
     mutate(total_duration = 0)
 
   tt_full <- tt |>
     bind_rows(tt_nn) |>
-    arrange(project_location, species_common_name, season) |>
-    mutate(total_season_days = ifelse(season == "summer", total_summer_days, total_winter_days)) |>
+    arrange(project_location, species_common_name, season_new) |>
+    mutate(total_season_days = case_when(
+      season_new == "Spring" ~ Spring,
+      season_new == "Summer" ~ Summer,
+      season_new == "Winter" ~ Winter
+    )) |>
     separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE, extra = "merge") |>
-    select(project, location, species_common_name, season, total_season_days, total_duration)
+    select(project, location, species_common_name, season_new, total_season_days, total_duration)
 
   return(tt_full)
 
@@ -523,10 +534,12 @@ calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long", in
 
   # Path to Google Drive
   g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
+  g_drive <- "G:/Shared drives/ABMI Mammals/"
   # Effective detection distance (EDD) predictions lookup
-  edd <- read_csv(paste0(g_drive, "data/processed/detection-distance/predictions/edd_veghf_season.csv"))
+  edd <- read_csv(paste0(g_drive, "Data/Detection Distance/EDD Predictions by Species Group Season Veg Category.csv"))
   # EDD species groups
-  dist_groups <- read_csv(paste0(g_drive, "data/lookup/species-distance-groups.csv"))
+  #dist_groups <- read_csv(paste0(g_drive, "data/lookup/species-distance-groups.csv"))
+  dist_groups <- read_csv(paste0(g_drive, "Data/Detection Distance/Species Detection Distance Groups.csv"))
 
   d <- tt |>
     unite("project_location", project, location, sep = "_", remove = TRUE) |>
@@ -535,18 +548,18 @@ calc_density_by_loc <- function(tt, veg, cam_fov_angle = 40, format = "long", in
     # Join detection distance vegetation values
     left_join(veg, by = "project_location") |>
     # Join EDD predictions
-    left_join(edd, by = c("dist_group", "season", "VegForDetectionDistance")) |>
+    left_join(edd, by = c("dist_group", "season_new", "overall_category")) |>
     # Remove random species (mostly birds) <- something to check on though.
-    filter(!is.na(detdist)) |>
+    filter(!is.na(edd)) |>
     # Calculate density
-    mutate(effort = total_season_days * (detdist ^ 2 * pi * (cam_fov_angle / 360)) / 100,
+    mutate(effort = total_season_days * (edd ^ 2 * pi * (cam_fov_angle / 360)) / 100,
            # Catch per unit effort
            cpue = total_duration / effort,
            # Catch per unit effort in km2
            cpue_km2 = cpue / 60 / 60 / 24 * 10000) |>
     separate(project_location, into = c("project", "location"), sep = "_", remove = TRUE, extra = "merge") |>
     # All the NaNs are just combinations where the total_seasons_days is 0.
-    select(project, location, species_common_name, season, total_season_days, total_duration, density_km2 = cpue_km2)
+    select(project, location, species_common_name, season_new, total_season_days, total_duration, density_km2 = cpue_km2)
 
   if(format == "long") {
     return(d)
