@@ -1198,9 +1198,9 @@ for (sp in 1:length(SpTable)) {
   if (SpTable[sp]=="Wolverine") best.model.sc.pa<-2
   if (SpTable[sp]=="WhitetailedJackRabbit") best.model.sc.pa<-2
   if (SpTable[sp]=="RedFox") best.model.sc.pa<-8  # Difficult spatial distribution - this gives soft approximation to overall pattern without extreme values at edges (mountains)
-  if (SpTable[sp]=="GrayWolf") best.model.sc.pa<-1  # None give reasonable patterns for this widespread but rare species
+  #if (SpTable[sp]=="GrayWolf") best.model.sc.pa<-1  # None give reasonable patterns for this widespread but rare species
   if (SpTable[sp]=="SnowshoeHare") best.model.sc.pa<-2
-  if (SpTable[sp]=="WoodlandCaribou") best.model.sc.pa<-3  # The best and other good model over-predict the undersampled NW.  This option is less bad.  Shouldn't really be showing that part of the province yet...
+  #if (SpTable[sp]=="WoodlandCaribou") best.model.sc.pa<-3  # The best and other good model over-predict the undersampled NW.  This option is less bad.  Shouldn't really be showing that part of the province yet...
 
   c1<-coef(m.sc.pa[[best.model.sc.pa]])  # Variable names in best sc model
 

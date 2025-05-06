@@ -208,7 +208,7 @@ df_tt_new3 <- df_tt |>
 df_tt_nn_new3 <- df_tbd_new3 |>
   # Retrieve only those that had no images of animals
   anti_join(df_tt_new3, by = "project_location") |>
-  # Same two seasons as new season 1
+
   crossing(season_new3 = c("spring", "summer", "winter"), species_common_name = sp) |>
   # Add total_duration column, which is zero in these cases
   mutate(total_duration = 0)

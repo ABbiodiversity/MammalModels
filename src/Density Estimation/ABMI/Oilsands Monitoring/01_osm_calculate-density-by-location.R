@@ -16,7 +16,7 @@
 
 # Attach packages
 
-library(wildRtrax) # To download data
+library(wildrtrax) # To download data
 library(keyring)   # For storing credentials safely
 
 # Set path to Shared Google Drive (G Drive)

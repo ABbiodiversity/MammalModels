@@ -19,18 +19,19 @@ library(purrr)
 g_drive <- "G:/Shared drives/ABMI Camera Mammals/data/"
 
 # ABMI and CMU data only — currently 4 files.
-image_files <- list.files(paste0(g_drive, "lookup/images/"),
+image_files <- list.files(paste0(g_drive, "lookup/image-reports/"),
                     full.names = TRUE) |>
-  str_subset("eh|og|cmu")
+  str_subset("nwsar")
+
+check <-
 
 # Read in image data, filtering for just the 'nice' images
-df_nice <- map_df(files, ~ read_csv(.x) |>
-              select(project, location, date_detected, is_nice, last_col())) |>
-  filter(is_nice == TRUE)
+df_nice <- map_df(image_files, ~ read_csv(.x) |>
+              select(project, location, common_name, last_col()))
 
 # Now load tag data
 tag_files <- list.files(paste0(g_drive, "base/clean/"), full.names = TRUE) |>
-  str_subset("eh|og|cmu") |>
+  str_subset("eh|og|cmu|nwsar|bg|bdt") |>
   # Just need the files that have already removed the non-native sp tags
   str_subset("native-sp")
 

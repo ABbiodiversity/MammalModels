@@ -25,23 +25,55 @@ df_series <- read_csv(paste0(g_drive, "data/processed/series-summary/camera-heig
 df_series_summary <- df_series |>
   # Make adjustment to one deployment to line up times properly
   mutate(image_date_time = case_when(
-    location == "760-NE_0.5m" ~ image_date_time %m+% seconds(76),
-    location == "OG-ALPAC-602-2-NE_1m" ~ image_date_time %m+% seconds(11),
-    location == "OG-ALPAC-602-2-SW_1m" ~ image_date_time %m+% seconds(34),
-    location == "OG-ALPAC-637-2-SW_1m" ~ image_date_time %m+% seconds(55),
-    location == "OG-ALPAC-724-3-SE_1m" ~ image_date_time %m-% seconds(63),
-    location == "OG-ALPAC-724-4-NE_1m" ~ image_date_time %m-% seconds(38),
-    location == "OG-ALPAC-724-4-SE_1m" ~ image_date_time %m+% seconds(15),
-    location == "OG-ALPAC-724-6-NE_1m" ~ image_date_time %m+% seconds(60),
-    location == "OG-ALPAC-761-1-NE_1m" ~ image_date_time %m+% seconds(43),
-    location == "OG-ALPAC-761-1-SE_1m" ~ image_date_time %m+% seconds(41),
-    location == "OG-ALPAC-761-2-NE_1m" ~ image_date_time %m-% seconds(22),
-    location == "OG-ALPAC-761-3-NE_1m" ~ image_date_time %m+% seconds(11),
-    location == "OG-ALPAC-761-3-SE_1m" ~ image_date_time %m-% seconds(18),
-    location == "OG-ALPAC-787-2-NW_1m" ~ image_date_time %m-% seconds(3576),
-    location == "OG-ALPAC-787-2-SW_1m" ~ image_date_time %m-% seconds(31),
-    location == "OG-ALPAC-787-3-NE_1m" ~ image_date_time %m+% seconds(72),
-    location == "OG-ALPAC-787-3-SE_1m" ~ image_date_time %m-% seconds(22),
+    location == "760-NE_half" ~ image_date_time %m+% seconds(76),
+    location == "1-2A3-CA1_full" ~ image_date_time %m+% seconds(45),
+    location == "1-2A3-CA2_full" ~ image_date_time %m+% seconds(94),
+    # BDT cameras
+    location == "OG-ALPAC-602-2-NE_full" ~ image_date_time %m+% seconds(11),
+    location == "OG-ALPAC-602-2-SW_full" ~ image_date_time %m+% seconds(34),
+    location == "OG-ALPAC-637-2-SW_full" ~ image_date_time %m+% seconds(55),
+    location == "OG-ALPAC-724-3-SE_full" ~ image_date_time %m-% seconds(63),
+    location == "OG-ALPAC-724-4-NE_full" ~ image_date_time %m-% seconds(38),
+    location == "OG-ALPAC-724-4-SE_full" ~ image_date_time %m+% seconds(15),
+    location == "OG-ALPAC-724-6-NE_full" ~ image_date_time %m+% seconds(60),
+    location == "OG-ALPAC-761-1-NE_full" ~ image_date_time %m+% seconds(43),
+    location == "OG-ALPAC-761-1-SE_full" ~ image_date_time %m+% seconds(41),
+    location == "OG-ALPAC-761-2-NE_full" ~ image_date_time %m-% seconds(22),
+    location == "OG-ALPAC-761-3-NE_full" ~ image_date_time %m+% seconds(11),
+    location == "OG-ALPAC-761-3-SE_full" ~ image_date_time %m-% seconds(18),
+    location == "OG-ALPAC-787-2-NW_full" ~ image_date_time %m-% seconds(3576),
+    location == "OG-ALPAC-787-2-SW_full" ~ image_date_time %m-% seconds(31),
+    location == "OG-ALPAC-787-3-NE_full" ~ image_date_time %m+% seconds(72),
+    location == "OG-ALPAC-787-3-SE_full" ~ image_date_time %m-% seconds(22),
+    # NEW - 2023 Cameras
+    location == "14-1A1-CA1_full" ~ image_date_time %m-% seconds(115),
+    location == "14-1A1-CA3_full" ~ image_date_time %m-% seconds(55),
+    location == "14-1C1-CA3_full" ~ image_date_time %m-% seconds(31),
+    location == "14-1E1-CA3_full" ~ image_date_time %m-% seconds(100),
+    location == "14-1E1-CA6_full" ~ image_date_time %m-% seconds(6),
+    location == "14-1E2-CA1_full" ~ image_date_time %m-% seconds(87),
+    location == "14-2A1-CA1_full" ~ image_date_time %m+% seconds(18),
+    location == "14-2A1-CA4_full" ~ image_date_time %m-% seconds(45),
+    location == "14-2C1-CA1_full" ~ image_date_time %m-% seconds(18),
+    location == "14-2C1-CA4_full" ~ image_date_time %m+% seconds(51),
+    location == "14-2E1-CA3_full" ~ image_date_time %m+% seconds(77),
+    location == "14-2E1-CA5_full" ~ image_date_time %m-% seconds(25),
+    location == "14-2E2-CA1_full" ~ image_date_time %m+% seconds(33),
+    location == "14-2E2-CA3_full" ~ image_date_time %m+% seconds(6),
+    location == "9-1A1-CA2_full" ~ image_date_time %m+% seconds(94),
+    location == "9-1A1-CA4_full" ~ image_date_time %m+% seconds(48),
+    location == "9-1C1-CA2_full" ~ image_date_time %m-% seconds(8),
+    location == "9-1C1-CA6_full" ~ image_date_time %m-% seconds(61),
+    location == "9-1E1-CA2_full" ~ image_date_time %m-% seconds(18),
+    location == "9-1E1-CA5_full" ~ image_date_time %m-% seconds(23),
+    location == "9-1E2-CA1_full" ~ image_date_time %m-% seconds(35),
+    location == "9-1E2-CA3_full" ~ image_date_time %m+% seconds(47),
+    location == "9-2A1-CA1_full" ~ image_date_time %m-% seconds(51),
+    location == "9-2A1-CA4_full" ~ image_date_time %m-% seconds(18),
+    location == "9-2C1-CA2_full" ~ image_date_time %m-% seconds(7),
+    location == "9-2C1-CA3_full" ~ image_date_time %m+% seconds(187),
+    location == "9-2E1-CA2_full" ~ image_date_time %m-% seconds(59),
+    location == "9-2E1-CA7_full" ~ image_date_time %m-% seconds(13),
     TRUE ~ image_date_time
   )) |>
   group_by(series_num, location, species_common_name) |>
@@ -55,8 +87,10 @@ df_series_summary <- df_series |>
   select(series_num, location, species_common_name, start, end, n_images) |>
   separate(location, into = c("location", "height"), sep = "_") |>
   # Split into two lists with dataframe elements by project
+  # group_by(height) |>
   group_split(height) |>
   # Fuzzy join - join is done by an overlap in the interval between start and end
+  # Potential issue - camera projects operating at the same time.
   reduce(interval_full_join, by = c("start", "end"))
 
 # Were there multiple matches for any series?
