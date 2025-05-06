@@ -12,7 +12,7 @@
 
 # Attach packages
 library(tidyverse)
-library(wildRtrax)
+library(wildrtrax)
 library(keyring)
 
 # Download data

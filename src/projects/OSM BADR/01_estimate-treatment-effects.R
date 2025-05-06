@@ -16,10 +16,12 @@ library(dplyr)
 library(stringr)
 
 # Set path to Shared Google Drive (G Drive)
-g_drive <- "G:/Shared drives/ABMI Camera Mammals/"
+g_drive <- "G:/Shared drives/OSM BADR Mammals/"
+
+g_drive_old <- "G:/Shared drives/ABMI Camera Mammals/"
 
 # Species character strings
-load(paste0(g_drive, "data/lookup/wt_cam_sp_str.RData"))
+load(paste0(g_drive_old, "data/lookup/wt_cam_sp_str.RData"))
 
 # Import data
 
@@ -48,12 +50,12 @@ lure <- read.csv(paste0(g_drive, "data/processed/lure/Lure effect from MS for OS
   # mutate(Species = str_replace_all(Species, "\\.", " "))
 
 # Processed main camera density file
-dataset.out<-paste0(g_drive, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData")
+dataset.out<-paste0(g_drive_old, "data/lookup/R Dataset SpTable for ABMI North mammal coefficients 2022.RData")
 load(dataset.out)
 
 # Supplemental camera deployment treatment metadata: EH & OG
-s1 <- read_csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_EH_2022-06-16.csv"))
-s2 <- read.csv(paste0(g_drive, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_OG_2022-06-16.csv"))
+s1 <- read_csv(paste0(g_drive_old, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_EH_2022-06-16.csv"))
+s2 <- read.csv(paste0(g_drive_old, "projects/osm-badr-site-selection/supplemental/final/supplemental-osm-treatments_OG_2022-06-16.csv"))
 
 # 2022 sites NOT to include
 df_2022_bad <- read_csv(paste0(g_drive, "data/lookup/veghf/VegForDetectionDistance/osm2022.csv")) |>

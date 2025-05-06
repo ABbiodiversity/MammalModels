@@ -1242,8 +1242,13 @@ for (sp in 1:length(SpTable)) {
     vnames<-ifelse(vnames=="I(Long * MAT)","LongMAT",vnames)
     vnames<-gsub(":","",vnames)
     km2.sc1<-km2.sc[,vnames]
-    if (sc.option[sp]==1) km2.p1<-exp(rowSums( t(c1*t(km2.sc1))))   # Predictions from just the climate and spatial part of the residual model for each km2 raster - log-link total abundance
-    if (sc.option[sp]==2) km2.p1<-plogis(rowSums( t(c1*t(km2.sc1))))   # Predictions from just the climate and spatial part of the residual model for each km2 raster - logit-link presence/absence
+
+    # Predictions from just the climate and spatial part of the residual model for each km2 raster - log-link total abundance
+    if (sc.option[sp]==1) km2.p1<-exp(rowSums( t(c1*t(km2.sc1))))
+
+    # Predictions from just the climate and spatial part of the residual model for each km2 raster - logit-link presence/absence
+    if (sc.option[sp]==2) km2.p1<-plogis(rowSums( t(c1*t(km2.sc1))))
+
     km2.p1<-ifelse(km2.p1>quantile(km2.p1,0.99),quantile(km2.p1,0.99),km2.p1)
     km2.p1<-km2.p1/max(km2.p1)
     if (max(km2.p1)==min(km2.p1)) {
@@ -1251,9 +1256,13 @@ for (sp in 1:length(SpTable)) {
     } else {
       km2.p1<-(km2.p1-min(km2.p1))/(max(km2.p1)-min(km2.p1))
     }
+
     r<-ifelse(km2.p1<0.5,1,(1-km2.p1)*2)[!is.na(km2.p1)]  # RGB for map (white at no change, more green for more positive residual effect, more red for more negative
+
     g<-ifelse(km2.p1>0.5,1,km2.p1*2)[!is.na(km2.p1)]  # RGB for map
+
     b<-(1-abs(km2.p1-0.5)*2)[!is.na(km2.p1)]  # RGB for map
+
     fname<-paste(fname.map,"Climate and spatial/New/",SpTable[sp],".jpg",sep="")
     jpeg(filename=fname,width=5,height=8.7,units="in",res=300)
     plot(km2.sc$Long[!is.na(km2.p1)],km2.sc$TrueLat[!is.na(km2.p1)],pch=15,cex=0.4,col=rgb(r,g,b),xlab="",ylab="")

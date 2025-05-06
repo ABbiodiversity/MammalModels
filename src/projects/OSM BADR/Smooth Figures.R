@@ -1,8 +1,11 @@
 # Full Smooth Figures
 
+library(ggplot2)
+library(gridExtra)
+
 # Smoothed Results
 
-on_off_smooth <- read_csv(paste0(g_drive, "Results/OSM BADR/OSM mammals 2021 2022 Smoothed On Off HF.csv")) |>
+on_off_smooth <- read_csv(paste0(g_drive, "Results/OSM mammals 2021 2022 Smoothed On Off HF.csv")) |>
   select(common_name = Sp, treatment = Treat, mean_density = Mean, lci_density = q5, uci_density = q95) |>
   mutate(fine_scale = case_when(
     str_detect(treatment, "On") ~ "On",
@@ -17,11 +20,11 @@ ref <- on_off_smooth |>
   select(-fine_scale) |>
   mutate(distance = 51.5)
 
-pm_dist_smooth <- read_csv(paste0(g_drive, "Results/OSM BADR/OSM mammals 2021 2022 Smoothed Plant mine distance.csv")) |>
+pm_dist_smooth <- read_csv(paste0(g_drive, "Results/OSM mammals 2021 2022 Smoothed Plant Mine Distance.csv")) |>
   mutate(treatment = "Plant/Mine") |>
   select(common_name = Sp, treatment, distance = Dist, mean_density = Mean, lci_density = q5, uci_density = q95)
 
-dist_smooth <- read_csv(paste0(g_drive, "Results/OSM BADR/OSM mammals 2021 2022 Smoothed Road distance.csv")) |>
+dist_smooth <- read_csv(paste0(g_drive, "Results/OSM mammals 2021 2022 Smoothed Road Distance.csv")) |>
   mutate(treatment = "Roads") |>
   select(common_name = Sp, treatment, distance = Dist, mean_density = Mean, lci_density = q5, uci_density = q95) |>
   bind_rows(pm_dist_smooth) |>
@@ -120,6 +123,6 @@ plot_dist_smooth
 # Join together
 full_plot <- grid.arrange(plot_on_off_smooth, plot_dist_smooth)
 
-ggsave(paste0(g_drive, "Results/OSM BADR/Figures/2022/", sp, " Full Smooth.png"), full_plot, height = 8, width = 8, dpi = 500, bg = "white")
+ggsave(paste0(g_drive, "Results/Figures/", sp, " Full Smooth.png"), full_plot, height = 8, width = 8, dpi = 500, bg = "white")
 
 
